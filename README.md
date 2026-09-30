@@ -100,6 +100,9 @@ pdf.current?.goToPage(0, { animated: false });
 pdf.current?.zoomTo(2);                        // relative to the fitted page
 pdf.current?.zoomTo(1);                        // reset
 const toc = await pdf.current?.getOutline();   // [{ title, page?, children }]
+pdf.current?.search('invoice');                // highlights matches, see onSearchChange
+pdf.current?.searchNext();                     // wraps around; searchPrevious() too
+pdf.current?.clearSearch();                    // or search('')
 ```
 
 ### Sources
@@ -137,6 +140,8 @@ document.
 | `enableRTL` | `boolean` | `false` | horizontal layouts run right to left (iOS: with `enablePaging` only) |
 | `singlePage` | `boolean` | `false` | one static page (`initialPage`, switched by `goToPage`) for thumbnails; ignores touches |
 | `fitPolicy` | `'width' \| 'height' \| 'page'` | `'width'`, or `'page'` with `horizontal` / `enablePaging` | how pages are scaled at zoom 1 |
+| `searchHighlightColor` | `ColorValue` | `'rgba(255, 214, 0, 0.4)'` | background of search matches; use a translucent colour |
+| `searchCurrentHighlightColor` | `ColorValue` | `'rgba(255, 140, 0, 0.6)'` | background of the current match |
 | `onLoad` | `({ pageCount, firstPageWidth, firstPageHeight, filePath? }) => void` | | sizes in PDF points; `filePath`: the local file being displayed (downloaded copy, local file or extracted asset; not for `content://`) |
 | `onLoadProgress` | `({ loadedBytes, totalBytes? }) => void` | | remote downloads only; at most every 100 ms plus once on completion |
 | `onPageChange` | `({ page, pageCount }) => void` | | zero-based |
@@ -145,6 +150,7 @@ document.
 | `onPageTap` | `({ page, x, y }) => void` | | tap on a page outside links; zero-based page, `x`/`y` in PDF points from the page's top-left |
 | `onScaleChange` | `({ scale }) => void` | | once per settled zoom change (pinch/double-tap end, `zoomTo`); relative to the fitted page |
 | `onTextSelectionChange` | `({ text }) => void` | | once per settled selection (long press, handle drag or Select all ends); `text` is `''` when cleared |
+| `onSearchChange` | `({ query, matchCount, currentMatch?, currentPage?, isComplete, isSupported }) => void` | | search progress and the current match; see [Search](#search) |
 
 Plus all `View` props (`style`, `testID`, …).
 
@@ -182,12 +188,46 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Page-change, load and typed error events
 - Link presses (URL links reported to JS; links to other pages followed
   natively) and page taps in PDF coordinates
+- Text search with highlighted matches and next/previous navigation
+  (Android 15+, or Android 12–14 with SDK extension 13 on Android)
 - Text selection with the platform's handles and Copy / Select all menu
   (Android 15+, or Android 12–14 with SDK extension 13 on Android)
 - Password-protected documents (Android 15+, or Android 12–14 with SDK extension 13 on Android)
 - Native page virtualization, render cache, prefetch and cancellation
   (Android; PDFKit handles these on iOS)
 - Memory-pressure handling and release of all pixels while a screen is hidden
+
+## Search
+
+```tsx
+const [search, setSearch] = useState<PdfSearchChangeEvent>();
+
+<PdfView ref={pdf} source={source} onSearchChange={setSearch} />;
+
+pdf.current?.search(query);   // new query: restarts; '' clears
+pdf.current?.searchNext();    // or searchPrevious(); both wrap around
+
+// "3 / 17", or "3 / 17…" while the rest of the document is searched
+const label = search?.isSupported === false
+  ? 'Search unavailable'
+  : `${(search?.currentMatch ?? -1) + 1} / ${search?.matchCount ?? 0}${search?.isComplete ? '' : '…'}`;
+```
+
+- Search is native and runs in the background: matches are highlighted as
+  pages are searched, starting at the current page, and the first match at
+  or after it becomes current and is scrolled into view. Case-insensitive.
+- `onSearchChange` fires at most 10 times per second while pages are
+  searched, and immediately for the first match, `searchNext`/`searchPrevious`,
+  completion and clearing. `currentMatch` counts matches in document order.
+- Matches are highlighted in `searchHighlightColor` (translucent yellow)
+  and the current one in `searchCurrentHighlightColor` (orange). Any React
+  Native colour works except `PlatformColor` / `DynamicColorIOS`, which
+  fall back to the defaults.
+- Loading another document ends the search (with an event whose `query` is
+  `''`).
+- Android searches with the platform renderer's text API (Android 15+, or
+  12–14 with SDK extension 13); elsewhere the search ends at once with
+  `isSupported: false`.
 
 ## Accessibility
 
@@ -207,7 +247,7 @@ Screen readers get the document's text and position:
 
 ## Limitations
 
-- **Not implemented yet**: editing annotations or forms, search.
+- **Not implemented yet**: editing annotations or forms.
 - **Text selection**: iOS uses PDFKit's selection, which can span pages.
   Android draws its own: a selection stays on one page, Select all selects
   that page, copying ends the selection (as in a text field), dragging a
@@ -229,6 +269,7 @@ Screen readers get the document's text and position:
   - Password-protected PDFs require Android 15+; other devices report
     `unsupported-pdf`.
   - Text selection requires Android 15+; other devices ignore long presses.
+  - Search requires Android 15+; other devices report `isSupported: false`.
   - Links require Android 15+. Of the internal-link forms, only
     GoTo actions with an XYZ destination are reported by `PdfRenderer`
     (`/Dest` arrays and `/Fit` destinations are not); undetected links behave

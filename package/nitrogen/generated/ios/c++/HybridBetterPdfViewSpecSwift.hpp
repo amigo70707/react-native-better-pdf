@@ -32,6 +32,8 @@ namespace margelo::nitro::betterpdf { struct PdfLinkPressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
+// Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -53,6 +55,7 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "PdfLinkPressEvent.hpp"
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
+#include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfOutlineEntry.hpp"
@@ -231,6 +234,20 @@ namespace margelo::nitro::betterpdf {
     inline void setEnableTextSelection(std::optional<bool> enableTextSelection) noexcept override {
       _swiftPart.setEnableTextSelection(enableTextSelection);
     }
+    inline std::optional<double> getSearchHighlightColor() noexcept override {
+      auto __result = _swiftPart.getSearchHighlightColor();
+      return __result;
+    }
+    inline void setSearchHighlightColor(std::optional<double> searchHighlightColor) noexcept override {
+      _swiftPart.setSearchHighlightColor(searchHighlightColor);
+    }
+    inline std::optional<double> getSearchCurrentHighlightColor() noexcept override {
+      auto __result = _swiftPart.getSearchCurrentHighlightColor();
+      return __result;
+    }
+    inline void setSearchCurrentHighlightColor(std::optional<double> searchCurrentHighlightColor) noexcept override {
+      _swiftPart.setSearchCurrentHighlightColor(searchCurrentHighlightColor);
+    }
     inline std::optional<std::function<void(const PdfLoadEvent& /* event */)>> getOnLoad() noexcept override {
       auto __result = _swiftPart.getOnLoad();
       return __result;
@@ -280,6 +297,13 @@ namespace margelo::nitro::betterpdf {
     inline void setOnScaleChange(const std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>& onScaleChange) noexcept override {
       _swiftPart.setOnScaleChange(onScaleChange);
     }
+    inline std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> getOnSearchChange() noexcept override {
+      auto __result = _swiftPart.getOnSearchChange();
+      return __result;
+    }
+    inline void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) noexcept override {
+      _swiftPart.setOnSearchChange(onSearchChange);
+    }
     inline std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() noexcept override {
       auto __result = _swiftPart.getOnTextSelectionChange();
       return __result;
@@ -317,6 +341,30 @@ namespace margelo::nitro::betterpdf {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline void search(const std::string& query) override {
+      auto __result = _swiftPart.search(query);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void searchNext() override {
+      auto __result = _swiftPart.searchNext();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void searchPrevious() override {
+      auto __result = _swiftPart.searchPrevious();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void clearSearch() override {
+      auto __result = _swiftPart.clearSearch();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
 
   private:

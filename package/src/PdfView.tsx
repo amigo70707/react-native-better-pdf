@@ -5,13 +5,14 @@ import {
   useRef,
   type Ref,
 } from 'react';
-import { Image, type ViewProps } from 'react-native';
+import { Image, type ColorValue, type ViewProps } from 'react-native';
 import {
   callback,
   getHostComponent,
   type HybridRef,
 } from 'react-native-nitro-modules';
 import BetterPdfViewConfig from '../nitrogen/generated/shared/json/BetterPdfViewConfig.json';
+import { nativeColor } from './nativeColor';
 import { buildOutlineTree } from './outline';
 import { normalizeSource, sourceKey, type PdfSource } from './source';
 import type {
@@ -28,6 +29,7 @@ import type { PdfOutlineItem } from './types/PdfOutlineItem';
 import type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
 import type { PdfPageTapEvent } from './types/PdfPageTapEvent';
 import type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
+import type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
 import type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
 import type { PdfViewStats } from './types/PdfViewStats';
 
@@ -37,6 +39,10 @@ const NativeBetterPdfView = getHostComponent<NativeProps, PdfViewMethods>(
 );
 
 type NativeRef = HybridRef<NativeProps, PdfViewMethods>;
+
+/** `rgba(255, 214, 0, 0.4)` and `rgba(255, 140, 0, 0.6)` as ARGB. */
+const DEFAULT_SEARCH_HIGHLIGHT_COLOR = 0x66ffd600;
+const DEFAULT_SEARCH_CURRENT_HIGHLIGHT_COLOR = 0x99ff8c00;
 
 export interface NavigationOptions {
   /** Default `true`. */
@@ -57,6 +63,20 @@ export interface PdfViewRef {
    * documents (their titles are encrypted).
    */
   getOutline(): Promise<PdfOutlineItem[]>;
+  /**
+   * Searches the document's text (case-insensitive), replacing any previous
+   * search; `''` clears it. Results arrive through
+   * {@linkcode PdfViewProps.onSearchChange} as pages are searched. All
+   * matches are highlighted; the first match at or after the current page
+   * becomes current and is scrolled into view.
+   */
+  search(query: string): void;
+  /** Makes the next match current (wrapping to the first) and scrolls it into view. */
+  searchNext(): void;
+  /** Makes the previous match current (wrapping to the last) and scrolls it into view. */
+  searchPrevious(): void;
+  /** Ends the search and removes its highlights. */
+  clearSearch(): void;
 }
 
 export interface PdfViewProps extends ViewProps {
@@ -168,6 +188,19 @@ export interface PdfViewProps extends ViewProps {
    * extension 13; other devices ignore long presses.
    */
   enableTextSelection?: boolean;
+  /**
+   * Background of every search match. Use a translucent colour so the text
+   * stays readable. `PlatformColor` and `DynamicColorIOS` are not supported
+   * (the default is used). Default `'rgba(255, 214, 0, 0.4)'` (yellow).
+   */
+  searchHighlightColor?: ColorValue;
+  /**
+   * Background of the current search match (the one `searchNext()` /
+   * `searchPrevious()` moved to), drawn instead of
+   * {@linkcode PdfViewProps.searchHighlightColor}. Default
+   * `'rgba(255, 140, 0, 0.6)'` (orange).
+   */
+  searchCurrentHighlightColor?: ColorValue;
   onLoad?: (event: PdfLoadEvent) => void;
   /**
    * Download progress of a remote document, at most every 100 ms plus once on
@@ -206,6 +239,12 @@ export interface PdfViewProps extends ViewProps {
    * document.
    */
   onTextSelectionChange?: (event: PdfTextSelectionChangeEvent) => void;
+  /**
+   * The search started with `ref.search()` changed: more matches found, the
+   * current match moved, or it completed or was cleared. At most 10 events
+   * per second while searching, plus one on completion.
+   */
+  onSearchChange?: (event: PdfSearchChangeEvent) => void;
   ref?: Ref<PdfViewRef>;
 }
 
@@ -219,6 +258,7 @@ type Handlers = Pick<
   | 'onPageTap'
   | 'onScaleChange'
   | 'onTextSelectionChange'
+  | 'onSearchChange'
 >;
 
 /**
@@ -260,6 +300,8 @@ export function PdfView({
   showsVerticalScrollIndicator,
   showsHorizontalScrollIndicator,
   enableTextSelection,
+  searchHighlightColor,
+  searchCurrentHighlightColor,
   onLoad,
   onLoadProgress,
   onError,
@@ -268,6 +310,7 @@ export function PdfView({
   onPageTap,
   onScaleChange,
   onTextSelectionChange,
+  onSearchChange,
   ref,
   ...viewProps
 }: PdfViewProps) {
@@ -284,6 +327,7 @@ export function PdfView({
     onPageTap,
     onScaleChange,
     onTextSelectionChange,
+    onSearchChange,
   };
   const handlers = useRef(renderedHandlers);
   useLayoutEffect(() => {
@@ -312,6 +356,9 @@ export function PdfView({
       ),
       onTextSelectionChange: callback((event: PdfTextSelectionChangeEvent) =>
         handlers.current.onTextSelectionChange?.(event),
+      ),
+      onSearchChange: callback((event: PdfSearchChangeEvent) =>
+        handlers.current.onSearchChange?.(event),
       ),
     }),
     [],
@@ -342,6 +389,18 @@ export function PdfView({
       },
       getStats() {
         return nativeRef.current?.getStats() ?? null;
+      },
+      search(query) {
+        nativeRef.current?.search(query);
+      },
+      searchNext() {
+        nativeRef.current?.searchNext();
+      },
+      searchPrevious() {
+        nativeRef.current?.searchPrevious();
+      },
+      clearSearch() {
+        nativeRef.current?.clearSearch();
       },
     }),
     [],
@@ -388,6 +447,14 @@ export function PdfView({
       showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? true}
       showsHorizontalScrollIndicator={showsHorizontalScrollIndicator ?? true}
       enableTextSelection={enableTextSelection ?? true}
+      searchHighlightColor={nativeColor(
+        searchHighlightColor,
+        DEFAULT_SEARCH_HIGHLIGHT_COLOR,
+      )}
+      searchCurrentHighlightColor={nativeColor(
+        searchCurrentHighlightColor,
+        DEFAULT_SEARCH_CURRENT_HIGHLIGHT_COLOR,
+      )}
       onLoad={subscription('onLoad')}
       onLoadProgress={subscription('onLoadProgress')}
       onError={subscription('onError')}
@@ -396,6 +463,7 @@ export function PdfView({
       onPageTap={subscription('onPageTap')}
       onScaleChange={subscription('onScaleChange')}
       onTextSelectionChange={subscription('onTextSelectionChange')}
+      onSearchChange={subscription('onSearchChange')}
       hybridRef={hybridRef}
     />
   );

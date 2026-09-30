@@ -86,6 +86,10 @@ namespace margelo::nitro::betterpdf {
     void setShowsHorizontalScrollIndicator(std::optional<bool> showsHorizontalScrollIndicator) override;
     std::optional<bool> getEnableTextSelection() override;
     void setEnableTextSelection(std::optional<bool> enableTextSelection) override;
+    std::optional<double> getSearchHighlightColor() override;
+    void setSearchHighlightColor(std::optional<double> searchHighlightColor) override;
+    std::optional<double> getSearchCurrentHighlightColor() override;
+    void setSearchCurrentHighlightColor(std::optional<double> searchCurrentHighlightColor) override;
     std::optional<std::function<void(const PdfLoadEvent& /* event */)>> getOnLoad() override;
     void setOnLoad(const std::optional<std::function<void(const PdfLoadEvent& /* event */)>>& onLoad) override;
     std::optional<std::function<void(const PdfLoadProgressEvent& /* event */)>> getOnLoadProgress() override;
@@ -100,6 +104,8 @@ namespace margelo::nitro::betterpdf {
     void setOnPageTap(const std::optional<std::function<void(const PdfPageTapEvent& /* event */)>>& onPageTap) override;
     std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>> getOnScaleChange() override;
     void setOnScaleChange(const std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>& onScaleChange) override;
+    std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> getOnSearchChange() override;
+    void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) override;
     std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() override;
     void setOnTextSelectionChange(const std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>& onTextSelectionChange) override;
 
@@ -109,6 +115,10 @@ namespace margelo::nitro::betterpdf {
     void zoomTo(double scale, bool animated) override;
     PdfViewStats getStats() override;
     std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() override;
+    void search(const std::string& query) override;
+    void searchNext() override;
+    void searchPrevious() override;
+    void clearSearch() override;
 
   private:
     jni::global_ref<JHybridBetterPdfViewSpec::JavaPart> _javaPart;

@@ -23,6 +23,7 @@
 #include "JFunc_void_PdfLinkPressEvent.hpp"
 #include "JFunc_void_PdfPageTapEvent.hpp"
 #include "JFunc_void_PdfScaleChangeEvent.hpp"
+#include "JFunc_void_PdfSearchChangeEvent.hpp"
 #include "JFunc_void_PdfTextSelectionChangeEvent.hpp"
 #include "views/JHybridBetterPdfViewStateUpdater.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
@@ -57,6 +58,7 @@ void registerAllNatives() {
   margelo::nitro::betterpdf::JFunc_void_PdfLinkPressEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfPageTapEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfScaleChangeEvent_cxx::registerNatives();
+  margelo::nitro::betterpdf::JFunc_void_PdfSearchChangeEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfTextSelectionChangeEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::views::JHybridBetterPdfViewStateUpdater::registerNatives();
 

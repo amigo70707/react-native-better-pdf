@@ -22,6 +22,8 @@
     "showsVerticalScrollIndicator": true,
     "showsHorizontalScrollIndicator": true,
     "enableTextSelection": true,
+    "searchHighlightColor": true,
+    "searchCurrentHighlightColor": true,
     "onLoad": true,
     "onLoadProgress": true,
     "onError": true,
@@ -29,6 +31,7 @@
     "onLinkPress": true,
     "onPageTap": true,
     "onScaleChange": true,
+    "onSearchChange": true,
     "onTextSelectionChange": true,
     "hybridRef": true
   }

@@ -28,6 +28,8 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   var showsVerticalScrollIndicator: Bool? { get set }
   var showsHorizontalScrollIndicator: Bool? { get set }
   var enableTextSelection: Bool? { get set }
+  var searchHighlightColor: Double? { get set }
+  var searchCurrentHighlightColor: Double? { get set }
   var onLoad: ((_ event: PdfLoadEvent) -> Void)? { get set }
   var onLoadProgress: ((_ event: PdfLoadProgressEvent) -> Void)? { get set }
   var onError: ((_ error: PdfError) -> Void)? { get set }
@@ -35,6 +37,7 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   var onLinkPress: ((_ event: PdfLinkPressEvent) -> Void)? { get set }
   var onPageTap: ((_ event: PdfPageTapEvent) -> Void)? { get set }
   var onScaleChange: ((_ event: PdfScaleChangeEvent) -> Void)? { get set }
+  var onSearchChange: ((_ event: PdfSearchChangeEvent) -> Void)? { get set }
   var onTextSelectionChange: ((_ event: PdfTextSelectionChangeEvent) -> Void)? { get set }
 
   // Methods
@@ -42,6 +45,10 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   func zoomTo(scale: Double, animated: Bool) throws -> Void
   func getStats() throws -> PdfViewStats
   func getOutline() throws -> Promise<[PdfOutlineEntry]>
+  func search(query: String) throws -> Void
+  func searchNext() throws -> Void
+  func searchPrevious() throws -> Void
+  func clearSearch() throws -> Void
 }
 
 public extension HybridBetterPdfViewSpec_protocol {

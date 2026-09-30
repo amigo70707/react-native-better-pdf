@@ -11,5 +11,6 @@ export type { PdfOutlineItem } from './types/PdfOutlineItem';
 export type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
 export type { PdfPageTapEvent } from './types/PdfPageTapEvent';
 export type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
+export type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
 export type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
 export type { PdfViewStats } from './types/PdfViewStats';

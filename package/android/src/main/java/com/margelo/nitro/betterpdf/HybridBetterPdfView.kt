@@ -25,6 +25,7 @@ class HybridBetterPdfView(
   PdfDocumentSession.Listener,
   PdfDocumentView.Listener {
   private val documentView = PdfDocumentView(context).also { it.listener = this }
+  private val searchController = SearchController(documentView) { event -> onSearchChange?.invoke(event) }
   override val view: View = documentView
 
   private val mainHandler = Handler(Looper.getMainLooper())
@@ -104,6 +105,18 @@ class HybridBetterPdfView(
       field = value
       documentView.pageAccessibilityLabel = value ?: "Page {page} of {pageCount}"
     }
+  // processColor output: signed on Android, unsigned on iOS; either way the
+  // low 32 bits are the ARGB value (Double.toInt() would clamp instead).
+  override var searchHighlightColor: Double? = null
+    set(value) {
+      field = value
+      documentView.searchMatchColor = value?.toLong()?.toInt()
+    }
+  override var searchCurrentHighlightColor: Double? = null
+    set(value) {
+      field = value
+      documentView.searchCurrentColor = value?.toLong()?.toInt()
+    }
   override var showsVerticalScrollIndicator: Boolean? = null
     set(value) {
       field = value
@@ -126,6 +139,7 @@ class HybridBetterPdfView(
   override var onLinkPress: ((event: PdfLinkPressEvent) -> Unit)? = null
   override var onPageTap: ((event: PdfPageTapEvent) -> Unit)? = null
   override var onScaleChange: ((event: PdfScaleChangeEvent) -> Unit)? = null
+  override var onSearchChange: ((event: PdfSearchChangeEvent) -> Unit)? = null
   override var onTextSelectionChange: ((event: PdfTextSelectionChangeEvent) -> Unit)? = null
 
   // endregion
@@ -176,6 +190,22 @@ class HybridBetterPdfView(
     mainHandler.post { documentView.zoomTo(scale.toFloat(), animated) }
   }
 
+  override fun search(query: String) {
+    mainHandler.post { searchController.search(query) }
+  }
+
+  override fun searchNext() {
+    mainHandler.post { searchController.next() }
+  }
+
+  override fun searchPrevious() {
+    mainHandler.post { searchController.previous() }
+  }
+
+  override fun clearSearch() {
+    mainHandler.post { searchController.clear() }
+  }
+
   override fun getOutline(): Promise<Array<PdfOutlineEntry>> {
     val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     return Promise.parallel {
@@ -214,6 +244,7 @@ class HybridBetterPdfView(
   }
 
   private fun closeSession() {
+    searchController.onDocumentChanged(null)
     loadedSession = null
     session?.close()
     session = null
@@ -230,6 +261,7 @@ class HybridBetterPdfView(
     val scale = initialScale?.takeIf { it.isFinite() && it > 0 }?.toFloat() ?: 1f
     documentView.setDocument(session, pageSizes, initial, scale)
     loadedSession = session
+    searchController.onDocumentChanged(session)
     val first = pageSizes.first()
     onLoad?.invoke(
       PdfLoadEvent(

@@ -539,6 +539,54 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var searchHighlightColor: bridge.std__optional_double_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_double_ in
+        if let __unwrappedValue = self.__implementation.searchHighlightColor {
+          return bridge.create_std__optional_double_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.searchHighlightColor = { () -> Double? in
+        if bridge.has_value_std__optional_double_(newValue) {
+          let __unwrapped = bridge.get_std__optional_double_(newValue)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
+  public final var searchCurrentHighlightColor: bridge.std__optional_double_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_double_ in
+        if let __unwrappedValue = self.__implementation.searchCurrentHighlightColor {
+          return bridge.create_std__optional_double_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.searchCurrentHighlightColor = { () -> Double? in
+        if bridge.has_value_std__optional_double_(newValue) {
+          let __unwrapped = bridge.get_std__optional_double_(newValue)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
   public final var onLoad: bridge.std__optional_std__function_void_const_PdfLoadEvent_____event______ {
     @inline(__always)
     get {
@@ -763,6 +811,38 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var onSearchChange: bridge.std__optional_std__function_void_const_PdfSearchChangeEvent_____event______ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__function_void_const_PdfSearchChangeEvent_____event______ in
+        if let __unwrappedValue = self.__implementation.onSearchChange {
+          return bridge.create_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______({ () -> bridge.Func_void_PdfSearchChangeEvent in
+            let __closureWrapper = Func_void_PdfSearchChangeEvent(__unwrappedValue)
+            return bridge.create_Func_void_PdfSearchChangeEvent(__closureWrapper.toUnsafe())
+          }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onSearchChange = { () -> ((_ event: PdfSearchChangeEvent) -> Void)? in
+        if bridge.has_value_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______(newValue)
+          return { () -> (PdfSearchChangeEvent) -> Void in
+            let __wrappedFunction = bridge.wrap_Func_void_PdfSearchChangeEvent(__unwrapped)
+            return { (__event: PdfSearchChangeEvent) -> Void in
+              __wrappedFunction.call(__event)
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
   public final var onTextSelectionChange: bridge.std__optional_std__function_void_const_PdfTextSelectionChangeEvent_____event______ {
     @inline(__always)
     get {
@@ -852,6 +932,50 @@ open class HybridBetterPdfViewSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__shared_ptr_Promise_std__vector_PdfOutlineEntry____(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func search(query: std.string) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.search(query: String(query))
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func searchNext() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.searchNext()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func searchPrevious() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.searchPrevious()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func clearSearch() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.clearSearch()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
   

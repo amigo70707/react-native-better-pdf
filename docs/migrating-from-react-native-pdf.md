@@ -258,6 +258,18 @@ The event now arrives once the selection settles (after the long press or
 handle drag), not for every handle movement, and on Android too (Android
 15+). A tap on the page clears the selection and is still an `onPageTap`.
 
+### Search
+
+react-native-pdf had no search. Here it is built in:
+
+```tsx
+<PdfView ref={pdf} source={source} onSearchChange={setSearch} />;
+pdf.current?.search('invoice');
+pdf.current?.searchNext();
+```
+
+Matches are highlighted natively; see the README's "Search" section.
+
 ### Tap to toggle toolbars
 
 ```diff

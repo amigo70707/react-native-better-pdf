@@ -31,6 +31,8 @@ namespace margelo::nitro::betterpdf { struct PdfLinkPressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
+// Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -50,6 +52,7 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "PdfLinkPressEvent.hpp"
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
+#include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfOutlineEntry.hpp"
@@ -119,6 +122,10 @@ namespace margelo::nitro::betterpdf {
       virtual void setShowsHorizontalScrollIndicator(std::optional<bool> showsHorizontalScrollIndicator) = 0;
       virtual std::optional<bool> getEnableTextSelection() = 0;
       virtual void setEnableTextSelection(std::optional<bool> enableTextSelection) = 0;
+      virtual std::optional<double> getSearchHighlightColor() = 0;
+      virtual void setSearchHighlightColor(std::optional<double> searchHighlightColor) = 0;
+      virtual std::optional<double> getSearchCurrentHighlightColor() = 0;
+      virtual void setSearchCurrentHighlightColor(std::optional<double> searchCurrentHighlightColor) = 0;
       virtual std::optional<std::function<void(const PdfLoadEvent& /* event */)>> getOnLoad() = 0;
       virtual void setOnLoad(const std::optional<std::function<void(const PdfLoadEvent& /* event */)>>& onLoad) = 0;
       virtual std::optional<std::function<void(const PdfLoadProgressEvent& /* event */)>> getOnLoadProgress() = 0;
@@ -133,6 +140,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setOnPageTap(const std::optional<std::function<void(const PdfPageTapEvent& /* event */)>>& onPageTap) = 0;
       virtual std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>> getOnScaleChange() = 0;
       virtual void setOnScaleChange(const std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>& onScaleChange) = 0;
+      virtual std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> getOnSearchChange() = 0;
+      virtual void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) = 0;
       virtual std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() = 0;
       virtual void setOnTextSelectionChange(const std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>& onTextSelectionChange) = 0;
 
@@ -142,6 +151,10 @@ namespace margelo::nitro::betterpdf {
       virtual void zoomTo(double scale, bool animated) = 0;
       virtual PdfViewStats getStats() = 0;
       virtual std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() = 0;
+      virtual void search(const std::string& query) = 0;
+      virtual void searchNext() = 0;
+      virtual void searchPrevious() = 0;
+      virtual void clearSearch() = 0;
 
     protected:
       // Hybrid Setup

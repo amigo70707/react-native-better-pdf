@@ -136,6 +136,18 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @set:Keep
   abstract var enableTextSelection: Boolean?
   
+  @get:DoNotStrip
+  @get:Keep
+  @set:DoNotStrip
+  @set:Keep
+  abstract var searchHighlightColor: Double?
+  
+  @get:DoNotStrip
+  @get:Keep
+  @set:DoNotStrip
+  @set:Keep
+  abstract var searchCurrentHighlightColor: Double?
+  
   abstract var onLoad: ((event: PdfLoadEvent) -> Unit)?
   
   private var onLoad_cxx: Func_void_PdfLoadEvent?
@@ -234,6 +246,20 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
       onScaleChange = value?.let { it }
     }
   
+  abstract var onSearchChange: ((event: PdfSearchChangeEvent) -> Unit)?
+  
+  private var onSearchChange_cxx: Func_void_PdfSearchChangeEvent?
+    @Keep
+    @DoNotStrip
+    get() {
+      return onSearchChange?.let { Func_void_PdfSearchChangeEvent_java(it) }
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onSearchChange = value?.let { it }
+    }
+  
   abstract var onTextSelectionChange: ((event: PdfTextSelectionChangeEvent) -> Unit)?
   
   private var onTextSelectionChange_cxx: Func_void_PdfTextSelectionChangeEvent?
@@ -264,6 +290,22 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @DoNotStrip
   @Keep
   abstract fun getOutline(): Promise<Array<PdfOutlineEntry>>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun search(query: String): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun searchNext(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun searchPrevious(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun clearSearch(): Unit
 
   // Default implementation of `HybridObject.toString()`
   override fun toString(): String {

@@ -15,6 +15,8 @@ internal class PlatformDocumentPage(private val page: PdfRenderer.Page) : Docume
 
   override fun readText(): String? = page.readText()
 
+  override fun searchText(query: String): List<List<PageRect>>? = page.findText(query)
+
   override fun selectText(query: TextSelectionQuery): PageTextSelection? = page.selectText(query)
 
   override fun close() = page.close()

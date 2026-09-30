@@ -206,6 +206,18 @@ using namespace margelo::nitro::betterpdf::views;
           : !newViewProps.enableTextSelection.hasSameValue(oldViewProps->enableTextSelection)) {
       swiftPart.setEnableTextSelection(newViewProps.enableTextSelection.get());
     }
+    // searchHighlightColor: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.searchHighlightColor.isProvided()
+          : !newViewProps.searchHighlightColor.hasSameValue(oldViewProps->searchHighlightColor)) {
+      swiftPart.setSearchHighlightColor(newViewProps.searchHighlightColor.get());
+    }
+    // searchCurrentHighlightColor: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.searchCurrentHighlightColor.isProvided()
+          : !newViewProps.searchCurrentHighlightColor.hasSameValue(oldViewProps->searchCurrentHighlightColor)) {
+      swiftPart.setSearchCurrentHighlightColor(newViewProps.searchCurrentHighlightColor.get());
+    }
     // onLoad: optional
     if (oldViewProps == nullptr
           ? newViewProps.onLoad.isProvided()
@@ -247,6 +259,12 @@ using namespace margelo::nitro::betterpdf::views;
           ? newViewProps.onScaleChange.isProvided()
           : !newViewProps.onScaleChange.hasSameValue(oldViewProps->onScaleChange)) {
       swiftPart.setOnScaleChange(newViewProps.onScaleChange.get());
+    }
+    // onSearchChange: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.onSearchChange.isProvided()
+          : !newViewProps.onSearchChange.hasSameValue(oldViewProps->onSearchChange)) {
+      swiftPart.setOnSearchChange(newViewProps.onSearchChange.get());
     }
     // onTextSelectionChange: optional
     if (oldViewProps == nullptr

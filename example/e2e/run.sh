@@ -8,11 +8,14 @@ cd "$(dirname "$0")"
 device="$1"; shift
 flows=("$@")
 if [ ${#flows[@]} -eq 0 ]; then
-  flows=(viewer-bundled viewer-scroll-zoom viewer-errors viewer-password viewer-layout-modes viewer-fit-policy viewer-single-page viewer-rtl viewer-outline viewer-scroll-enabled viewer-double-tap viewer-scale-change viewer-initial viewer-text-selection viewer-accessibility)
+  flows=(viewer-bundled viewer-scroll-zoom viewer-errors viewer-password viewer-layout-modes viewer-fit-policy viewer-single-page viewer-rtl viewer-outline viewer-scroll-enabled viewer-double-tap viewer-scale-change viewer-initial viewer-text-selection viewer-accessibility viewer-search)
 fi
 failed=0
 is_android=0
 adb -s "$device" get-state > /dev/null 2>&1 && is_android=1
+# Android 14+ keyboards open a "Try out your stylus" sheet on the first text
+# input, which swallows Maestro's typing; the example needs no handwriting.
+[ "$is_android" = 1 ] && adb -s "$device" shell settings put secure stylus_handwriting_enabled 0 > /dev/null 2>&1
 for flow in "${flows[@]}"; do
   # Maestro cannot produce an Android double tap; see double-tap/run-android.sh.
   if [ "$flow" = viewer-double-tap ] && [ "$is_android" = 1 ]; then

@@ -41,6 +41,7 @@ package/
   ios/
     HybridBetterPdfView.swift      PDFView host, scale mapping, events, lifecycle
     PdfContainerView.swift         taps, links, text selection settle / disable
+    PdfSearchController.swift      PDFKit async find, highlights, next/previous
     PdfDocumentLoader.swift        source resolution, URLSession download, PDFDocument open
     PdfLoadFailure.swift           Swift error → PdfError
   android/src/main/java/com/margelo/nitro/betterpdf/
@@ -50,6 +51,9 @@ package/
     PdfDocumentView.kt             the viewer View: gestures, drawing, cache, tiles
     TextSelectionController.kt     long press, handles, highlight, floating Copy / Select all toolbar
     PageTextSelection.kt           pure: selection ends, handle anchors, drags
+    SearchController.kt            search(), next/previous, onSearchChange throttling
+    PdfSearchTask.kt               search thread with its own renderer (duplicated FD)
+    SearchResults.kt               pure: matches by page, current match, wrapping
     PdfDocumentLayout.kt           pure: page geometry, O(log n) lookups
     PrefetchPlanner.kt             pure: render priority order
     LruByteCache.kt                pure: byte-budgeted LRU
@@ -80,6 +84,7 @@ per-frame path without a second caller. See the research notes.
 | Cache insert / evict / draw                 | PDFKit internal                      | main only (no locking needed)                    |
 | Bitmap pool                                 | —                                    | acquire: render thread, release: main (locked)   |
 | Text selection                              | PDFKit (main); settle reported on main | query: render thread (urgent queue slot); UI: main |
+| Search                                      | PDFKit async find (background); matches and highlights on main | `BetterPdf-search` thread with its own renderer; results on main |
 | Event callbacks                             | invoked on main; Nitro hops to JS    | invoked on main; Nitro hops to JS                |
 
 Rule: nothing ever blocks the main thread on document I/O or rendering, and
@@ -231,6 +236,20 @@ queues `PageTextQuery` work for visible pages without text only while
 `AccessibilityManager.isEnabled`. The render thread answers it through
 `DocumentPage.readText()`.
 
+### Search
+
+`SearchController` starts one `PdfSearchTask` per query. The task runs on
+its own thread with its own `PdfRenderer` over a duplicated file descriptor
+(the view's render thread and its queue are untouched), searches pages from
+the current one to the end and then from the start, and posts each page's
+matches to the main thread; a new query or document cancels it. The
+renderer is reopened every 48 pages to cap PDFium's per-page cache. The
+platform serialises all `PdfRenderer` calls in a process on one lock, so
+the search interleaves with rendering page by page. `SearchResults` keeps
+matches by page; `PdfDocumentView` draws the highlights of visible pages
+and scrolls the current match into view (0.3 of the viewport from the top
+unless it is already fully visible).
+
 ### Zoom
 
 Pinch zooms around the focal point; double-tap toggles between `minScale`
@@ -271,6 +290,8 @@ double-tap, page virtualization and background tile rendering. The wrapper:
 - applies `initialPage` after the first layout with a non-zero fit scale
   (`go(to:)` before layout is ignored by PDFKit);
 - reports `PDFViewPageChanged` as `onPageChange`, de-duplicated;
+- searches with `beginFindString` (asynchronous; matches arrive through
+  `PDFDocumentDidFindMatch`) and shows them with `highlightedSelections`;
 - sets `document = nil` in `onDropView` so PDFKit releases its tiles
   immediately.
 

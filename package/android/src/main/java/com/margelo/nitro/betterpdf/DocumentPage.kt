@@ -19,6 +19,12 @@ internal interface DocumentPage : AutoCloseable {
   /** Links on the page, internal first; empty where the renderer exposes none. */
   fun readLinks(): List<PageLink>
 
+  /**
+   * Case-insensitive matches of [query], each as the rectangles it covers;
+   * null where the renderer exposes no text.
+   */
+  fun searchText(query: String): List<List<PageRect>>?
+
   /** The page's text for screen readers; null where the renderer exposes no text. */
   fun readText(): String?
 

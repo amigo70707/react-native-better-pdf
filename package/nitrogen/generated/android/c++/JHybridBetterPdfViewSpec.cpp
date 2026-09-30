@@ -27,6 +27,8 @@ namespace margelo::nitro::betterpdf { struct PdfLinkPressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
+// Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -66,6 +68,9 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "PdfScaleChangeEvent.hpp"
 #include "JFunc_void_PdfScaleChangeEvent.hpp"
 #include "JPdfScaleChangeEvent.hpp"
+#include "PdfSearchChangeEvent.hpp"
+#include "JFunc_void_PdfSearchChangeEvent.hpp"
+#include "JPdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "JFunc_void_PdfTextSelectionChangeEvent.hpp"
 #include "JPdfTextSelectionChangeEvent.hpp"
@@ -269,6 +274,24 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JBoolean> /* enableTextSelection */)>("setEnableTextSelection");
     method(_javaPart, enableTextSelection.has_value() ? jni::JBoolean::valueOf(enableTextSelection.value()) : nullptr);
   }
+  std::optional<double> JHybridBetterPdfViewSpec::getSearchHighlightColor() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getSearchHighlightColor");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->value()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setSearchHighlightColor(std::optional<double> searchHighlightColor) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* searchHighlightColor */)>("setSearchHighlightColor");
+    method(_javaPart, searchHighlightColor.has_value() ? jni::JDouble::valueOf(searchHighlightColor.value()) : nullptr);
+  }
+  std::optional<double> JHybridBetterPdfViewSpec::getSearchCurrentHighlightColor() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getSearchCurrentHighlightColor");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->value()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setSearchCurrentHighlightColor(std::optional<double> searchCurrentHighlightColor) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* searchCurrentHighlightColor */)>("setSearchCurrentHighlightColor");
+    method(_javaPart, searchCurrentHighlightColor.has_value() ? jni::JDouble::valueOf(searchCurrentHighlightColor.value()) : nullptr);
+  }
   std::optional<std::function<void(const PdfLoadEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnLoad() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PdfLoadEvent::javaobject>()>("getOnLoad_cxx");
     auto __result = method(_javaPart);
@@ -388,6 +411,23 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PdfScaleChangeEvent::javaobject> /* onScaleChange */)>("setOnScaleChange_cxx");
     method(_javaPart, onScaleChange.has_value() ? JFunc_void_PdfScaleChangeEvent_cxx::fromCpp(onScaleChange.value()) : nullptr);
   }
+  std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnSearchChange() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PdfSearchChangeEvent::javaobject>()>("getOnSearchChange_cxx");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const PdfSearchChangeEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_PdfSearchChangeEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_PdfSearchChangeEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_PdfSearchChangeEvent, void(PdfSearchChangeEvent)>(std::move(__resultRef));
+      }
+    }()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PdfSearchChangeEvent::javaobject> /* onSearchChange */)>("setOnSearchChange_cxx");
+    method(_javaPart, onSearchChange.has_value() ? JFunc_void_PdfSearchChangeEvent_cxx::fromCpp(onSearchChange.value()) : nullptr);
+  }
   std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnTextSelectionChange() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PdfTextSelectionChangeEvent::javaobject>()>("getOnTextSelectionChange_cxx");
     auto __result = method(_javaPart);
@@ -444,6 +484,22 @@ namespace margelo::nitro::betterpdf {
       });
       return __promise;
     }();
+  }
+  void JHybridBetterPdfViewSpec::search(const std::string& query) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* query */)>("search");
+    method(_javaPart, jni::make_jstring(query));
+  }
+  void JHybridBetterPdfViewSpec::searchNext() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("searchNext");
+    method(_javaPart);
+  }
+  void JHybridBetterPdfViewSpec::searchPrevious() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("searchPrevious");
+    method(_javaPart);
+  }
+  void JHybridBetterPdfViewSpec::clearSearch() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("clearSearch");
+    method(_javaPart);
   }
 
 } // namespace margelo::nitro::betterpdf

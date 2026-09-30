@@ -13,6 +13,9 @@ import UIKit
 /// Methods called through `hybridRef` arrive on the JS thread and hop to main.
 final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private let container = PdfContainerView()
+  private lazy var searchController = PdfSearchController(pdfView: container.pdfView) { [weak self] event in
+    self?.onSearchChange?(event)
+  }
   var view: UIView { container }
   private var pdfView: PDFView? { container.pdfView }
 
@@ -66,6 +69,18 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var enableTextSelection: Bool? {
     didSet { container.isTextSelectionEnabled = enableTextSelection ?? true }
   }
+  var searchHighlightColor: Double? {
+    didSet {
+      guard let searchHighlightColor else { return }
+      searchController.matchColor = UIColor(argb: searchHighlightColor)
+    }
+  }
+  var searchCurrentHighlightColor: Double? {
+    didSet {
+      guard let searchCurrentHighlightColor else { return }
+      searchController.currentColor = UIColor(argb: searchCurrentHighlightColor)
+    }
+  }
   var onLoad: ((PdfLoadEvent) -> Void)?
   var onLoadProgress: ((PdfLoadProgressEvent) -> Void)?
   var onError: ((PdfError) -> Void)?
@@ -73,6 +88,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var onLinkPress: ((PdfLinkPressEvent) -> Void)?
   var onPageTap: ((PdfPageTapEvent) -> Void)?
   var onScaleChange: ((PdfScaleChangeEvent) -> Void)?
+  var onSearchChange: ((PdfSearchChangeEvent) -> Void)?
   var onTextSelectionChange: ((PdfTextSelectionChangeEvent) -> Void)?
 
   // MARK: State (main thread)
@@ -144,6 +160,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   }
 
   func onDropView() {
+    searchController.clear()
     offsetObservation = nil
     if let scaleObserver { NotificationCenter.default.removeObserver(scaleObserver) }
     scaleObserver = nil
@@ -165,6 +182,25 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     DispatchQueue.main.async { [weak self] in
       self?.scrollToPage(Int(page.rounded()), animated: animated)
     }
+  }
+
+  func search(query: String) throws {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      self.searchController.search(query, startPage: max(self.lastReportedPage, 0))
+    }
+  }
+
+  func searchNext() throws {
+    DispatchQueue.main.async { [weak self] in self?.searchController.next() }
+  }
+
+  func searchPrevious() throws {
+    DispatchQueue.main.async { [weak self] in self?.searchController.previous() }
+  }
+
+  func clearSearch() throws {
+    DispatchQueue.main.async { [weak self] in self?.searchController.clear() }
   }
 
   func getOutline() throws -> Promise<[PdfOutlineEntry]> {
@@ -263,6 +299,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   }
 
   private func present(_ document: PDFDocument) {
+    searchController.clear()
     lastReportedScale = nil
     outlineCache = nil
     guard let pdfView else { return }

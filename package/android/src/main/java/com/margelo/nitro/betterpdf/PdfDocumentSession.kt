@@ -128,6 +128,15 @@ class PdfDocumentSession(
     return entries
   }
 
+  /**
+   * Starts searching the open document on its own thread (see
+   * [PdfSearchTask]); null when the document is not open. Main thread.
+   */
+  internal fun startSearch(query: String, pageCount: Int, startPage: Int, listener: PdfSearchTask.Listener): PdfSearchTask? {
+    val descriptor = synchronized(descriptorLock) { master?.dup() } ?: return null
+    return PdfSearchTask(descriptor, password, pageCount, startPage, query, listener).also { it.start() }
+  }
+
   fun close() {
     if (closed) return
     queue.close()
@@ -408,13 +417,6 @@ class PdfDocumentSession(
   private inline fun post(crossinline onDropped: () -> Unit = {}, crossinline block: () -> Unit) {
     mainHandler.post {
       if (closed) onDropped() else block()
-    }
-  }
-
-  private fun ParcelFileDescriptor.closeQuietly() {
-    try {
-      close()
-    } catch (_: IOException) {
     }
   }
 

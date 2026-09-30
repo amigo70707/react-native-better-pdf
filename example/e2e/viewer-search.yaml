@@ -1,0 +1,49 @@
+# ref.search() + searchNext / searchPrevious on the `outline` fixture: every
+# page starts with a "Page N" heading and the filler text never says "page",
+# so "Page 1" matches exactly pages 1, 10, 11 and 12, and "Page 7" only 7.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "outline(, .*)?", centerElement: true }
+- tapOn: "outline(, .*)?"
+- extendedWaitUntil: { visible: "1 / 12", timeout: 15000 }
+- tapOn: "Find"
+- tapOn: { id: "search-input" }
+- inputText: "Page 1"
+# The first match at or after the current page (page 1) becomes current.
+- extendedWaitUntil: { visible: { id: "search-status", text: "1 / 4" }, timeout: 15000 }
+- assertVisible: "1 / 12"
+- takeScreenshot: search-first
+# Custom highlight colours apply to the shown matches at once.
+- tapOn: "Yellow"
+- extendedWaitUntil: { visible: "Blue", timeout: 5000 }
+- takeScreenshot: search-blue
+- tapOn: "Blue"
+- extendedWaitUntil: { visible: "Yellow", timeout: 5000 }
+- tapOn: "Next"
+- extendedWaitUntil: { visible: { id: "search-status", text: "2 / 4" }, timeout: 5000 }
+- extendedWaitUntil: { visible: "10 / 12", timeout: 5000 }
+- tapOn: "Prev"
+- extendedWaitUntil: { visible: { id: "search-status", text: "1 / 4" }, timeout: 5000 }
+- extendedWaitUntil: { visible: "1 / 12", timeout: 5000 }
+# Wraps backwards to the last match.
+- tapOn: "Prev"
+- extendedWaitUntil: { visible: { id: "search-status", text: "4 / 4" }, timeout: 5000 }
+- extendedWaitUntil: { visible: "12 / 12", timeout: 5000 }
+- takeScreenshot: search-last
+
+# A new query replaces the search; a single match far away is scrolled to.
+# Matching ignores case.
+- eraseText: 10
+- inputText: "pAGE 7"
+- extendedWaitUntil: { visible: { id: "search-status", text: "1 / 1" }, timeout: 15000 }
+- extendedWaitUntil: { visible: "7 / 12", timeout: 5000 }
+
+# No match.
+- eraseText: 10
+- inputText: "zzzzqq"
+- extendedWaitUntil: { visible: { id: "search-status", text: "0 / 0" }, timeout: 15000 }
+- tapOn: "Find"
+- tapOn: "‹ Back"

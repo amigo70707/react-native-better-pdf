@@ -89,6 +89,34 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
 
   val pageCount: Int get() = pageSizes.size
 
+  /** The reported current page, 0 before a document is shown. */
+  val currentPageIndex: Int get() = currentPage.coerceAtLeast(0)
+
+  /** Matches of the active search, highlighted on screen; null when none. */
+  var searchResults: SearchResults? = null
+    set(value) {
+      field = value
+      invalidate()
+    }
+  private val searchMatchPaint = Paint().apply { color = SEARCH_MATCH_COLOR }
+  private val searchCurrentPaint = Paint().apply { color = SEARCH_CURRENT_COLOR }
+
+  /** ARGB highlight of search matches; null restores the default. */
+  var searchMatchColor: Int? = null
+    set(value) {
+      field = value
+      searchMatchPaint.color = value ?: SEARCH_MATCH_COLOR
+      invalidate()
+    }
+
+  /** ARGB highlight of the current search match; null restores the default. */
+  var searchCurrentColor: Int? = null
+    set(value) {
+      field = value
+      searchCurrentPaint.color = value ?: SEARCH_CURRENT_COLOR
+      invalidate()
+    }
+
   // endregion
 
   // region Viewport state (zoomed content pixels)
@@ -441,6 +469,67 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     if (px == spacingPx) return
     spacingPx = px
     rebuildLayout()
+  }
+
+  /** Content-space (unzoomed) rectangles of [page]'s search matches. */
+  private fun drawSearchMatches(canvas: Canvas, layout: PdfDocumentLayout, page: Int) {
+    val results = searchResults ?: return
+    val matches = results.matchesOn(page)
+    if (matches.isEmpty()) return
+    val current = results.currentMatch
+    val pointsToPixels = layout.pointsToPixels(page)
+    val left = layout.pageLeft(page)
+    val top = layout.pageTop(page)
+    matches.forEachIndexed { index, rects ->
+      val paint = if (current?.page == page && current.indexOnPage == index) searchCurrentPaint else searchMatchPaint
+      for (rect in rects) {
+        drawRect.set(
+          left + rect.left * pointsToPixels,
+          top + rect.top * pointsToPixels,
+          left + rect.right * pointsToPixels,
+          top + rect.bottom * pointsToPixels,
+        )
+        canvas.drawRect(drawRect, paint)
+      }
+    }
+  }
+
+  /**
+   * Scrolls [match] into view: nothing when it is already fully visible
+   * along the scroll axis, else it lands a third down the view; when zoomed
+   * wider than the view it is also centred across.
+   */
+  fun revealSearchMatch(match: SearchMatch) {
+    val layout = layout ?: return
+    if (match.page >= layout.pageCount || match.rects.isEmpty()) return
+    invalidate()
+    if (isSinglePage) {
+      goToPage(match.page, animated = false)
+      return
+    }
+    val pointsToPixels = layout.pointsToPixels(match.page)
+    val left = layout.pageLeft(match.page) + match.rects.minOf { it.left } * pointsToPixels
+    val top = layout.pageTop(match.page) + match.rects.minOf { it.top } * pointsToPixels
+    val right = layout.pageLeft(match.page) + match.rects.maxOf { it.right } * pointsToPixels
+    val bottom = layout.pageTop(match.page) + match.rects.maxOf { it.bottom } * pointsToPixels
+    scroller.forceFinished(true)
+    // Across the scroll axis (only moves when the content is wider than the view).
+    if (isHorizontal) {
+      setOffsets(offsetX, (top + bottom) / 2f * scale - height / 2f)
+    } else {
+      setOffsets((left + right) / 2f * scale - width / 2f, offsetY)
+    }
+    val mainStart = if (isHorizontal) left else top
+    val mainEnd = if (isHorizontal) right else bottom
+    val visibleStart = mainOffset / scale
+    val visibleEnd = (mainOffset + mainViewportLength) / scale
+    if (mainStart >= visibleStart && mainEnd <= visibleEnd) {
+      scheduleSettle()
+      return
+    }
+    var target = mainStart - mainViewportLength / scale * SEARCH_REVEAL_FRACTION
+    if (isPaged && !isZoomedIn) target = target.coerceIn(pageScrollStart(match.page), pageScrollEnd(match.page))
+    scrollToMain(target, animated = true)
   }
 
   fun goToPage(page: Int, animated: Boolean) {
@@ -808,6 +897,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
         tileSource.set(0, 0, tile.usedWidth, tile.usedHeight)
         canvas.drawBitmap(tile.bitmap, tileSource, tile.contentRect, bitmapPaint)
       }
+      drawSearchMatches(canvas, layout, page)
     }
     canvas.restore()
     textSelection.draw(canvas)
@@ -1223,6 +1313,11 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   // endregion
 
   private companion object {
+    /** Translucent yellow and orange, readable over black text on white. */
+    const val SEARCH_MATCH_COLOR = 0x66FFD600
+    const val SEARCH_CURRENT_COLOR = 0x99FF8C00.toInt()
+    /** A revealed match lands this far down (along) the view. */
+    const val SEARCH_REVEAL_FRACTION = 0.3f
     const val DEFAULT_PAGE_ACCESSIBILITY_LABEL = "Page {page} of {pageCount}"
     const val MAX_PAGE_TEXTS = 32
     const val ACCESSIBILITY_SCROLL_FRACTION = 0.9f

@@ -112,6 +112,7 @@ Navigation after load is imperative (`goToPage`).
 | `zoomTo(scale, { animated = true })`      | Clamped to `[minScale, maxScale]`. `zoomTo(1)` resets zoom. |
 | `getStats()`                              | Diagnostics (cache bytes, hits, renders). Synchronous, cheap. |
 | `getOutline()`                            | `Promise<PdfOutlineItem[]>`; see "Outline". |
+| `search(query)` / `searchNext()` / `searchPrevious()` / `clearSearch()` | See "Search". |
 
 `resetZoom()` was dropped: it is `zoomTo(1)` (or `zoomTo(minScale)`), and
 one fewer method keeps the surface small.
@@ -655,6 +656,73 @@ Design:
   Android (first and last page), a localised label, and PDFKit's text on
   iOS. Not tested automatically: speech itself, TalkBack's scroll actions
   and the VoiceOver announcement (they need a real screen-reader session).
+
+## Search (v0.2)
+
+```ts
+// ref
+search(query: string): void;   // '' clears
+searchNext(): void;
+searchPrevious(): void;
+clearSearch(): void;
+// prop
+onSearchChange?: (event: PdfSearchChangeEvent) => void;
+
+interface PdfSearchChangeEvent {
+  query: string;
+  matchCount: number;
+  currentMatch?: number;   // zero-based, document order
+  currentPage?: number;    // zero-based
+  isComplete: boolean;
+  isSupported: boolean;
+}
+```
+
+The most requested missing feature of react-native-pdf (7 issues, see
+`community-requests.md`).
+
+- **Methods plus one state event, not a `Promise<Match[]>`.** Searching a
+  large document takes time; a Promise would show nothing until the end and
+  would hand JS every match's rectangles, which JS cannot use (highlights and
+  scrolling are native). The viewer owns the matches; JS gets the state it
+  needs for a "3 / 17" label and next/previous buttons.
+- **One event with the full state** rather than separate progress / match /
+  current events, so a `useState` setter can be passed directly. Throttled
+  to ≤ 10/s while pages are searched (a 1000-page document would otherwise
+  send 1000 events), immediate for the first match, navigation, completion
+  and clearing.
+- **Starts at the current page.** Pages are searched from the reader's page
+  to the end and then from the start; the first match at or after the
+  current page becomes current, as in browser find bars. `currentMatch` is
+  still the index in document order, so the label stays meaningful when
+  more matches arrive before it.
+- **Case-insensitive, no options yet.** PDFKit takes `.caseInsensitive`;
+  Android's `PdfRenderer.Page.searchText` always ignores case. Whole-word
+  or case-sensitive search would need filtering on one platform only, so it
+  waits for a request.
+- **`isSupported` is a runtime capability**, not a platform check: Android
+  gains text search with the renderer's text API (15+, or 12–14 with SDK
+  extension 13), and devices without it end the search at once with
+  `isSupported: false`. The flag is the same for every search on a device,
+  so an app can hide its search UI after the first search reports `false`.
+- **Highlights**: all matches in translucent yellow, the current one in
+  orange, on both platforms (PDFKit `highlightedSelections`; Android draws
+  them over the page bitmaps, so zoom and tiles keep them aligned).
+- **Colours are props** (`searchHighlightColor`, `searchCurrentHighlightColor`,
+  `ColorValue`), not arguments of `search()`: they are styling, belong with
+  the rest of the view's appearance and apply to a search already shown.
+  The wrapper flattens them with `processColor` to the ARGB number the
+  native props take; `PlatformColor` and `DynamicColorIOS` cannot be
+  flattened, so they fall back to the defaults (a dark-mode app passes a
+  colour chosen from `useColorScheme()`). PDFKit keeps pages it has drawn
+  when only a highlight's colour changes, so iOS resets
+  `highlightedSelections` when colours or the current match change
+  (measured: without it, the old colour stayed on screen).
+- **Tested:** `viewer-search` (both platforms) checks counts, next,
+  previous, wrapping backwards, the page scrolled to, a query in different
+  case, a custom highlight colour (checked on the screenshots), and no
+  matches. `SearchResultsTest` covers ordering, indexes and
+  wrapping.
 
 ## Open questions
 

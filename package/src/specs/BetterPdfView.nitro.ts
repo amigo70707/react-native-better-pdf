@@ -13,6 +13,7 @@ import type { PdfOutlineEntry } from '../types/PdfOutlineEntry';
 import type { PdfPageChangeEvent } from '../types/PdfPageChangeEvent';
 import type { PdfPageTapEvent } from '../types/PdfPageTapEvent';
 import type { PdfScaleChangeEvent } from '../types/PdfScaleChangeEvent';
+import type { PdfSearchChangeEvent } from '../types/PdfSearchChangeEvent';
 import type { PdfTextSelectionChangeEvent } from '../types/PdfTextSelectionChangeEvent';
 import type { PdfViewStats } from '../types/PdfViewStats';
 
@@ -55,6 +56,10 @@ export interface PdfViewProps extends HybridViewProps {
   showsHorizontalScrollIndicator?: boolean;
   /** Long press selects text (Android: API 35+). Default true. */
   enableTextSelection?: boolean;
+  /** Highlight of search matches, ARGB (`processColor` output). */
+  searchHighlightColor?: number;
+  /** Highlight of the current search match, ARGB (`processColor` output). */
+  searchCurrentHighlightColor?: number;
   onLoad?: (event: PdfLoadEvent) => void;
   onLoadProgress?: (event: PdfLoadProgressEvent) => void;
   onError?: (error: PdfError) => void;
@@ -63,6 +68,8 @@ export interface PdfViewProps extends HybridViewProps {
   onPageTap?: (event: PdfPageTapEvent) => void;
   /** Once per settled zoom change (gesture end, zoomTo), never per frame. */
   onScaleChange?: (event: PdfScaleChangeEvent) => void;
+  /** Search progress and navigation; at most 10 per second while searching, plus one on completion. */
+  onSearchChange?: (event: PdfSearchChangeEvent) => void;
   /** Once per settled selection change (gesture end), never per handle move. */
   onTextSelectionChange?: (event: PdfTextSelectionChangeEvent) => void;
 }
@@ -80,6 +87,14 @@ export interface PdfViewMethods extends HybridViewMethods {
    * Android for encrypted documents.
    */
   getOutline(): Promise<PdfOutlineEntry[]>;
+  /** Starts a case-insensitive text search, replacing any previous one; '' clears it. */
+  search(query: string): void;
+  /** Moves to the next match (wrapping) and scrolls it into view. */
+  searchNext(): void;
+  /** Moves to the previous match (wrapping) and scrolls it into view. */
+  searchPrevious(): void;
+  /** Ends the search and removes its highlights. */
+  clearSearch(): void;
 }
 
 export type BetterPdfView = HybridView<PdfViewProps, PdfViewMethods>;

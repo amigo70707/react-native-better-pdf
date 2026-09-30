@@ -31,6 +31,10 @@ const nativeInstance = {
   zoomTo: (scale: number, animated: boolean) =>
     nativeCalls.push(`zoomTo(${scale}, ${animated})`),
   getStats: () => stats,
+  search: (query: string) => nativeCalls.push(`search(${query})`),
+  searchNext: () => nativeCalls.push('searchNext()'),
+  searchPrevious: () => nativeCalls.push('searchPrevious()'),
+  clearSearch: () => nativeCalls.push('clearSearch()'),
   getOutline: () =>
     Promise.resolve([
       { title: 'Chapter', page: 0, depth: 0 },
@@ -47,6 +51,14 @@ mock.module('react-native', () => ({
   Image: {
     resolveAssetSource: (asset: number) => ({ uri: `asset://${asset}` }),
   },
+  // Like React Native: a number for plain colours, an object for
+  // PlatformColor, null for invalid strings.
+  processColor: (color: unknown) =>
+    color === 'blue'
+      ? 0xff0000ff
+      : typeof color === 'object'
+        ? { semantic: ['label'] }
+        : null,
 }));
 mock.module('react-native-nitro-modules', () => ({
   callback: <T,>(f: T) => ({ f }),
@@ -247,6 +259,7 @@ describe('PdfView', () => {
         fitPolicy="height"
         horizontal
         enableTextSelection={false}
+        searchHighlightColor="blue"
         onPageTap={() => calls.push('tap')}
       />,
     );
@@ -270,11 +283,34 @@ describe('PdfView', () => {
       enableDoubleTapZoom: true,
       pageAccessibilityLabel: 'Page {page} of {pageCount}',
       enableTextSelection: true,
+      searchHighlightColor: 0x66ffd600,
+      searchCurrentHighlightColor: 0x99ff8c00,
     });
     // Still subscribed, but the removed handler is no longer called.
     expect(lastHost().onPageTap).toBe(tap);
     tap.f({ page: 0, x: 1, y: 2 });
     expect(calls).toEqual([]);
+  });
+
+  test('sends search highlight colours as ARGB, falling back to the defaults', () => {
+    render(
+      <PdfView
+        source={{ uri: 'x' }}
+        searchHighlightColor="blue"
+        searchCurrentHighlightColor="not-a-colour"
+      />,
+    );
+    expect(lastHost()).toMatchObject({
+      searchHighlightColor: 0xff0000ff,
+      searchCurrentHighlightColor: 0x99ff8c00,
+    });
+    render(
+      <PdfView
+        source={{ uri: 'x' }}
+        searchHighlightColor={{ semantic: ['label'] } as never}
+      />,
+    );
+    expect(lastHost().searchHighlightColor).toBe(0x66ffd600);
   });
 
   test('defaults fitPolicy to the whole page in horizontal and paged layouts', () => {
@@ -337,6 +373,37 @@ describe('PdfView', () => {
       'zoomTo(2, true)',
     ]);
     expect(ref.current?.getStats()).toBe(stats);
+  });
+
+  test('search methods forward to the native view', () => {
+    const ref = createRef<PdfViewRef>();
+    const events: number[] = [];
+    render(
+      <PdfView
+        ref={ref}
+        source={{ uri: 'x' }}
+        onSearchChange={(event) => events.push(event.matchCount)}
+      />,
+    );
+    const hybridRef = lastHost().hybridRef as {
+      f: (instance: typeof nativeInstance) => void;
+    };
+    hybridRef.f(nativeInstance);
+    ref.current?.search('lorem');
+    ref.current?.searchNext();
+    ref.current?.searchPrevious();
+    ref.current?.clearSearch();
+    expect(nativeCalls).toEqual([
+      'search(lorem)',
+      'searchNext()',
+      'searchPrevious()',
+      'clearSearch()',
+    ]);
+    const wrapped = lastHost().onSearchChange as {
+      f: (event: { matchCount: number }) => void;
+    };
+    wrapped.f({ matchCount: 3 });
+    expect(events).toEqual([3]);
   });
 
   test('getOutline rejects before mount and returns a tree after', async () => {

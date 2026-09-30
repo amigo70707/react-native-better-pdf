@@ -13,12 +13,14 @@ import {
   type PdfError,
   type PdfLoadProgressEvent,
   type PdfOutlineItem,
+  type PdfSearchChangeEvent,
   type PdfSource,
   type PdfViewRef,
   type PdfViewStats,
 } from 'react-native-better-pdf';
 import { DOCUMENTS, type DocumentEntry } from '../documents';
 import { OutlinePanel } from './OutlinePanel';
+import { SearchBar } from './SearchBar';
 import { ThumbnailStrip } from './ThumbnailStrip';
 import { Button, colors } from '../ui';
 
@@ -66,6 +68,9 @@ export function ViewerScreen() {
   const [fitIndex, setFitIndex] = useState(0);
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+  const [search, setSearch] = useState<PdfSearchChangeEvent | null>(null);
+  const [customSearchColor, setCustomSearchColor] = useState(false);
   const [doubleTapZoom, setDoubleTapZoom] = useState(true);
   const [textSelection, setTextSelection] = useState(true);
   /** Counts onTextSelectionChange events: one per settled selection. */
@@ -86,6 +91,8 @@ export function ViewerScreen() {
     setLastEvent('');
     setProgress(null);
     setOutline(null);
+    setSearch(null);
+    setShowSearch(false);
     scaleEvents.current = 0;
     selectionEvents.current = 0;
     setState({ kind: 'resolving' });
@@ -163,7 +170,7 @@ export function ViewerScreen() {
           onPress={() => setStats(ref.current?.getStats() ?? null)}
         />
       </View>
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, styles.wrap]}>
         <Button
           title={showIndicators ? 'Bars on' : 'Bars off'}
           onPress={() => setShowIndicators((value) => !value)}
@@ -186,7 +193,23 @@ export function ViewerScreen() {
           title={showThumbnails ? 'Thumbs on' : 'Thumbs off'}
           onPress={() => setShowThumbnails((value) => !value)}
         />
+        <Button
+          title="Find"
+          onPress={() => {
+            if (showSearch) ref.current?.clearSearch();
+            setShowSearch((value) => !value);
+          }}
+        />
       </View>
+
+      {showSearch && (
+        <SearchBar
+          pdf={ref.current}
+          state={search}
+          isCustomColor={customSearchColor}
+          onToggleColor={() => setCustomSearchColor((value) => !value)}
+        />
+      )}
 
       {showThumbnails && source != null && pageCount > 0 && (
         <ThumbnailStrip
@@ -231,6 +254,13 @@ export function ViewerScreen() {
             onPageChange={(event) => setPage(event.page)}
             // A real app would validate the scheme and call Linking.openURL.
             onLinkPress={(event) => setLastEvent(`link: ${event.url}`)}
+            onSearchChange={setSearch}
+            searchHighlightColor={
+              customSearchColor ? 'rgba(0, 122, 255, 0.3)' : undefined
+            }
+            searchCurrentHighlightColor={
+              customSearchColor ? 'rgba(0, 122, 255, 0.6)' : undefined
+            }
             onScaleChange={(event) => {
               scaleEvents.current += 1;
               setLastEvent(
@@ -382,6 +412,8 @@ const styles = StyleSheet.create({
   row: { padding: 14, borderRadius: 10, backgroundColor: colors.card },
   rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   rowSubtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  // Many toggles: wrap on narrow screens rather than push the last off-screen.
+  wrap: { flexWrap: 'wrap', justifyContent: 'flex-start' },
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',

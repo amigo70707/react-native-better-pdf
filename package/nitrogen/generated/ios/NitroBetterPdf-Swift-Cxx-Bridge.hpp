@@ -32,6 +32,8 @@ namespace margelo::nitro::betterpdf { struct PdfPageChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
+// Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -54,6 +56,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfPageChangeEvent.hpp"
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
+#include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include <NitroModules/Promise.hpp>
@@ -444,6 +447,43 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline std::function<void(const PdfScaleChangeEvent& /* event */)> get_std__optional_std__function_void_const_PdfScaleChangeEvent_____event______(const std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<void(const PdfSearchChangeEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const PdfSearchChangeEvent&)>`.
+   */
+  using Func_void_PdfSearchChangeEvent = std::function<void(const PdfSearchChangeEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PdfSearchChangeEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_PdfSearchChangeEvent_Wrapper final {
+  public:
+    explicit Func_void_PdfSearchChangeEvent_Wrapper(std::function<void(const PdfSearchChangeEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const PdfSearchChangeEvent& /* event */)>>(std::move(func))) {}
+    inline void call(PdfSearchChangeEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PdfSearchChangeEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PdfSearchChangeEvent create_Func_void_PdfSearchChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PdfSearchChangeEvent_Wrapper wrap_Func_void_PdfSearchChangeEvent(Func_void_PdfSearchChangeEvent value) noexcept {
+    return Func_void_PdfSearchChangeEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const PdfSearchChangeEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_PdfSearchChangeEvent_____event______ = std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>;
+  inline std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> create_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______(const std::function<void(const PdfSearchChangeEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const PdfSearchChangeEvent& /* event */)> get_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& optional) noexcept {
     return optional.value();
   }
   
