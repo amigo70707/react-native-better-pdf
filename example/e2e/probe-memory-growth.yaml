@@ -1,0 +1,18 @@
+# Diagnostic: renders ~100 distinct pages of the 1000-page scan via jumps.
+# Run with benchmarks/sample-android-memory.sh to separate bitmap-cache memory
+# (bounded, see Stats) from renderer-internal memory.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "extreme.*" }
+- tapOn: "extreme.*"
+- extendedWaitUntil: { visible: "1 / 1000", timeout: 120000 }
+- repeat:
+    times: 20
+    commands:
+      - tapOn: "+10"
+      - waitForAnimationToEnd
+- tapOn: "Stats"
+- takeScreenshot: probe-memory-growth-stats
+- tapOn: "‹ Back"

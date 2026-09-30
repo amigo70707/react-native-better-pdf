@@ -1,0 +1,89 @@
+# Contributing
+
+## Repository layout
+
+- `package/` — the published library (`react-native-better-pdf`)
+- `example/` — Expo SDK 57 development-build app: a viewer, a benchmark
+  screen, and Maestro end-to-end flows (`example/e2e/`)
+- `benchmarks/` — fixture generator, fixture server, Android benchmark driver
+- `docs/` — design, research, benchmarks, audit
+
+Bun workspaces with `linker = "hoisted"` (see `bunfig.toml`): react-native-pdf,
+used as the benchmark baseline, expects a flat `node_modules`.
+
+## Setup
+
+```sh
+bun install
+bun run fixtures          # generates benchmarks/fixtures/*.pdf (~650 MB, gitignored)
+```
+
+Toolchain: Node 24, Bun 1.3, Xcode 27, JDK 17 (JDK 25 breaks the CMake
+configure step of some React Native dependencies), Android SDK 36, NDK 27.1,
+Maestro (e2e). With several Android devices attached, set `ANDROID_SERIAL`.
+
+## Everyday commands
+
+```sh
+bun run typecheck                       # library + example
+bun run lint
+bun run test                            # JS unit tests (bun test)
+cd package && bun run specs             # regenerate Nitro bindings after editing *.nitro.ts
+```
+
+Android JVM unit tests (layout, prefetch planner, LRU):
+
+```sh
+cd example/android && ./gradlew :react-native-better-pdf:testDebugUnitTest
+```
+
+## Running the example
+
+```sh
+node benchmarks/serve-fixtures.mjs      # serves fixtures on :8090
+adb reverse tcp:8090 tcp:8090           # Android only
+cd example && bunx expo run:ios         # or run:android
+```
+
+## End-to-end tests (Maestro)
+
+Flows live in `example/e2e/` and run on both platforms:
+
+```sh
+example/e2e/run.sh <simulator-udid | emulator-serial>             # functional flows
+example/e2e/run.sh <device> stress-open-close stress-rapid        # stress flows
+```
+
+| Flow | Covers |
+| --- | --- |
+| `viewer-bundled` | `require()` asset, page count, `goToPage` |
+| `viewer-scroll-zoom` | native scroll changes pages, zoom, navigation while zoomed, stats |
+| `viewer-errors` | `file-not-found`, `http-error`, `invalid-pdf` for empty / non-PDF / truncated / corrupt-xref files |
+| `viewer-password` | `password-required` → `invalid-password` → unlock |
+| `stress-open-close` | 10× open/close of the 1000- and 500-page scans |
+| `stress-rapid` | rapid flings, direction changes, jumps and zooms on 1000 pages |
+| `viewer-links` | page tap coordinates in PDF points, URL link reported (not opened), internal link followed, double tap not reported as a tap |
+| `viewer-load-progress` | download progress of a remote document (fixture server throttled via `?bytesPerSecond=`) |
+| `viewer-mixed-sizes` | estimated page sizes corrected on render (portrait, landscape, receipt, square) |
+| `viewer-text-selection` | long press selects a word, one event per handle drag, tap clears, `enableTextSelection={false}` in continuous and paged layouts |
+| `probe-memory-growth` | diagnostic: ~100 distinct pages rendered via jumps; run with the memory sampler |
+
+On iOS, `Pressable` rows expose one combined accessibility label, so flows
+match list rows as `"title.*"`.
+
+While a stress flow runs, `benchmarks/sample-android-memory.sh` records
+memory once per second.
+
+## Benchmarks
+
+See [docs/benchmarks.md](docs/benchmarks.md). Always benchmark **release**
+builds.
+
+## Change guidelines
+
+- Keep the hot path native. A change that adds per-frame JS work, a new
+  per-gesture event, or a React-managed page needs a design note first.
+- Anything that allocates bitmaps must say who frees them and when.
+- Update `README.md` and `docs/api-design.md` for public API changes.
+- Validate both iOS and Android for native changes.
+- Performance claims need a benchmark run attached.

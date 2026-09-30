@@ -1,0 +1,89 @@
+{
+  "name": "react-native-better-pdf",
+  "version": "0.1.0",
+  "description": "A native, virtualized PDF viewer for React Native built on Nitro Views. PDFKit on iOS, PdfRenderer on Android, zero JS in the scroll/zoom/render path.",
+  "main": "lib/src/index.js",
+  "types": "lib/src/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
+  "exports": {
+    ".": {
+      "types": "./lib/src/index.d.ts",
+      "react-native": "./src/index.ts",
+      "default": "./lib/src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "react-native.config.js",
+    "lib",
+    "nitrogen",
+    "android/build.gradle",
+    "android/gradle.properties",
+    "android/fix-prefab.gradle",
+    "android/CMakeLists.txt",
+    "android/src/main",
+    "ios/**/*.h",
+    "ios/**/*.m",
+    "ios/**/*.mm",
+    "ios/**/*.cpp",
+    "ios/**/*.swift",
+    "nitro.json",
+    "*.podspec",
+    "README.md",
+    "LICENSE",
+    "!**/*.test.ts",
+    "!**/*.test.tsx"
+  ],
+  "scripts": {
+    "prepare": "bun run build",
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "cp ../README.md ./README.md && bun run build",
+    "postpack": "rm ./README.md",
+    "specs": "tsc --noEmit && nitrogen --logLevel=\"debug\"",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src",
+    "clean": "rm -rf android/build node_modules/**/android/build lib *.tsbuildinfo"
+  },
+  "keywords": [
+    "react-native",
+    "nitro",
+    "pdf",
+    "pdf-viewer",
+    "pdfkit",
+    "pdfrenderer",
+    "expo"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gmi-software/react-native-better-pdf.git"
+  },
+  "author": "GMI",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gmi-software/react-native-better-pdf/issues"
+  },
+  "homepage": "https://github.com/gmi-software/react-native-better-pdf",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "@types/react": "~19.2.14",
+    "@types/react-test-renderer": "19.1.0",
+    "nitrogen": "0.37.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-nitro-modules": "0.37.1",
+    "react-test-renderer": "19.2.3",
+    "typescript": "~6.0.3"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": ">=0.81",
+    "react-native-nitro-modules": ">=0.37.0"
+  },
+  "sideEffects": false
+}

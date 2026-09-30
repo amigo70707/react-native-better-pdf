@@ -1,0 +1,24 @@
+# Dismisses Expo dev-client UI (onboarding sheet, dev menu, iOS "Open in"
+# prompt) when present. Release builds never show these.
+appId: software.gmi.betterpdf.example
+---
+# Foreground the app without restarting it (keeps dev-client state).
+- launchApp:
+    stopApp: false
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+- runFlow:
+    when:
+      visible: "Toggle performance monitor"
+    commands:
+      - pressKey: back
+# Start from the document list even if a previous flow failed mid-way.
+- runFlow:
+    when:
+      visible: "‹ Back"
+    commands:
+      - tapOn: "‹ Back"

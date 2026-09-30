@@ -1,0 +1,18 @@
+# Timing probe (not part of the regression set): opens outline-large and
+# reads the outline twice (the second call hits the cache).
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "outline-large.*" }
+- tapOn: "outline-large.*"
+- extendedWaitUntil: { visible: "1 / 1000", timeout: 60000 }
+- tapOn: "TOC"
+- extendedWaitUntil: { visible: "Contents \\(1000\\)", timeout: 10000 }
+- tapOn: "Close"
+- takeScreenshot: outline-timing-first
+- tapOn: "TOC"
+- extendedWaitUntil: { visible: "Contents \\(1000\\)", timeout: 10000 }
+- tapOn: "Close"
+- takeScreenshot: outline-timing-second

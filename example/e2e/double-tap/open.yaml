@@ -1,0 +1,10 @@
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: ../_dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*", centerElement: true }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at 50[0-9], .*", timeout: 5000 }

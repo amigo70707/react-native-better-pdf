@@ -1,0 +1,56 @@
+# onScaleChange: one event per settled zoom change, with the zoom relative
+# to the fitted page; no events during animations or for unchanged values.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*", centerElement: true }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- assertNotVisible: "scale: .*"
+
+# Animated zoomTo: exactly one event, after the animation.
+- tapOn: "2.5×"
+- extendedWaitUntil: { visible: "scale: 2.50 \\(#1\\)", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "scale: 2.50 \\(#1\\)"
+# Scrolling while zoomed is not a zoom change.
+- swipe: { start: "50%, 80%", end: "50%, 40%", duration: 400 }
+- waitForAnimationToEnd
+- assertVisible: "scale: 2.50 \\(#1\\)"
+# Same value again: no event.
+- tapOn: "2.5×"
+- waitForAnimationToEnd
+- assertVisible: "scale: 2.50 \\(#1\\)"
+- tapOn: "1×"
+- extendedWaitUntil: { visible: "scale: 1.00 \\(#2\\)", timeout: 5000 }
+
+# Double-tap zoom: one event after PDFKit's zoom animation. PDFKit picks its
+# own zoom step (measured 1.70 here; Android zooms to 2×). Maestro's double
+# tap registers on iOS only (see double-tap/run-android.sh).
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - doubleTapOn: { point: "50%, 55%" }
+      - extendedWaitUntil: { visible: "scale: (1\\.[1-9]|[2-9]\\.)\\d* \\(#3\\)", timeout: 5000 }
+      - waitForAnimationToEnd
+      - assertVisible: "scale: .* \\(#3\\)"
+- tapOn: "‹ Back"
+
+# Paging through pages of different sizes is not a zoom change (PDFKit's
+# page view controller fits each page on its own).
+- scrollUntilVisible: { element: "mixed-sizes.*", centerElement: true }
+- tapOn: "mixed-sizes.*"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 15000 }
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- extendedWaitUntil: { visible: "Paged", timeout: 5000 }
+- repeat:
+    times: 3
+    commands:
+      - swipe: { start: "50%, 80%", end: "50%, 30%", duration: 200 }
+      - waitForAnimationToEnd
+- assertVisible: "4 / 5"
+- assertNotVisible: "scale: .*"
+- tapOn: "‹ Back"

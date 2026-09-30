@@ -1,0 +1,105 @@
+import { Directory, File, Paths } from 'expo-file-system';
+import type { PdfSource } from 'react-native-better-pdf';
+
+/** Served by `node benchmarks/serve-fixtures.mjs` (Android: `adb reverse tcp:8090 tcp:8090`). */
+export const FIXTURE_SERVER = 'http://localhost:8090';
+
+export const FIXTURES = [
+  'small',
+  'medium',
+  'large',
+  'extreme',
+  'mixed-sizes',
+  'links',
+  'outline',
+  'outline-compressed',
+  'outline-large',
+  'annotations',
+  'encrypted',
+  'malformed-not-a-pdf',
+  'malformed-empty',
+  'malformed-truncated',
+  'malformed-garbage-xref',
+] as const;
+export type FixtureName = (typeof FIXTURES)[number];
+
+export const BENCHMARK_FIXTURES = [
+  'small',
+  'medium',
+  'large',
+  'extreme',
+] as const satisfies readonly FixtureName[];
+
+export interface DocumentEntry {
+  id: string;
+  title: string;
+  subtitle: string;
+  /** Resolves the source; fixtures are copied onto the device first. */
+  resolve: () => Promise<PdfSource>;
+  initialPage?: number;
+  initialScale?: number;
+}
+
+const fixtureDirectory = () => {
+  const directory = new Directory(Paths.document, 'fixtures');
+  if (!directory.exists) directory.create();
+  return directory;
+};
+
+/** Copies a fixture from the fixture server once and returns its local file. */
+export async function ensureFixture(name: FixtureName): Promise<File> {
+  const file = new File(fixtureDirectory(), `${name}.pdf`);
+  if (file.exists && file.size > 0) return file;
+  if (file.exists) file.delete();
+  return File.downloadFileAsync(`${FIXTURE_SERVER}/${name}.pdf`, file);
+}
+
+export const DOCUMENTS: DocumentEntry[] = [
+  {
+    id: 'bundled',
+    title: 'Bundled sample',
+    subtitle: "require('./assets/sample.pdf')",
+    resolve: async () => require('./assets/sample.pdf') as number,
+  },
+  {
+    id: 'remote',
+    title: 'Remote (HTTP)',
+    subtitle: 'Downloaded natively from the fixture server',
+    resolve: async () => ({ uri: `${FIXTURE_SERVER}/medium.pdf` }),
+  },
+  {
+    id: 'remote-slow',
+    title: 'Remote (slow)',
+    subtitle: 'Throttled to 4 MB/s to show download progress',
+    // A unique query per open bypasses the per-session download cache.
+    resolve: async () => ({
+      uri: `${FIXTURE_SERVER}/medium.pdf?bytesPerSecond=4000000&open=${Date.now()}`,
+    }),
+  },
+  {
+    id: 'remote-404',
+    title: 'Remote 404',
+    subtitle: 'Expect http-error',
+    resolve: async () => ({ uri: `${FIXTURE_SERVER}/does-not-exist.pdf` }),
+  },
+  {
+    id: 'missing-file',
+    title: 'Missing file',
+    subtitle: 'Expect file-not-found',
+    resolve: async () => ({ filePath: '/definitely/not/here.pdf' }),
+  },
+  {
+    id: 'medium-page5-2x',
+    title: 'Start at page 5, 2×',
+    subtitle: 'initialPage={4} initialScale={2}',
+    resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
+    initialPage: 4,
+    initialScale: 2,
+  },
+  ...FIXTURES.map<DocumentEntry>((name) => ({
+    id: `fixture-${name}`,
+    title: name,
+    subtitle: 'Fixture copied to the device',
+    resolve: async () => ({ uri: (await ensureFixture(name)).uri }),
+  })),
+];

@@ -1,0 +1,27 @@
+/**
+ * Diagnostic counters returned by `PdfViewRef.getStats()`. Cheap to read,
+ * intended for benchmarks and tests, not for driving UI. Fields that a
+ * platform does not track are `-1`.
+ */
+export interface PdfViewStats {
+  /** Number of pages in the open document, 0 before load. */
+  pageCount: number;
+  /** Pages currently holding a rendered bitmap (Android); -1 on iOS. */
+  residentPages: number;
+  /** Bytes held by the native render cache (Android); -1 on iOS. */
+  cacheBytes: number;
+  /** Current cache budget in bytes (Android); -1 on iOS. */
+  cacheBudgetBytes: number;
+  /** Pages that were already rendered when they scrolled into view. */
+  cacheHits: number;
+  /** Pages that were not rendered yet when they scrolled into view. */
+  cacheMisses: number;
+  /** Bitmaps allocated (not reused) since the document was loaded. */
+  bitmapAllocations: number;
+  /** Page renders completed since the document was loaded. */
+  pagesRendered: number;
+  /** Render requests dropped before execution because the page scrolled away. */
+  rendersCancelled: number;
+  /** Mean wall time of a native page render in milliseconds, -1 if not tracked. */
+  meanRenderMs: number;
+}

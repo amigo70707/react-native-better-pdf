@@ -1,0 +1,8 @@
+appId: software.gmi.betterpdf.example
+---
+# Both taps of the double tap were reported as page taps (centre: x ≈ 297).
+- extendedWaitUntil: { visible: "tap: page 1 at 29[0-9], .*", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at 50[0-9], .*", timeout: 5000 }
+- tapOn: "‹ Back"

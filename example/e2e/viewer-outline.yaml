@@ -1,0 +1,67 @@
+# ref.getOutline(): every destination form of the `outline` fixture (see
+# OUTLINE_ITEMS in benchmarks/generate-fixtures.mjs) navigates to its page,
+# titles in three scripts render, entries without a destination are inert.
+# "1.2" uses a PDF 1.1 named destination, which PDFKit leaves unresolved.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "outline(, .*)?" }
+- tapOn: "outline(, .*)?"
+- extendedWaitUntil: { visible: "1 / 12", timeout: 15000 }
+
+- tapOn: "TOC"
+- extendedWaitUntil: { visible: "Contents \\(10\\)", timeout: 5000 }
+- assertVisible: "• Introduction — overview"
+- assertVisible: "Rozdział 1: Zażółć gęślą jaźń"
+- assertVisible: "الفصل الثاني"
+- takeScreenshot: outline-panel
+- tapOn: "Głęboko"
+- extendedWaitUntil: { visible: "6 / 12", timeout: 5000 }
+
+- tapOn: "TOC"
+- tapOn: "1.1 Named \\(name tree\\)"
+- extendedWaitUntil: { visible: "4 / 12", timeout: 5000 }
+- tapOn: "TOC"
+- tapOn: "1.3 Named dictionary"
+- extendedWaitUntil: { visible: "7 / 12", timeout: 5000 }
+- tapOn: "TOC"
+- tapOn: "الفصل الثاني"
+- extendedWaitUntil: { visible: "8 / 12", timeout: 5000 }
+- tapOn: "TOC"
+- tapOn: "Last page"
+- extendedWaitUntil: { visible: "12 / 12", timeout: 5000 }
+
+# PDF 1.1 named destination: resolved on Android only.
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - tapOn: "TOC"
+      - tapOn: "1.2 Named \\(catalog Dests\\)"
+      - extendedWaitUntil: { visible: "5 / 12", timeout: 5000 }
+
+# Entries without a destination do nothing.
+- tapOn: "TOC"
+- tapOn: "No destination"
+- assertVisible: "Contents \\(10\\)"
+- tapOn: "Close"
+- tapOn: "‹ Back"
+
+# Object streams + xref stream: same result.
+- scrollUntilVisible: { element: "outline-compressed.*" }
+- tapOn: "outline-compressed.*"
+- extendedWaitUntil: { visible: "1 / 12", timeout: 15000 }
+- tapOn: "TOC"
+- extendedWaitUntil: { visible: "Contents \\(10\\)", timeout: 5000 }
+- tapOn: "Głęboko"
+- extendedWaitUntil: { visible: "6 / 12", timeout: 5000 }
+- tapOn: "‹ Back"
+
+# No outline.
+- tapOn: "Bundled sample.*"
+- extendedWaitUntil: { visible: ".* / .*", timeout: 15000 }
+- tapOn: "TOC"
+- extendedWaitUntil: { visible: "This document has no outline.", timeout: 5000 }
+- tapOn: "Close"
+- tapOn: "‹ Back"

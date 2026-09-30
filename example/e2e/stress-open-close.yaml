@@ -1,0 +1,20 @@
+# Repeated open/close of the largest documents: native resources must be
+# released every time (watch memory while this runs; see docs/benchmarks.md).
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- repeat:
+    times: 10
+    commands:
+      - scrollUntilVisible: { element: "extreme.*" }
+      - tapOn: "extreme.*"
+      - extendedWaitUntil: { visible: "1 / 1000", timeout: 120000 }
+      - swipe: { start: "50%, 80%", end: "50%, 10%", duration: 100 }
+      - tapOn: "+10"
+      - tapOn: "‹ Back"
+      - scrollUntilVisible: { element: "large.*" }
+      - tapOn: "large.*"
+      - extendedWaitUntil: { visible: "1 / 500", timeout: 120000 }
+      - tapOn: "Last"
+      - tapOn: "‹ Back"

@@ -1,0 +1,12 @@
+appId: software.gmi.betterpdf.example
+---
+# One onScaleChange after the zoom animation (Android zooms to 2×).
+- extendedWaitUntil: { visible: "scale: 2.00 \\(#1\\)", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at .*", timeout: 5000 }
+- assertNotVisible: "tap: page 1 at 50[0-9], .*"
+- tapOn: "1×"
+- waitForAnimationToEnd
+- tapOn: "2×tap on"
+- extendedWaitUntil: { visible: "2×tap off", timeout: 5000 }

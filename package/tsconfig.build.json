@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "types": [],
+    "outDir": "lib",
+    "rootDir": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src", "nitrogen/generated/shared/json/*.json"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}

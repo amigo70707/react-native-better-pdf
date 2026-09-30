@@ -1,0 +1,33 @@
+# singlePage thumbnails: each shows one page, ignores touches (the Pressable
+# around it gets the tap, the horizontal ScrollView scrolls from on top of
+# them), and taps navigate the main viewer.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*" }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- tapOn: "Thumbs off"
+- extendedWaitUntil: { visible: { id: "thumb-5" }, timeout: 10000 }
+- waitForAnimationToEnd
+- takeScreenshot: single-page-strip
+
+# The tap lands on the thumbnail's PDF view and reaches the Pressable.
+- tapOn: { id: "thumb-5" }
+- extendedWaitUntil: { visible: "5 / 100", timeout: 5000 }
+
+# Dragging on top of the thumbnails scrolls the strip.
+- assertNotVisible: { id: "thumb-12" }
+# Swipe distance varies (momentum); swipe until the thumbnail shows, bounded.
+- repeat:
+    while: { notVisible: { id: "thumb-12" } }
+    times: 6
+    commands:
+      - swipe: { from: { id: "thumbnails" }, direction: LEFT, duration: 600 }
+      - waitForAnimationToEnd
+- tapOn: { id: "thumb-12" }
+- extendedWaitUntil: { visible: "12 / 100", timeout: 5000 }
+- takeScreenshot: single-page-strip-scrolled
+- tapOn: "‹ Back"

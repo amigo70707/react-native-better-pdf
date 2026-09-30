@@ -1,0 +1,24 @@
+# Rapid flings, direction changes, navigation and zoom on a 1000-page scan.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "extreme.*" }
+- tapOn: "extreme.*"
+- extendedWaitUntil: { visible: "1 / 1000", timeout: 120000 }
+- repeat:
+    times: 15
+    commands:
+      - swipe: { start: "50%, 85%", end: "50%, 10%", duration: 80 }
+      - swipe: { start: "50%, 85%", end: "50%, 10%", duration: 80 }
+      - swipe: { start: "50%, 15%", end: "50%, 85%", duration: 80 }
+      - tapOn: "+10"
+      - tapOn: "2.5×"
+      - tapOn: "−10"
+      - tapOn: "1×"
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "1000 / 1000", timeout: 5000 }
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 1000", timeout: 5000 }
+- takeScreenshot: stress-rapid
+- tapOn: "‹ Back"

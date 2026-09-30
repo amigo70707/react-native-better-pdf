@@ -1,0 +1,71 @@
+# fitPolicy on a document with a 226 × 3000 pt receipt (page 3):
+# - 'page' (the paged default) shrinks it to a narrow strip: taps beside it
+#   hit no page;
+# - 'width' makes it much longer than the view: in paged mode, Android
+#   scrolls within it before moving on. iOS (PDFKit's page view controller)
+#   turns the page instead; that step is Android-only.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "mixed-sizes.*" }
+- tapOn: "mixed-sizes.*"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 15000 }
+
+# Vertical paging, default fit ('page').
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- extendedWaitUntil: { visible: "Paged", timeout: 5000 }
+- waitForAnimationToEnd
+- repeat:
+    times: 2
+    commands:
+      - swipe: { start: "50%, 80%", end: "50%, 30%", duration: 200 }
+      - waitForAnimationToEnd
+- assertVisible: "3 / 5"
+- tapOn: { point: "10%, 55%" }
+- waitForAnimationToEnd
+- assertNotVisible: "tap:.*"
+- tapOn: { point: "50%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 3 .*", timeout: 3000 }
+- takeScreenshot: fit-page-receipt
+
+# 'width': the receipt is now long.
+- tapOn: "Fit auto"
+- extendedWaitUntil: { visible: "Fit W", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "3 / 5"
+- takeScreenshot: fit-width-receipt
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - swipe: { start: "50%, 80%", end: "50%, 30%", duration: 200 }
+      - waitForAnimationToEnd
+      - assertVisible: "3 / 5"
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "5 / 5", timeout: 5000 }
+
+# 'height' in the vertical continuous layout: the square page is wider than
+# the view; navigation still works.
+- tapOn: "Paged"
+- tapOn: "Paged H"
+- tapOn: "RTL"
+- tapOn: "Paged RTL"
+- extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
+- tapOn: "Fit W"
+- extendedWaitUntil: { visible: "Fit H", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "5 / 5"
+- takeScreenshot: fit-height-square
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 5000 }
+- takeScreenshot: fit-height-first
+
+# Back to the default: removing a prop must not crash (Fabric sends null).
+- tapOn: "Fit H"
+- tapOn: "Fit P"
+- extendedWaitUntil: { visible: "Fit auto", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "1 / 5"
+- tapOn: "‹ Back"

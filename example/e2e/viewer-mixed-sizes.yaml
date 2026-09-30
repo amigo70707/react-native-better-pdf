@@ -1,0 +1,20 @@
+# Page sizes are estimated from page 0 and corrected as pages are rendered.
+# Landscape, a 226×3000 pt receipt and a square page must end up laid out at
+# their real aspect ratio, with navigation landing on the right page.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "mixed-sizes.*" }
+- tapOn: "mixed-sizes.*"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 15000 }
+- swipe: { start: "50%, 80%", end: "50%, 30%", duration: 400 }
+- waitForAnimationToEnd
+- takeScreenshot: mixed-sizes-landscape
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "5 / 5", timeout: 5000 }
+- waitForAnimationToEnd
+- takeScreenshot: mixed-sizes-last
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 5000 }
+- tapOn: "‹ Back"

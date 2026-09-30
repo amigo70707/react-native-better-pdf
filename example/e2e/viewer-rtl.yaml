@@ -1,0 +1,61 @@
+# enableRTL: the first page is on the right; reading continues to the left
+# (dragging the content to the right). Page numbers keep document order.
+# Android: continuous and paged horizontal layouts. iOS: paged only — PDFKit
+# ignores displaysRTL in continuous layouts, so that part is Android-only.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*" }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- tapOn: "Paged"
+- tapOn: "Paged H"
+- extendedWaitUntil: { visible: "RTL", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "1 / 100"
+
+# Continuous: forward is a drag to the right, back a drag to the left.
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - swipe: { start: "10%, 50%", end: "90%, 50%", duration: 1500 }
+      - waitForAnimationToEnd
+      - assertVisible: "2 / 100"
+      - takeScreenshot: rtl-continuous-page-2
+      - swipe: { start: "90%, 50%", end: "10%, 50%", duration: 1500 }
+      - waitForAnimationToEnd
+      - assertVisible: "1 / 100"
+
+# Paged: page kept; three fast swipes to the right = three pages forward.
+- tapOn: "RTL"
+- extendedWaitUntil: { visible: "Paged RTL", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "1 / 100"
+- repeat:
+    times: 3
+    commands:
+      - swipe: { start: "10%, 50%", end: "90%, 50%", duration: 150 }
+      - waitForAnimationToEnd
+- assertVisible: "4 / 100"
+- takeScreenshot: rtl-paged-page-4
+- swipe: { start: "90%, 50%", end: "10%, 50%", duration: 150 }
+- waitForAnimationToEnd
+- assertVisible: "3 / 100"
+
+# Navigation and the last page work mirrored too.
+- tapOn: "+10"
+- extendedWaitUntil: { visible: "13 / 100", timeout: 5000 }
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "100 / 100", timeout: 5000 }
+- takeScreenshot: rtl-paged-last
+
+# Back to vertical: page kept.
+- tapOn: "Paged RTL"
+- extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "100 / 100"
+- tapOn: "‹ Back"

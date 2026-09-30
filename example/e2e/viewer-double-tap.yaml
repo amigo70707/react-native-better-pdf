@@ -1,0 +1,38 @@
+# enableDoubleTapZoom. Zoom is detected through onPageTap coordinates: a tap
+# at 85% of an unzoomed A4 page's width reports x ≈ 505 pt.
+# iOS only: Maestro cannot produce an Android double tap (its taps are ~17 ms
+# apart, below GestureDetector's 40 ms minimum); Android runs
+# double-tap/run-android.sh, which sends the double taps through adb.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*", centerElement: true }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at 50[0-9], .*", timeout: 5000 }
+
+# Control (default on): a double tap zooms, so the same point reports another x.
+- doubleTapOn: { point: "50%, 55%" }
+- waitForAnimationToEnd
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at .*", timeout: 5000 }
+- assertNotVisible: "tap: page 1 at 50[0-9], .*"
+- tapOn: "1×"
+- waitForAnimationToEnd
+
+# Off: no zoom; both taps of the double tap are reported as page taps.
+# Text selection off too: on iOS a double tap on text also selects a word,
+# whose onTextSelectionChange would replace the tap in the event row.
+- tapOn: "2×tap on"
+- extendedWaitUntil: { visible: "2×tap off", timeout: 5000 }
+- tapOn: "Sel on"
+- extendedWaitUntil: { visible: "Sel off", timeout: 5000 }
+- doubleTapOn: { point: "50%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at 29[0-9], .*", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 1 at 50[0-9], .*", timeout: 5000 }
+- tapOn: "‹ Back"

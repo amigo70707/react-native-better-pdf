@@ -1,0 +1,32 @@
+# Every failure mode surfaces a stable error code instead of crashing.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- tapOn: "Missing file.*"
+- extendedWaitUntil: { visible: "file-not-found", timeout: 10000 }
+- tapOn: "‹ Back"
+- tapOn: "Remote 404.*"
+- extendedWaitUntil: { visible: "http-error", timeout: 15000 }
+- tapOn: "‹ Back"
+- scrollUntilVisible: { element: "malformed-not-a-pdf.*", centerElement: true }
+- tapOn: "malformed-not-a-pdf.*"
+- extendedWaitUntil: { visible: "invalid-pdf", timeout: 15000 }
+- tapOn: "‹ Back"
+- scrollUntilVisible: { element: "malformed-empty.*", centerElement: true }
+- tapOn: "malformed-empty.*"
+- extendedWaitUntil: { visible: "invalid-pdf", timeout: 15000 }
+- tapOn: "‹ Back"
+- scrollUntilVisible: { element: "malformed-truncated.*", centerElement: true }
+- tapOn: "malformed-truncated.*"
+# Truncated files are either rejected or partially recovered, never a crash.
+- extendedWaitUntil:
+    visible: "invalid-pdf|1 / .*"
+    timeout: 15000
+- tapOn: "‹ Back"
+- scrollUntilVisible: { element: "malformed-garbage-xref.*", centerElement: true }
+- tapOn: "malformed-garbage-xref.*"
+- extendedWaitUntil:
+    visible: "invalid-pdf|1 / 3"
+    timeout: 15000
+- tapOn: "‹ Back"

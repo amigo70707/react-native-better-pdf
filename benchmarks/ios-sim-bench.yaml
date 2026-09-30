@@ -1,0 +1,21 @@
+# Driven by run-ios-sim.sh. Starts one benchmark run via deep link and swipes
+# during the app's scroll window (the window is 30 s; see run-ios-sim.sh).
+appId: software.gmi.betterpdf.example
+---
+- openLink: "betterpdfexample://bench?library=${LIBRARY}&fixture=${FIXTURE}&run=1&scrollSeconds=30&source=${SOURCE}"
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible: "Running.*"
+    timeout: 120000
+# Load + idle + jumps + zoom take ~9 s before the scroll window opens.
+- waitForAnimationToEnd:
+    timeout: 12000
+- repeat:
+    times: 24
+    commands:
+      - swipe: { start: "50%, 80%", end: "50%, 30%", duration: 120 }
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 120000

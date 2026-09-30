@@ -1,0 +1,31 @@
+# initialPage + initialScale, and onLoad's filePath.
+# At 2× with the page centred, a tap at the screen centre reports x ≈ 297 pt
+# (the middle of an A4 page) and one at 85% of the width x ≈ 297 + 0.35 ×
+# 595 / 2 ≈ 401 pt (unzoomed it would be ≈ 505).
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "Start at page 5.*", centerElement: true }
+- tapOn: "Start at page 5.*"
+- extendedWaitUntil: { visible: "5 / 100", timeout: 60000 }
+- assertVisible: "file: fixtures/medium.pdf"
+# The initial zoom is not reported as a change.
+- waitForAnimationToEnd
+- assertNotVisible: "scale: .*"
+- tapOn: { point: "50%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 5 at (29[0-9]|30[0-2]), .*", timeout: 5000 }
+- tapOn: { point: "85%, 55%" }
+- extendedWaitUntil: { visible: "tap: page 5 at (39[5-9]|40[0-9]), .*", timeout: 5000 }
+- tapOn: "‹ Back"
+
+# filePath for a downloaded document (app cache) and a bundled asset.
+- scrollUntilVisible: { element: "Remote \\(HTTP\\).*", centerElement: true }
+- tapOn: "Remote \\(HTTP\\).*"
+- extendedWaitUntil: { visible: "file: BetterPdf/[0-9a-f]+\\.pdf", timeout: 60000 }
+- tapOn: "‹ Back"
+- scrollUntilVisible: { element: "Bundled sample.*", direction: UP, centerElement: true }
+- tapOn: "Bundled sample.*"
+- extendedWaitUntil: { visible: "file: .*\\.pdf", timeout: 15000 }
+- tapOn: "‹ Back"

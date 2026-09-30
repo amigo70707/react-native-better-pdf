@@ -1,0 +1,36 @@
+# Link presses and page taps (fixture `links`, page 1: upper-left = URL link,
+# lower-left = link to page 3, right strip = plain page).
+# Android reports links from Android 15 (API 35); the emulator used is API 35.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "links.*" }
+- tapOn: "links.*"
+- extendedWaitUntil: { visible: "1 / 3", timeout: 15000 }
+# Plain page tap, reported in page points from the top-left corner. 85% of a
+# fit-width A4 page is ~505 pt on every device; pixels or view points would
+# fall outside 450–559.
+- tapOn: { point: "85%, 40%" }
+- extendedWaitUntil: { visible: "tap: page 1 at (4[5-9][0-9]|5[0-5][0-9]), [0-9]+ pt", timeout: 5000 }
+# URL link: reported to JS, not opened.
+- tapOn: { point: "25%, 25%" }
+- extendedWaitUntil: { visible: "link: https://example.com/better-pdf", timeout: 5000 }
+# Internal link: followed natively, no JS event needed.
+- tapOn: { point: "25%, 62%" }
+- extendedWaitUntil: { visible: "3 / 3", timeout: 5000 }
+- assertVisible: "link: https://example.com/better-pdf"
+# A double tap zooms and must not be reported as a page tap (the example
+# shows the zoom's onScaleChange instead). iOS only: Maestro's taps are too
+# close together to form an Android double tap; double-tap/run-android.sh
+# covers Android (the last event after its double tap is the scale change).
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 3", timeout: 5000 }
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - doubleTapOn: { point: "85%, 40%" }
+      - waitForAnimationToEnd
+      - assertNotVisible: "tap: .*"
+- takeScreenshot: viewer-links
+- tapOn: "‹ Back"

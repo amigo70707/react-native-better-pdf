@@ -1,0 +1,283 @@
+# Architecture
+
+`react-native-better-pdf` is one Nitro Hybrid View (`BetterPdfView`) with a
+thin React wrapper (`PdfView`). Everything that happens per frame (scrolling,
+zooming, rendering, caching, prefetching) happens natively. JS sends
+configuration and commands and receives three kinds of events.
+
+Background research and rejected alternatives: [`docs/architecture/research.md`](docs/architecture/research.md).
+Performance model, measurements and optimizations: [`docs/performance/`](docs/performance/).
+Public API rationale: [`docs/api-design.md`](docs/api-design.md).
+
+```text
+┌──────────────────────────── JS thread ────────────────────────────┐
+│ <PdfView>  (src/PdfView.tsx)                                      │
+│   • normalizes + memoizes source by value                         │
+│   • identity-stable callbacks (ref-forwarded)                     │
+│   • ref → goToPage / zoomTo / getStats / getOutline               │
+└──────────────┬───────────────────────────────▲────────────────────┘
+               │ props (on change only)         │ onLoad / onPageChange / onError
+               ▼                                │
+┌──────────── Nitro (generated C++: ShadowNode, JSI converters) ────┐
+└──────────────┬───────────────────────────────▲────────────────────┘
+               ▼                                │
+┌──── iOS: HybridBetterPdfView.swift ────┐ ┌── Android: HybridBetterPdfView.kt ──┐
+│ PdfDocumentLoader (download, open)     │ │ PdfDocumentSession (download, open, │
+│ PDFView (PDFKit): scroll, zoom,        │ │   render thread, queue)             │
+│   virtualization, tiled rendering      │ │ PdfDocumentView: gestures, layout,  │
+│                                        │ │   drawing, cache, tiles, prefetch   │
+└────────────────────────────────────────┘ └─────────────────────────────────────┘
+```
+
+## Source layout
+
+```text
+package/
+  src/
+    specs/BetterPdfView.nitro.ts   Nitro spec: props, methods, event/error types
+    PdfView.tsx                    public component (wrapper over the host component)
+    source.ts                      PdfSource union → native { uri, headers }
+  nitrogen/generated/              Nitrogen output (committed; regenerate with `bun run specs`)
+  ios/
+    HybridBetterPdfView.swift      PDFView host, scale mapping, events, lifecycle
+    PdfContainerView.swift         taps, links, text selection settle / disable
+    PdfDocumentLoader.swift        source resolution, URLSession download, PDFDocument open
+    PdfLoadFailure.swift           Swift error → PdfError
+  android/src/main/java/com/margelo/nitro/betterpdf/
+    HybridBetterPdfView.kt         props/methods/events, session lifecycle
+    PdfDocumentSession.kt          PdfRenderer + FD owner, render thread, renderer recycling
+    RenderQueue.kt                 pure: replace-on-submit work queue (cancellation)
+    PdfDocumentView.kt             the viewer View: gestures, drawing, cache, tiles
+    TextSelectionController.kt     long press, handles, highlight, floating Copy / Select all toolbar
+    PageTextSelection.kt           pure: selection ends, handle anchors, drags
+    PdfDocumentLayout.kt           pure: page geometry, O(log n) lookups
+    PrefetchPlanner.kt             pure: render priority order
+    LruByteCache.kt                pure: byte-budgeted LRU
+    BitmapPool.kt                  bitmap reuse + eager recycling
+    PdfSourceResolver.kt           source → seekable ParcelFileDescriptor
+```
+
+No hand-written C++: the only consumer of shared logic would be Android
+(PDFKit already virtualizes on iOS), so a C++ core would add a JNI hop to the
+per-frame path without a second caller. See the research notes.
+
+## Threading
+
+| Operation                                   | iOS                                  | Android                                          |
+| ------------------------------------------- | ------------------------------------ | ------------------------------------------------ |
+| React render / prop diff                    | JS thread                            | JS thread                                        |
+| Prop setters, `afterUpdate`, `onDropView`   | main                                 | main                                             |
+| `goToPage` / `zoomTo` (via `hybridRef`)     | JS thread → `DispatchQueue.main`     | JS thread → main `Handler`                       |
+| `getStats`                                  | JS thread, lock-protected snapshot   | JS thread, `@Volatile` / atomic counters         |
+| `getOutline` (first call; then cached)      | main → `com.betterpdf.outline` queue, separate `PDFDocument` | `Promise.parallel` thread, duplicated FD (`outline/` reader) |
+| Remote download                             | `URLSession` delegate queue          | document worker thread (`HttpURLConnection`)     |
+| Download progress (throttle ≤ 10/s)         | throttled on the delegate queue → main | throttled on the worker → main                  |
+| Open + parse document                       | concurrent background queue          | document worker thread                           |
+| Page size measurement                       | PDFKit (lazy, internal)              | lazily, render thread, when a page is first opened |
+| Scroll, fling, pinch, double-tap            | main (UIScrollView inside PDFView)   | main (`OverScroller`, gesture detectors)         |
+| Visible-range / page-change computation     | PDFKit, main                         | main, O(log n) binary search                     |
+| Page rendering                              | PDFKit background tile rendering     | one `BetterPdf-render` thread per document       |
+| Cache insert / evict / draw                 | PDFKit internal                      | main only (no locking needed)                    |
+| Bitmap pool                                 | —                                    | acquire: render thread, release: main (locked)   |
+| Text selection                              | PDFKit (main); settle reported on main | query: render thread (urgent queue slot); UI: main |
+| Event callbacks                             | invoked on main; Nitro hops to JS    | invoked on main; Nitro hops to JS                |
+
+Rule: nothing ever blocks the main thread on document I/O or rendering, and
+nothing blocks JS on native work (`getStats` reads a snapshot).
+
+## Android viewer internals
+
+### Coordinate model
+
+`PdfDocumentLayout` places pages along a main axis (vertical, or
+horizontal with `horizontal`) in unzoomed content pixels, separated by
+`pageSpacing`. Every page is scaled individually by the fit policy (width,
+height or whole page); pages narrower than the widest one are centred on the
+cross axis, whose extent is at least the view. Paged layouts give every page a viewport-sized slot, so scrolling to
+`slotStart(i)` shows exactly page `i`; after a fling or a drag the view snaps
+to the next/previous/nearest slot (`snapToPage`) unless zoomed in. A page
+longer than the view gets a slot of its own length and scrolls freely within
+it; flings are bounded to the page until its edge is reached. `singlePage`
+reuses the paged layout with the scroll bounds confined to one slot, renders
+only that page (no prefetch) and returns `false` from `onTouchEvent`, so
+touches reach the parents. Right-to-left horizontal layouts keep the
+per-page arrays in visual order and map page indices at the layout's API
+(`visual(index)`), so everything outside `PdfDocumentLayout` keeps document
+page indices. The viewport state is
+`(scale, offsetX, offsetY)` in zoomed pixels. A frame is:
+
+```text
+canvas.clipRect(view bounds)          // RN parents disable clipChildren
+canvas.translate(-offsetX, -offsetY)
+canvas.scale(scale)
+for page in layout.visibleRange(offsetY/scale, (offsetY+height)/scale):
+    draw base bitmap (or white placeholder) into the page rect
+    draw the page's zoom tile, if any, into its content rect
+```
+
+### Virtualization
+
+No child views, no per-page objects beyond a `FloatArray` of tops/heights.
+A 1000-page document costs 12 KB of layout arrays; only visible pages are
+touched per frame.
+
+### Render pipeline
+
+```text
+viewport change (main)
+  └─ PrefetchPlanner.plan(visible, center, direction)
+       └─ requests = planned pages not cached at the current width
+                     (+ zoom tiles for visible pages when settled)
+            └─ session.submit(requests)   // replaces the queue
+                 └─ render thread: pop highest priority → openPage → render → close
+                      └─ post(main): cache.put / tiles.put → invalidate
+```
+
+- **Cancellation**: `PdfRenderer.Page.render` cannot be interrupted, so the
+  queue (`RenderQueue`) is *replaced* on every viewport change and unwanted
+  requests are dropped before they start (`rendersCancelled`). The in-flight
+  request is never duplicated. Both guarantees are unit tested.
+- **Priority**: visible pages (nearest to center first) → zoom tiles →
+  pages ahead in the scroll direction → pages behind.
+- **Direction changes** take effect on the next frame; queued work for the old
+  direction is discarded.
+- **Links**: read once per page, on the render thread, while the page is
+  open for its first render (`DocumentPage.readLinks`, API 35+ or
+  `PdfRendererPreV`), and
+  kept per page on the UI thread. A confirmed single tap is mapped to page
+  points (`PdfDocumentLayout.pagePointAt`) and hit-tested against them:
+  internal links scroll natively, URL links go to `onLinkPress`, anything
+  else to `onPageTap`.
+- **Text selection**: a long press or handle move submits a
+  `TextSelectionQuery` to the queue's urgent slot, which the render thread
+  takes before any render and a newer query replaces before it starts. The
+  thread opens the page, calls `selectContent` (API 35+ or
+  `PdfRendererPreV`) and posts the
+  result; the view keeps it in page points and draws the highlight and
+  handles in view coordinates on top of the pages.
+- **Failure isolation**: a page that throws is recorded in `failedPages`,
+  reported once (`page-render-failed`) and drawn as a placeholder, never
+  retried in a loop.
+
+### Page sizes and PDFium's document cache
+
+`PdfRenderer` only reports a page's size from an opened page, and PDFium keeps
+every object it parsed for an opened page (for scans: the compressed image
+data) until the document is closed. Measured on the 395 MB, 1000-page
+fixture: opening every page to read sizes took 1.7 s and retained 400 MB of
+native heap. So:
+
+- At load only page 0 is opened. Every other page is **estimated** at page
+  0's size, which is exact for the common uniform document.
+- A page's real size is recorded the first time it is opened for rendering.
+  If it differs from the estimate, the layout is rebuilt with the top visible
+  page anchored (deferred until the viewport settles if a fling or zoom
+  animation is running). Base bitmaps are always rendered at the page's real
+  aspect ratio, and tiles are only requested for pages whose base bitmap
+  exists, so an estimate never distorts or misplaces content.
+- The renderer is re-created from a duplicate of the original file descriptor
+  every 48 page opens (`RECYCLE_AFTER_PAGES`), which drops PDFium's cache.
+  Creating a renderer is cheap (3–27 ms measured, no retained memory) because
+  it does not touch pages.
+
+Trade-off: parsing moved from load time to first render of each page, and
+pages far from the viewport sit at estimated positions until visited, so a
+`goToPage` into a document of mixed page sizes lands on the estimated
+position first and is re-anchored after that page is measured.
+
+### Cache strategy
+
+| Layer        | What                                             | Bound                                                   |
+| ------------ | ------------------------------------------------ | ------------------------------------------------------- |
+| Base cache   | one fit-width bitmap per page (`LruByteCache`)   | `clamp(maxHeap / 6, 24 MB, 128 MB)`, ≥ 4 viewports      |
+| Zoom tiles   | one viewport-sized full-res crop per visible page| visible pages × 1 viewport                              |
+| Bitmap pool  | free bitmaps for reuse                           | `max(8 MB, 1 viewport)`; 0 while detached               |
+
+- Visible pages are *protected*: they are never evicted to make room, so the
+  budget can be exceeded only by what is on screen.
+- Very tall pages have their base bitmap capped at 2 viewports of pixels;
+  tiles supply detail when zoomed.
+- Cache key is the page; entries rendered at a different width (rotation,
+  resize) are re-requested and replaced.
+- Memory pressure: `onTrimMemory(RUNNING_LOW+)`/`onLowMemory` trims the cache
+  to the visible pages and empties the pool. `out-of-memory` during a render
+  trims the same way and is reported once.
+- Detached from window (e.g. a screen hidden under a native stack): all
+  bitmaps are dropped; the document stays open and re-renders on attach.
+- Bitmaps that leave the cache go to the pool or are `recycle()`d
+  immediately rather than waiting for a GC (the Java heap of a PDF viewer is
+  tiny, so GCs are rare and native pixel memory would pile up).
+- Bitmaps are released one frame after they leave the screen
+  (`postOnAnimation`), so the render thread never overwrites pixels that the
+  RenderThread may still be drawing.
+
+### Scroll indicators
+
+The platform's own fading scroll bars (theme-styled thumbs), fed from the
+viewport state through `computeVertical/HorizontalScroll{Range,Offset,Extent}`
+and woken by `awakenScrollBars()` whenever the offsets change. The view is
+constructed with the ScrollView style because that is the only public way for
+a `View` created in code to get its scroll bar drawables initialized
+(`initializeScrollbars(TypedArray)` was removed from the SDK). No JS is
+involved; the bars fade on the platform's schedule.
+
+### Zoom
+
+Pinch zooms around the focal point; double-tap toggles between `minScale`
+and `max(2, 2 × minScale)`; horizontal pan is enabled when content is wider
+than the view. During a gesture the base bitmaps are simply scaled (cheap,
+slightly soft). When the viewport settles for 80 ms and the screen shows
+≥ 15% more pixels than the base layer has, one full-resolution tile per
+visible page is rendered using `PdfRenderer`'s clip + matrix. Tiles carry
+their own content-space rect and scale, so a tile that finishes after the
+user zoomed again still lands in the right place.
+
+### Lifecycle
+
+| Event                 | Effect                                                                       |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `source`/`password` change | old session `close()`d; new session started                              |
+| `onDropView`          | session closed, all bitmaps dropped                                          |
+| `session.close()`     | queue cleared, download aborted, pending main-thread results dropped; the worker finishes the in-flight render, then closes the renderer (and with it the FD) |
+| Detach from window    | bitmaps dropped, pool emptied, queue emptied                                 |
+
+`PdfRenderer` and `PdfRenderer.Page` are created *and* closed on the worker
+thread; pages are always closed via `use {}`.
+
+## iOS internals
+
+`PDFView` (`.singlePageContinuous`, or `.singlePage` with user interaction
+disabled for `singlePage`; `displayDirection` from `horizontal`;
+`usePageViewController` for `enablePaging`; `displaysRTL` for `enableRTL`,
+effective with the page view controller only) provides scrolling, zooming,
+double-tap, page virtualization and background tile rendering. The wrapper:
+
+- loads on a background queue (`PDFDocument(url:)` parses synchronously),
+  downloads with `URLSession` into `Caches/BetterPdf`, cancels on source change;
+- maps `minScale`/`maxScale` (relative to the fitted page; one scale for the
+  whole document, see `fitPolicy`) to PDFKit's absolute
+  `minScaleFactor`/`maxScaleFactor`, re-deriving on layout changes and keeping
+  the user's relative zoom across rotation;
+- applies `initialPage` after the first layout with a non-zero fit scale
+  (`go(to:)` before layout is ignored by PDFKit);
+- reports `PDFViewPageChanged` as `onPageChange`, de-duplicated;
+- sets `document = nil` in `onDropView` so PDFKit releases its tiles
+  immediately.
+
+PDFKit does not expose cache metrics; `getStats()` returns `-1` for those
+fields on iOS.
+
+## Known platform constraints
+
+- **Android PdfRenderer serializes all documents in a process** on a static
+  PDFium lock (`PdfProcessor.sPdfiumLock`, API 35+). Two visible `PdfView`s
+  render one page at a time between them, and a closing document's in-flight
+  render can delay the next document's first page by one render.
+- **Passwords on Android need API 35+, or API 31–34 with SDK extension 13**
+  (`LoadParams` with `PdfRenderer` or `PdfRendererPreV`, chosen by
+  `DocumentRenderer.open`). Other devices report `unsupported-pdf`.
+- **Android page positions are estimates until visited** in documents whose
+  pages differ in size (see "Page sizes" above).
+- **Untrusted documents** are parsed in-process by the platform renderers.
+  Android's docs recommend an isolated process for untrusted input; this
+  library does not do that (see `docs/audit.md`).

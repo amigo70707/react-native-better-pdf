@@ -1,0 +1,457 @@
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import {
+  PdfView,
+  type PdfError,
+  type PdfLoadProgressEvent,
+  type PdfOutlineItem,
+  type PdfSource,
+  type PdfViewRef,
+  type PdfViewStats,
+} from 'react-native-better-pdf';
+import { DOCUMENTS, type DocumentEntry } from '../documents';
+import { OutlinePanel } from './OutlinePanel';
+import { ThumbnailStrip } from './ThumbnailStrip';
+import { Button, colors } from '../ui';
+
+/** Layout modes cycled by the toolbar button, labelled by their title. */
+const LAYOUTS = [
+  { title: 'Vertical', horizontal: false, enablePaging: false },
+  { title: 'Horizontal', horizontal: true, enablePaging: false },
+  { title: 'Paged', horizontal: false, enablePaging: true },
+  { title: 'Paged H', horizontal: true, enablePaging: true },
+  { title: 'RTL', horizontal: true, enablePaging: false, enableRTL: true },
+  { title: 'Paged RTL', horizontal: true, enablePaging: true, enableRTL: true },
+] as const;
+
+/** `fitPolicy` values cycled by the toolbar button; `undefined` = default. */
+const FITS = [
+  { title: 'Fit auto', fitPolicy: undefined },
+  { title: 'Fit W', fitPolicy: 'width' },
+  { title: 'Fit H', fitPolicy: 'height' },
+  { title: 'Fit P', fitPolicy: 'page' },
+] as const;
+
+type LoadState =
+  | { kind: 'idle' }
+  | { kind: 'resolving' }
+  | { kind: 'loading'; source: PdfSource }
+  | { kind: 'loaded'; source: PdfSource; pageCount: number }
+  | { kind: 'failed'; source: PdfSource | null; error: PdfError | string };
+
+export function ViewerScreen() {
+  const ref = useRef<PdfViewRef>(null);
+  const [entry, setEntry] = useState<DocumentEntry | null>(null);
+  const [state, setState] = useState<LoadState>({ kind: 'idle' });
+  const [page, setPage] = useState(0);
+  const [password, setPassword] = useState<string | undefined>(undefined);
+  const [passwordDraft, setPasswordDraft] = useState('');
+  // Remounts the secure input per attempt; resetting a controlled secure
+  // TextInput to '' does not always clear the native Android field.
+  const [attempt, setAttempt] = useState(0);
+  const [stats, setStats] = useState<PdfViewStats | null>(null);
+  /** Last link press / page tap, shown under the toolbar. */
+  const [lastEvent, setLastEvent] = useState('');
+  const [showIndicators, setShowIndicators] = useState(true);
+  const [layoutIndex, setLayoutIndex] = useState(0);
+  const layout = LAYOUTS[layoutIndex] ?? LAYOUTS[0];
+  const [fitIndex, setFitIndex] = useState(0);
+  const [showThumbnails, setShowThumbnails] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [doubleTapZoom, setDoubleTapZoom] = useState(true);
+  const [textSelection, setTextSelection] = useState(true);
+  /** Counts onTextSelectionChange events: one per settled selection. */
+  const selectionEvents = useRef(0);
+  /** Counts onScaleChange events: one per settled zoom, never per frame. */
+  const scaleEvents = useRef(0);
+  const [outline, setOutline] = useState<PdfOutlineItem[] | null>(null);
+  const fit = FITS[fitIndex] ?? FITS[0];
+  const [progress, setProgress] = useState<PdfLoadProgressEvent | null>(null);
+
+  const open = useCallback(async (next: DocumentEntry) => {
+    setEntry(next);
+    setPassword(undefined);
+    setPasswordDraft('');
+    setAttempt((value) => value + 1);
+    setPage(0);
+    setStats(null);
+    setLastEvent('');
+    setProgress(null);
+    setOutline(null);
+    scaleEvents.current = 0;
+    selectionEvents.current = 0;
+    setState({ kind: 'resolving' });
+    try {
+      const source = await next.resolve();
+      setState({ kind: 'loading', source });
+    } catch (error) {
+      setState({ kind: 'failed', source: null, error: String(error) });
+    }
+  }, []);
+
+  if (entry == null) {
+    return (
+      <ScrollView contentContainerStyle={styles.list}>
+        {DOCUMENTS.map((document) => (
+          <Pressable
+            key={document.id}
+            style={styles.row}
+            onPress={() => open(document)}
+          >
+            <Text style={styles.rowTitle}>{document.title}</Text>
+            <Text style={styles.rowSubtitle}>{document.subtitle}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    );
+  }
+
+  const unlock = (value: string) => {
+    if (state.kind !== 'failed' || state.source == null) return;
+    setState({ kind: 'loading', source: state.source });
+    setPassword(value);
+    setPasswordDraft('');
+    setAttempt((current) => current + 1);
+  };
+
+  const source =
+    state.kind === 'loading' ||
+    state.kind === 'loaded' ||
+    state.kind === 'failed'
+      ? state.source
+      : null;
+  const pageCount = state.kind === 'loaded' ? state.pageCount : 0;
+  const error = state.kind === 'failed' ? state.error : null;
+
+  return (
+    <View style={styles.fill}>
+      <View style={styles.toolbar}>
+        <Button title="‹ Back" onPress={() => setEntry(null)} />
+        <Text style={styles.pageLabel}>
+          {pageCount > 0 ? `${page + 1} / ${pageCount}` : entry.title}
+        </Text>
+        <Button
+          title="TOC"
+          onPress={() => {
+            const started = performance.now();
+            ref.current
+              ?.getOutline()
+              .then((items) => {
+                const ms = Math.round(performance.now() - started);
+                setLastEvent(`outline: ${items.length} top-level in ${ms} ms`);
+                setOutline(items);
+              })
+              .catch((error: unknown) =>
+                setLastEvent(`outline: ${String(error)}`),
+              );
+          }}
+        />
+        <Button
+          title={doubleTapZoom ? '2×tap on' : '2×tap off'}
+          onPress={() => setDoubleTapZoom((value) => !value)}
+        />
+        <Button
+          title="Stats"
+          onPress={() => setStats(ref.current?.getStats() ?? null)}
+        />
+      </View>
+      <View style={styles.toolbar}>
+        <Button
+          title={showIndicators ? 'Bars on' : 'Bars off'}
+          onPress={() => setShowIndicators((value) => !value)}
+        />
+        <Button
+          title={layout.title}
+          onPress={() =>
+            setLayoutIndex((index) => (index + 1) % LAYOUTS.length)
+          }
+        />
+        <Button
+          title={fit.title}
+          onPress={() => setFitIndex((index) => (index + 1) % FITS.length)}
+        />
+        <Button
+          title={scrollEnabled ? 'Drag on' : 'Drag off'}
+          onPress={() => setScrollEnabled((value) => !value)}
+        />
+        <Button
+          title={showThumbnails ? 'Thumbs on' : 'Thumbs off'}
+          onPress={() => setShowThumbnails((value) => !value)}
+        />
+      </View>
+
+      {showThumbnails && source != null && pageCount > 0 && (
+        <ThumbnailStrip
+          source={source}
+          pageCount={pageCount}
+          currentPage={page}
+          onSelect={(target) => ref.current?.goToPage(target)}
+        />
+      )}
+
+      {/* Always rendered: a row appearing mid-gesture would resize the viewer. */}
+      <Text style={styles.lastEvent} numberOfLines={1}>
+        {lastEvent === '' ? ' ' : lastEvent}
+      </Text>
+
+      <View style={styles.fill}>
+        {source != null && (
+          <PdfView
+            ref={ref}
+            style={styles.pdf}
+            source={source}
+            password={password}
+            showsVerticalScrollIndicator={showIndicators}
+            showsHorizontalScrollIndicator={showIndicators}
+            horizontal={layout.horizontal}
+            enablePaging={layout.enablePaging}
+            enableRTL={'enableRTL' in layout && layout.enableRTL}
+            fitPolicy={fit.fitPolicy}
+            scrollEnabled={scrollEnabled}
+            enableDoubleTapZoom={doubleTapZoom}
+            enableTextSelection={textSelection}
+            onLoadProgress={setProgress}
+            initialPage={entry.initialPage}
+            initialScale={entry.initialScale}
+            onLoad={(event) => {
+              setState({ kind: 'loaded', source, pageCount: event.pageCount });
+              // The local file behind the document, e.g. for sharing.
+              setLastEvent(
+                `file: ${event.filePath?.split('/').slice(-2).join('/') ?? 'none'}`,
+              );
+            }}
+            onPageChange={(event) => setPage(event.page)}
+            // A real app would validate the scheme and call Linking.openURL.
+            onLinkPress={(event) => setLastEvent(`link: ${event.url}`)}
+            onScaleChange={(event) => {
+              scaleEvents.current += 1;
+              setLastEvent(
+                `scale: ${event.scale.toFixed(2)} (#${scaleEvents.current})`,
+              );
+            }}
+            onTextSelectionChange={(event) => {
+              selectionEvents.current += 1;
+              setLastEvent(
+                `selection #${selectionEvents.current}: "${event.text.replace(/\s+/g, ' ').trim()}"`,
+              );
+            }}
+            onPageTap={(event) =>
+              setLastEvent(
+                `tap: page ${event.page + 1} at ${Math.round(event.x)}, ${Math.round(event.y)} pt`,
+              )
+            }
+            onError={(pdfError) =>
+              setState({ kind: 'failed', source, error: pdfError })
+            }
+          />
+        )}
+        {(state.kind === 'resolving' || state.kind === 'loading') && (
+          <View style={styles.overlay} pointerEvents="none">
+            <ActivityIndicator size="large" />
+            {progress != null && (
+              <Text style={styles.progress}>{formatProgress(progress)}</Text>
+            )}
+          </View>
+        )}
+        {error != null && (
+          <View style={styles.overlay}>
+            <View style={styles.errorCard}>
+              {typeof error === 'string' ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <>
+                  <Text style={styles.errorCode}>{error.code}</Text>
+                  <Text style={styles.errorText}>{error.message}</Text>
+                  {error.nativeDescription != null && (
+                    <Text style={styles.errorNative}>
+                      {error.nativeDescription}
+                    </Text>
+                  )}
+                  {(error.code === 'password-required' ||
+                    error.code === 'invalid-password') && (
+                    <View style={styles.passwordRow}>
+                      <Button
+                        title="Try wrong"
+                        onPress={() => unlock('wrong')}
+                      />
+                      <Button
+                        title="Try fixture"
+                        onPress={() => unlock('secret')}
+                      />
+                    </View>
+                  )}
+                  {(error.code === 'password-required' ||
+                    error.code === 'invalid-password') && (
+                    <View style={styles.passwordRow}>
+                      <TextInput
+                        key={attempt}
+                        style={styles.input}
+                        placeholder="Password (fixture: secret)"
+                        secureTextEntry
+                        autoCapitalize="none"
+                        value={passwordDraft}
+                        onChangeText={setPasswordDraft}
+                      />
+                      <Button
+                        title="Unlock"
+                        onPress={() => unlock(passwordDraft)}
+                      />
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        )}
+        {outline != null && (
+          <OutlinePanel
+            items={outline}
+            onClose={() => setOutline(null)}
+            onSelect={(target) => {
+              setOutline(null);
+              ref.current?.goToPage(target, { animated: false });
+            }}
+          />
+        )}
+        {stats != null && (
+          <Pressable style={styles.stats} onPress={() => setStats(null)}>
+            <Text style={styles.statsText}>{formatStats(stats)}</Text>
+          </Pressable>
+        )}
+      </View>
+
+      <View style={styles.toolbar}>
+        <Button title="First" onPress={() => ref.current?.goToPage(0)} />
+        <Button
+          title="−10"
+          onPress={() => ref.current?.goToPage(Math.max(0, page - 10))}
+        />
+        <Button title="+10" onPress={() => ref.current?.goToPage(page + 10)} />
+        <Button
+          title="Last"
+          onPress={() =>
+            ref.current?.goToPage(pageCount - 1, { animated: false })
+          }
+        />
+        <Button title="1×" onPress={() => ref.current?.zoomTo(1)} />
+        <Button title="2.5×" onPress={() => ref.current?.zoomTo(2.5)} />
+        {/* Bottom row: a top-row button would push "Stats" under the dev-client menu button. */}
+        <Button
+          title={textSelection ? 'Sel on' : 'Sel off'}
+          onPress={() => setTextSelection((value) => !value)}
+        />
+      </View>
+    </View>
+  );
+}
+
+function formatProgress({
+  loadedBytes,
+  totalBytes,
+}: PdfLoadProgressEvent): string {
+  const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(1);
+  if (totalBytes === undefined) return `Downloading ${mb(loadedBytes)} MB`;
+  const percent = Math.floor((loadedBytes / totalBytes) * 100);
+  return `Downloading ${percent}% (${mb(loadedBytes)} / ${mb(totalBytes)} MB)`;
+}
+
+function formatStats(stats: PdfViewStats): string {
+  const mb = (bytes: number) =>
+    bytes < 0 ? 'n/a' : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return [
+    `pages ${stats.pageCount}  resident ${stats.residentPages}`,
+    `cache ${mb(stats.cacheBytes)} / ${mb(stats.cacheBudgetBytes)}`,
+    `hits ${stats.cacheHits}  misses ${stats.cacheMisses}`,
+    `rendered ${stats.pagesRendered}  cancelled ${stats.rendersCancelled}`,
+    `bitmap allocs ${stats.bitmapAllocations}  mean ${stats.meanRenderMs < 0 ? 'n/a' : `${stats.meanRenderMs.toFixed(1)} ms`}`,
+  ].join('\n');
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  pdf: { flex: 1, backgroundColor: colors.canvas },
+  list: { padding: 12, gap: 8 },
+  row: { padding: 14, borderRadius: 10, backgroundColor: colors.card },
+  rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  rowSubtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 4,
+    backgroundColor: colors.card,
+  },
+  progress: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  lastEvent: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    fontSize: 13,
+    color: colors.muted,
+    backgroundColor: colors.card,
+  },
+  pageLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorCard: {
+    margin: 24,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    gap: 6,
+  },
+  errorCode: { fontSize: 16, fontWeight: '700', color: colors.danger },
+  errorText: { fontSize: 14, color: colors.text },
+  errorNative: { fontSize: 12, color: colors.muted },
+  passwordRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.muted,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: colors.text,
+  },
+  stats: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+  },
+  statsText: {
+    color: 'white',
+    fontSize: 12,
+    fontFamily: 'Courier',
+    lineHeight: 16,
+  },
+});

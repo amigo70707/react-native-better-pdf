@@ -1,0 +1,11 @@
+node_modules/
+lib/
+dist/
+coverage/
+.expo/
+android/
+ios/
+nitrogen/
+plugin/build/
+docs/internal/
+bun.lock

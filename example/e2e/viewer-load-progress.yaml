@@ -1,0 +1,14 @@
+# Download progress of a remote document (fixture server throttled to 4 MB/s,
+# medium.pdf = 19 MB): progress is shown while downloading, then the document
+# loads.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- tapOn: "Remote \\(slow\\).*"
+- extendedWaitUntil:
+    visible: "Downloading [0-9]+% \\([0-9.]+ / 19\\.1 MB\\)"
+    timeout: 10000
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- assertNotVisible: "Downloading.*"
+- tapOn: "‹ Back"

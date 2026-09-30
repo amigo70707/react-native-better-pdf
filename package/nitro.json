@@ -1,0 +1,25 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": ["betterpdf"],
+  "ios": {
+    "iosModuleName": "NitroBetterPdf"
+  },
+  "android": {
+    "androidNamespace": ["betterpdf"],
+    "androidCxxLibName": "NitroBetterPdf"
+  },
+  "autolinking": {
+    "BetterPdfView": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridBetterPdfView"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridBetterPdfView"
+      }
+    }
+  },
+  "ignorePaths": ["**/node_modules"],
+  "gitAttributesGeneratedFlag": true
+}

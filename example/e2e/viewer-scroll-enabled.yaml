@@ -1,0 +1,60 @@
+# scrollEnabled={false}: drags do not scroll the document (continuous and
+# paged), programmatic navigation and taps still work; inside a ScrollView
+# the drag scrolls the parent instead.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*", centerElement: true }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- tapOn: "Drag on"
+- extendedWaitUntil: { visible: "Drag off", timeout: 5000 }
+- repeat:
+    times: 3
+    commands:
+      - swipe: { start: "50%, 80%", end: "50%, 25%", duration: 150 }
+- waitForAnimationToEnd
+- assertVisible: "1 / 100"
+- tapOn: "+10"
+- extendedWaitUntil: { visible: "11 / 100", timeout: 5000 }
+- tapOn: { point: "50%, 60%" }
+- extendedWaitUntil: { visible: "tap: page 11 .*", timeout: 5000 }
+
+# Paged: no page turns either.
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- extendedWaitUntil: { visible: "Paged", timeout: 5000 }
+- waitForAnimationToEnd
+- swipe: { start: "50%, 80%", end: "50%, 20%", duration: 150 }
+- waitForAnimationToEnd
+- assertVisible: "11 / 100"
+
+# Back on: dragging scrolls again.
+- tapOn: "Drag off"
+- extendedWaitUntil: { visible: "Drag on", timeout: 5000 }
+- swipe: { start: "50%, 80%", end: "50%, 20%", duration: 150 }
+- waitForAnimationToEnd
+- assertVisible: "12 / 100"
+- tapOn: "‹ Back"
+
+# Embedded in a ScrollView: the drag on the document scrolls the form.
+- tapOn: "Embedded"
+- extendedWaitUntil: { visible: "Inner scroll off", timeout: 5000 }
+- extendedWaitUntil: { visible: "Document page 1", timeout: 15000 }
+- assertNotVisible: "End of form"
+
+# Control: with inner scrolling on, the same drag scrolls the document.
+- tapOn: "Inner scroll off"
+- extendedWaitUntil: { visible: "Inner scroll on", timeout: 5000 }
+- swipe: { from: { id: "embedded-pdf" }, direction: UP, duration: 600 }
+- waitForAnimationToEnd
+- assertNotVisible: "End of form"
+- assertNotVisible: "Document page 1"
+- tapOn: "Inner scroll on"
+- extendedWaitUntil: { visible: "Inner scroll off", timeout: 5000 }
+- swipe: { from: { id: "embedded-pdf" }, direction: UP, duration: 600 }
+- waitForAnimationToEnd
+- extendedWaitUntil: { visible: "End of form", timeout: 5000 }
+- takeScreenshot: embedded-scrolled

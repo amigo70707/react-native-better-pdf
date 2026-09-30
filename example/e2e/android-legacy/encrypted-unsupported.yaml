@@ -1,0 +1,15 @@
+# Android devices that cannot open password-protected PDFs: API < 31, or
+# Android 12–14 without SDK extension 13 (e.g. the API 34 emulator image,
+# extension 7). They report unsupported-pdf with an explanation. Devices with
+# support run viewer-password instead.
+#   maestro --device <id> test example/e2e/android-legacy/encrypted-unsupported.yaml
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: ../_dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "encrypted.*", centerElement: true }
+- tapOn: "encrypted.*"
+- extendedWaitUntil: { visible: "unsupported-pdf", timeout: 15000 }
+- assertVisible: "Password-protected PDFs require Android 15, or Android 12–14 with the updated PDF module \\(SDK extension 13\\)"
+- tapOn: "‹ Back"

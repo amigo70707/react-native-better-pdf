@@ -1,0 +1,355 @@
+# Performance results
+
+Every number here was produced by `benchmarks/run-android.mjs` (see
+[../benchmarks.md](../benchmarks.md) for the method) or by the named probe.
+Medians of 3 runs unless stated. Raw JSON: `benchmarks/results/` (gitignored;
+file names below).
+
+**Environment**: Android emulator `sdk_gphone64_arm64`, API 35, 1080×2400,
+release build of the example app, host Apple Silicon Mac under other load.
+Emulator timings are not device timings; use them for before/after and
+library-vs-library comparisons only. Differences below ~1 percentage point of
+janky frames or ~10% CPU are within run-to-run noise here.
+
+## 1. Baseline (before optimization)
+
+`android-2026-09-29T14-33-32-528Z.json`
+
+| Fixture | Library | Load (ms) | Jump (ms) | Peak PSS (MB) | Janky % | p90 frame (ms) | JS thread CPU % | Total CPU % |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| small | better | 160 | 1 | 122.5 | 3.7 | 26 | 2.1 | 36.8 |
+| small | react-native-pdf | 190 | 49 | 88.9 | 3.4 | 27 | 2.1 | 65.6 |
+| medium | better | 323 | 0 | 150.9 | 4.3 | 29 | 2.7 | 62.2 |
+| medium | react-native-pdf | 433 | 34 | 130.7 | 2.6 | 28 | 2.7 | 123.5 |
+| large | better | 800 | 1 | 351.0 | 3.0 | 29 | 2.7 | 70.0 |
+| large | react-native-pdf | 769 | 51 | 544.4 | 8.9 | 36 | 2.1 | 117.9 |
+| extreme | better | 1182 | 1 | 532.2 | 3.5 | 28 | 2.3 | 85.9 |
+| extreme | react-native-pdf | 2118 | 34 | 898.5 | 4.8 | 29 | 2.4 | 121.5 |
+
+## 2. B1 — page-size measurement retained the whole file in PDFium
+
+**Evidence** (temporary probe logging `Debug.getNativeHeapAllocatedSize()`
+around `PdfRenderer(...)` and around the loop that opened every page to read
+its size; debug build; probe removed afterwards):
+
+| Pages | File | Constructor: Δ native / time | + size loop: Δ native / time |
+| ---: | ---: | --- | --- |
+| 10 | 0.8 MB | 0 MB / 27 ms | 0 MB / 45 ms |
+| 100 | 19 MB | 0 MB / 3 ms | 19 MB / 123 ms |
+| 500 | 225 MB | 0 MB / 6 ms | 226 MB / 796 ms |
+| 1000 | 395 MB | 0 MB / 3 ms | 400 MB / 1692 ms |
+
+A second probe (open `extreme`, then render ~200 pages via jumps) showed the
+native heap jump happening at open and then staying flat while rendering —
+ruling out the render cache.
+
+**Change**: lazy page sizes (page 0 at load, others on first render, layout
+re-anchored on correction) + re-create the renderer every 48 page opens.
+
+**Result** (`android-2026-09-29T14-43-44-561Z.json`, better only):
+
+| Fixture | Load before → after | Peak PSS before → after | Janky % before → after | Total CPU % before → after |
+| --- | --- | --- | --- | --- |
+| small | 160 → 122 ms | 122.5 → 122.7 MB | 3.7 → 4.3 | 36.8 → 38.9 |
+| medium | 323 → 118 ms (−63%) | 150.9 → 128.4 MB (−15%) | 4.3 → 5.1 | 62.2 → 68.8 |
+| large | 800 → 112 ms (−86%) | 351.0 → 136.1 MB (−61%) | 3.0 → 4.3 | 70.0 → 74.3 |
+| extreme | 1182 → 113 ms (−90%) | 532.2 → 142.1 MB (−73%) | 3.5 → 5.1 | 85.9 → 92.7 |
+
+Cost: parsing moved from load to first render. Mean render time on
+`extreme` went from 74–85 ms to 88–121 ms per page and render-thread CPU
+from ~48% to ~55% while scrolling. Cache hit rate unchanged (71–78%).
+
+## 3. B2 — evicted bitmaps left to the GC
+
+Applied before the baseline, so it has no clean before/after in the table
+above. Stress-flow memory sampling (debug build, `stress-open-close` +
+`stress-rapid`, B1 still present): peak native heap 611 → 578 MB. The effect
+is small because B1 dominated; kept because it removes GC-timing dependence
+from pixel memory.
+
+## 4. B3 — bitmap pool size
+
+**Hypothesis**: the pool kept up to `max(16 MB, 2 viewports)` of free bitmaps.
+
+**Change**: `max(8 MB, 1 viewport)`.
+
+**Result** (`android-2026-09-29T14-49-59-890Z.json`, better only):
+
+| Fixture | Peak PSS before → after | Bitmap allocations / run before → after | Janky % | CPU % |
+| --- | --- | --- | --- | --- |
+| small | 122.7 → 116.3 MB (−5%) | ~11 → ~16 | 4.3 → 4.4 | 38.9 → 37.1 |
+| extreme | 142.1 → 138.1 MB (−3%) | ~10 → ~25 (of ~95 renders) | 5.1 → 3.3 | 92.7 → 91.4 |
+
+Kept: bounded memory is the primary goal and ~15 extra 6.6 MB allocations
+per minute of scrolling showed no measurable CPU or frame-time cost.
+
+## 5. B4/C2 — cache misses on direction changes, and plan/budget thrashing
+
+**Symptom** (first 5-minute soak): 121 of 1688 pages (7.2%) were not rendered
+when they scrolled into view.
+
+**Diagnosis** (60 s scroll windows on `extreme`, 2 runs each,
+`--reverse-every 0` vs `5`):
+
+| Scrolling | Misses | Renders | Page crossings |
+| --- | ---: | ---: | ---: |
+| forward only | 14 / 14 (4.1%) | 366 / 362 | 328 / 323 |
+| every 5th swipe reversed | 39 / 35 (11%) | 466 / 456 | 326 / 323 |
+
+Forward-only misses equal the page jumps + first page: sequential scrolling
+never misses, so render throughput is *not* the bottleneck and a
+low-resolution fling mode would not help. Misses and ~95 extra renders come
+from reversals: pages just scrolled past had been evicted. The budget (4
+viewports ≈ 32 MB ≈ 4.8 page bitmaps) was smaller than the render plan
+(2–3 visible + 2 ahead + 1 behind).
+
+**Failed attempt — reverted**: `behind = 2` with a 5-viewport budget (36 MB).
+The plan (~7 pages ≈ 46 MB) exceeded the budget and the cache thrashed —
+every render evicted another planned page:
+
+| Scrolling | Misses | Renders | Total CPU % |
+| --- | ---: | ---: | ---: |
+| reversed every 5th | 190 / 206 (57–61%) | 728 / 723 | 121 |
+| forward only | 190 / 238 (56–70%) | 886 / 754 | 120 |
+
+This exposed a latent bug (C2): any configuration where the plan exceeds the
+budget thrashes — tablets and landscape are likely candidates.
+
+**Fix**: `PrefetchPlanner.fitToBudget` — the cache budget grows to cover the
+whole plan (up to 128 MB); beyond that the lowest-priority planned pages are
+dropped. Unit tested. Then `behind = 2` was re-tested on top of it.
+
+| Variant (reversed every 5th) | Misses | Renders | Peak PSS | CPU % |
+| --- | ---: | ---: | ---: | ---: |
+| before | 37 (11%) | 461 | ~140 MB | ~80 |
+| budget covers plan, behind = 1 | 27 / 27 (8.2%) | 460 / 470 | 138.5 / 141.3 MB | 78.5 / 81.3 |
+| budget covers plan, behind = 2 | 27 / 17 (6.5%) | 376 / 367 | 147.4 / 145.3 MB | 81.0 / 78.8 |
+
+Forward-only was unchanged by both (14 misses). Kept: budget fit +
+`behind = 2` — about +6 MB for 19% fewer renders and fewer placeholders.
+
+## 6. Final comparison
+
+Better PDF: `android-2026-09-29T16-11-47-624Z.json` (all changes applied).
+react-native-pdf: `android-2026-09-29T15-14-47-441Z.json` (same session, same
+emulator; its code did not change between the two runs).
+
+| Fixture | Library | Load (ms) | Jump (ms) | Peak PSS (MB) | Janky % | p90 frame (ms) | JS thread CPU % | Total CPU % | JS callbacks while scrolling (8 s) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| small | better | **109** | 1 | 116.5 | 4.7 | 27 | 2.2 | **37.4** | 29 |
+| small | react-native-pdf | 136 | 37 | **90.7** | 3.6 | 28 | 2.8 | 77.9 | 27 |
+| medium | better | **123** | 1 | **126.6** | 4.1 | 29 | 2.2 | **56.7** | 48 |
+| medium | react-native-pdf | 467 | 34 | 131.3 | 3.2 | 29 | 2.6 | 124.5 | 51 |
+| large | better | **116** | 0 | **135.8** | 4.1 | 29 | 2.3 | **63.7** | 48 |
+| large | react-native-pdf | 1841 | 41 | 546.1 | 4.2 | 28 | 2.5 | 122.2 | 48 |
+| extreme | better | **134** | 1 | **143.7** | 3.9 | 27 | 2.4 | **78.5** | 49 |
+| extreme | react-native-pdf | 2371 | 34 | 897.8 | 7.6 | 29 | 2.6 | 120.8 | 45 |
+
+### Before → after (Better PDF)
+
+| Scenario | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Load, 1000 pages | 1182 ms | 134 ms | −89% |
+| Load, 500 pages | 800 ms | 116 ms | −86% |
+| Peak PSS, 1000 pages | 532.2 MB | 143.7 MB | −73% |
+| Peak PSS, 500 pages | 351.0 MB | 135.8 MB | −61% |
+| Peak PSS, 10 pages | 122.5 MB | 116.5 MB | −5% |
+| Total CPU while scrolling, 1000 pages | 85.9% | 78.5% | −9% |
+| Cache misses, 5-min soak | 7.2% | 2.6% | −64% |
+| Renders per page crossed, 5-min soak | 1.33 | 1.17 | −12% |
+| Janky frames while scrolling | 3.0–4.3% | 3.9–4.7% | within noise |
+| Page jump (to page-change event) | 1 ms | 1 ms | — |
+
+### Where react-native-pdf is better
+
+- **Memory on small documents**: 90.7 vs 116.5 MB on the 10-page fixture.
+  Our cache holds the prefetch window as full-resolution ARGB page bitmaps
+  (≈ 31.5 MB at budget). react-native-pdf (AndroidPdfViewer 4.0.1) renders
+  256-px parts in `RGB_565` unless `useBestQuality` is set (react-native-pdf
+  does not set it) — half the bytes per pixel, visibly lower quality in
+  images — plus 0.3× thumbnails. Not copied: halving via RGB_565 would lower
+  quality, and shrinking the window would bring back misses (§5).
+- Janky frames on `small`/`medium`: equal within noise.
+
+### What the numbers do not say
+
+- "Jump" is time to the page-change event, not to pixels (see methodology).
+  react-native-pdf's ~35–50 ms includes its JS `setNativeProps` round trip.
+- JS thread CPU (~2.5%) is the benchmark's own `requestAnimationFrame`
+  monitor for both libraries; neither library does JS work while scrolling.
+- JS callbacks while scrolling are `onPageChange` events, one per page
+  boundary crossed, identical for both libraries by design.
+
+## 7. Structural guarantees (unit tests)
+
+| Guarantee | Test |
+| --- | --- |
+| No per-frame JS events; boundary exactly the reviewed props/events | `package/src/nitroBoundary.test.ts` |
+| Re-render with equal inline source/callbacks sends nothing to native | `package/src/PdfView.test.tsx` |
+| Work for pages the user left is never started | `RenderQueueTest` |
+| In-flight request never duplicated; queue ≤ latest plan | `RenderQueueTest` |
+| Render plan does not grow with document size | `PrefetchPlannerTest` |
+| Cache budget always covers the render plan (no thrashing); only visible pages under memory pressure | `PrefetchPlannerTest` |
+| Cache never exceeds its budget except for visible pages | `LruByteCacheTest` |
+
+## 8. Memory soak
+
+`extreme` (1000 pages, 395 MB), 5 min 20 s of continuous host-driven swipes
+(every 5th reversed), one run per variant. PSS sampled every 500 ms.
+
+| Library / version | Before scroll | After 1 min | After 5 min | End | Peak | Page crossings | Misses | Renders | Bitmap allocations | Total CPU % |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| better, after B1 (`…15-28-32…`) | 122.3 | 118.9 | 131.5 | 123.1 | 143.6 | 1693 | 121 (7.2%) | 2253 | 378 | 88.8 |
+| better, final (`…16-20-01…`) | 123.9 | 136.1 | 142.6 | 134.8 | 148.6 | 1469 | 38 (2.6%) | 1722 | 186 | 74.7 |
+| react-native-pdf (`…15-28-32…`) | 877.7 | 901.7 | 901.3 | 894.3 | 903.3 | 1691 | – | – | – | 118.8 |
+
+Stress flows (`stress-open-close` + `stress-rapid`, sampled every second,
+Android emulator): peak PSS **768 MB** before the changes
+(`android-stress-memory.csv`, debug build) → **170 MB** after
+(`android-final-stress-memory.csv`, release build), returning to 87 MB on the
+document list.
+
+Memory stays flat over five minutes: no growth attributable to the document
+(PDFium object cache bounded by renderer recycling, bitmap cache bounded by
+budget). The final version holds ~10 MB more than the post-B1 version because
+of the larger plan (§5).
+
+## 9. iOS (simulator)
+
+**Caveat**: iOS Simulator on an Apple Silicon Mac. Memory is the host
+process's physical footprint (`footprint -p`) of the simulated app — useful
+for relative comparisons and leak detection, not a device number. One run per
+cell. Script: `benchmarks/run-ios-sim.sh`. Both libraries use PDFKit on iOS,
+so this compares wrappers around the same engine.
+
+| Fixture | Library | Load (ms) | Peak footprint (MB) | Footprint after run (MB) | JS callbacks while scrolling |
+| --- | --- | ---: | ---: | ---: | ---: |
+| small | better | 22 | 278 | 180 | 7 |
+| small | react-native-pdf | 25 | 343 | 332 | 4 |
+| medium | better | 50 | 320 | 189 | 22 |
+| medium | react-native-pdf | 93 | 393 | 245 | 9 |
+| large | better | 40 | 174 | 68 | 22 |
+| large | react-native-pdf | 125 | 176 | 65 | 9 |
+| extreme | better | 226 | 204 | 90 | 21 |
+| extreme | react-native-pdf | 226 | 203 | 67 | 9 |
+
+- Load and memory are close for scanned documents, as expected with the same
+  engine; the text-heavy fixtures peak higher than the scans for both
+  libraries (PDFKit tiles dense vector text at full resolution — unverified
+  without Instruments on a device).
+- Better PDF emits more `onPageChange` events because it reports the page
+  under the viewport centre continuously (the same rule as Android, see audit
+  M8); react-native-pdf relays PDFKit's coarser `PDFViewPageChanged`.
+
+## 10. iOS leak — hybrid objects outliving their views
+
+**Found by**: repeating `stress-open-close` (10× open/close of the 1000- and
+500-page scans) in one process and reading the footprint after each round.
+
+**Evidence**: temporary `NSLog` probes in `present`, `onDropView` and `deinit`
+of `HybridBetterPdfView`: `onDropView` ran for every close but `deinit`
+never did. With `hybridRef` removed from the JS wrapper, `deinit` ran after
+every close — JS kept the hybrid object (and its `PDFView`) alive until a
+Hermes GC, which a PDF viewer's small JS heap rarely triggers.
+
+**Change**: `onDropView` destroys the `PDFView` (not just its document), so a
+lingering hybrid object is an empty `UIView`. Android: `onDropView` also
+empties the bitmap pool.
+
+| Footprint after each round of 10 open/close cycles | Before | After |
+| --- | ---: | ---: |
+| start | 34 MB | 34 MB |
+| round 1 | 231 MB | 76 MB |
+| round 2 | 361 MB | 82 MB |
+| round 3 | 512 MB | 88 MB |
+| growth per round | ~150 MB | ~6 MB |
+
+The remaining ~0.3 MB per opened viewer is the empty native shells and their
+JS wrappers until the JS garbage collector runs.
+
+## 11. Re-run after text selection (2026-09-30)
+
+Same method, emulator and fixtures as §6; release builds that include text
+selection (render queue with an urgent slot, selection controller) and
+`initialScale` / `filePath`. react-native-pdf 7.0.5 unchanged.
+
+**Android** (`android-2026-09-30T12-51-30-492Z.json`, medians of 3):
+
+| Fixture | Library | Load (ms) | Jump (ms) | Peak PSS (MB) | Janky % | p90 frame (ms) | JS thread CPU % | Total CPU % | JS callbacks while scrolling |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| small | better | **122** | 0 | 118.2 | 4.3 | 23 | 1.8 | **30.8** | 27 |
+| small | react-native-pdf | 162 | 50 | **91.0** | 2.1 | 29 | 1.7 | 60.2 | 27 |
+| medium | better | **90** | 0 | **126.8** | 3.2 | 24 | 1.8 | **47.6** | 49 |
+| medium | react-native-pdf | 288 | 34 | 132.1 | 1.0 | 25 | 1.9 | 119.8 | 49 |
+| large | better | **91** | 0 | **141.2** | 3.7 | 20 | 1.9 | **58.0** | 48 |
+| large | react-native-pdf | 900 | 34 | 546.7 | 1.2 | 24 | 1.8 | 116.0 | 48 |
+| extreme | better | **91** | 1 | **146.8** | 4.3 | 24 | 1.9 | **72.4** | 46 |
+| extreme | react-native-pdf | 1207 | 50 | 900.5 | 1.5 | 23 | 1.8 | 116.4 | 47 |
+
+- Load, memory, CPU and jump latency reproduce §6. No regression from text
+  selection: Better PDF's janky frames (3.2–4.3%) are in §6's range
+  (3.9–4.7%).
+- react-native-pdf's janky frames were lower in this run (1.0–2.1%) than in
+  §6 (3.2–7.6%). Janky-frame percentages on this emulator vary by more than
+  the difference between the libraries; they need a device to compare.
+- JS-thread dropped frames (`requestAnimationFrame`, medians): zoom 1–3 vs
+  1–4, page jumps 1–5 vs 1–6 — equal. While scrolling, Better PDF dropped
+  11–17 vs 8–12 JS frames, with equal JS-thread CPU (1.8–1.9%).
+
+**iOS simulator** (one run per cell; `ios-sim-20260930T144205.txt`):
+
+| Fixture | Library | Load (ms) | Peak footprint (MB) | Footprint after run (MB) | JS callbacks while scrolling |
+| --- | --- | ---: | ---: | ---: | ---: |
+| small | better | 31 | 286 | 171 | 7 |
+| small | react-native-pdf | 28 | 344 | 279 | 4 |
+| medium | better | 56 | 318 | 214 | 22 |
+| medium | react-native-pdf | 99 | 353 | 290 | 9 |
+| large | better | 99 | 175 | 65 | 22 |
+| large | react-native-pdf | 134 | 175 | 65 | 9 |
+| extreme | better | 229 | 204 | 75 | 21 |
+| extreme | react-native-pdf | 246 | 234 | 67 | 9 |
+
+**Remote documents** (new: `--source remote` / `SOURCE=remote`; the fixture
+is opened from `http://localhost:8090` with a fresh URL per run, so the time
+to load includes each library's download; react-native-pdf with
+`cache: false`):
+
+iOS simulator (`ios-sim-20260930T145031.txt`, one run per cell):
+
+| Fixture | Library | Load incl. download (ms) | Peak footprint (MB) |
+| --- | --- | ---: | ---: |
+| small | better | 54 | 282 |
+| small | react-native-pdf | 48 | 346 |
+| medium | better | 80 | 321 |
+| medium | react-native-pdf | 94 | 393 |
+| large | better | 376 | 175 |
+| large | react-native-pdf | 374 | 182 |
+
+On iOS both download natively (URLSession; react-native-blob-util's native
+side), so times are equal within one run's noise.
+
+Android: with its default `trustAllCerts: true`, react-native-pdf 7.0.5
+failed to load every remote document (`android-2026-09-30T13-25-01-233Z.json`,
+9 of 9 runs; the host script reports them as load timeouts): react-native-blob-util
+0.25.1 throws `IllegalStateException: Use of own trust manager but none
+defined` in `getUnsafeOkHttpClient`, and `onError` receives "ReactNativeBlobUtil
+request error". The benchmark now passes `trustAllCerts={false}`.
+
+Android emulator with `trustAllCerts={false}` (`android-2026-09-30T13-33-31-232Z.json`,
+medians of 3; the fixture server runs on the host, reached through
+`adb reverse`):
+
+| Fixture | Library | Load incl. download (ms) | Peak PSS (MB) | Janky % | Total CPU % while scrolling |
+| --- | --- | ---: | ---: | ---: | ---: |
+| small (0.76 MB) | better | **145** | 118.3 | 1.9 | **32.7** |
+| small | react-native-pdf | 332 | **100.1** | 2.1 | 72.3 |
+| medium (19 MB) | better | **298** | **133.7** | 2.7 | **55.8** |
+| medium | react-native-pdf | 666 | 141.1 | 1.8 | 119.2 |
+| large (225 MB) | better | **2028** | **137.1** | 2.2 | **64.1** |
+| large | react-native-pdf | 4057 | 784.2 | 2.1 | 117.3 |
+
+Better PDF downloads on its document thread straight into the file it
+opens; react-native-pdf downloads through react-native-blob-util, whose
+completion reaches JS, which then mounts the native view with the path.
+Janky frames were equal in this run (1.9–2.7% vs 1.8–2.1%), which supports
+reading the local run's difference as emulator noise.
