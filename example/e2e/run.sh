@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 device="$1"; shift
 flows=("$@")
 if [ ${#flows[@]} -eq 0 ]; then
-  flows=(viewer-bundled viewer-scroll-zoom viewer-errors viewer-password viewer-layout-modes viewer-fit-policy viewer-single-page viewer-rtl viewer-outline viewer-scroll-enabled viewer-double-tap viewer-scale-change viewer-initial viewer-text-selection)
+  flows=(viewer-bundled viewer-scroll-zoom viewer-errors viewer-password viewer-layout-modes viewer-fit-policy viewer-single-page viewer-rtl viewer-outline viewer-scroll-enabled viewer-double-tap viewer-scale-change viewer-initial viewer-text-selection viewer-accessibility)
 fi
 failed=0
 is_android=0

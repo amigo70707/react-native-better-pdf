@@ -83,6 +83,7 @@ type PdfSource =
 | `pageSpacing`  | `number`              | `8`     | dp / pt between pages.                                                |
 | `enableDoubleTapZoom` | `boolean` | `true` | Double tap toggles zoom (Android 2×, iOS PDFKit's step); `false` also makes `onPageTap` immediate. |
 | `scrollEnabled` | `boolean` | `true` | Drag scrolling; see "Scroll enabled". |
+| `pageAccessibilityLabel` | `string` | `'Page {page} of {pageCount}'` | Screen-reader page label; see "Accessibility". |
 | `showsVerticalScrollIndicator` | `boolean` | `true` | Same name and meaning as React Native's `ScrollView`.            |
 | `showsHorizontalScrollIndicator` | `boolean` | `true` | Only visible while a page is zoomed wider than the view.        |
 | `enableTextSelection` | `boolean` | `true` | Long press selects text; `false` turns selection off; see "Text selection". |
@@ -614,6 +615,46 @@ found while cycling `fitPolicy` back to its default. The wrapper therefore
 sends concrete defaults for every configuration prop and keeps an event
 subscribed once it has been (a removed handler becomes a no-op). Covered by a
 unit test and the last step of the `viewer-fit-policy` e2e flow.
+
+## Accessibility (v0.2)
+
+Measured first (the accessibility tree, as Maestro reads it on both
+platforms — the same tree TalkBack and VoiceOver use):
+
+| Before | iOS (PDFKit) | Android |
+| --- | --- | --- |
+| Page text | ✅ exposed by PDFKit | ❌ no node at all — the document was invisible to TalkBack |
+| Which page | ❌ only the scroll bar ("99 pages" = screens, not PDF pages) | ❌ |
+
+Design:
+
+- **Android:** `PdfAccessibilityHelper` (`ExploreByTouchHelper`) exposes one
+  virtual node per visible page — label plus the page's text, bounds clipped
+  to the view — inside a host that reports itself as a scrollable
+  `ScrollView` with collection info (page count) and handles
+  `ACTION_SCROLL_FORWARD/BACKWARD` (a page in paged layouts, 90% of a screen
+  otherwise). The host's state description follows the current page.
+- **Text is read only while an accessibility service is on**, only for
+  visible pages, as `PageTextQuery` work queued after their renders (dropped
+  with them when they scroll away) and cached for the 32 pages nearest the
+  reader. Without a service nothing changes. It comes from
+  `getTextContents` — Android 15+, or 12–14 with SDK extension 13; older
+  versions read the label only (verified on API 34: "Page 1 of 100").
+- **iOS:** PDFKit already exposes the text; the viewer posts
+  `UIAccessibility.pageScrolled` with the label on page changes while
+  VoiceOver runs.
+- **One string, localisable:** `pageAccessibilityLabel` with `{page}`
+  (1-based) and `{pageCount}`. A template rather than a JS callback, so no
+  native→JS round trip is needed to announce a page.
+- **`testID` keeps working:** React Native maps `testID` to the view's
+  resource id in its own accessibility delegate, which it installs only on
+  views without one; ours replaces it, so the helper sets the resource id
+  itself. Found by the regression run (`viewer-scroll-enabled` could no
+  longer find `embedded-pdf`).
+- **Tested:** `viewer-accessibility` asserts the page nodes with text on
+  Android (first and last page), a localised label, and PDFKit's text on
+  iOS. Not tested automatically: speech itself, TalkBack's scroll actions
+  and the VoiceOver announcement (they need a real screen-reader session).
 
 ## Open questions
 

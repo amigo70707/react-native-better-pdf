@@ -1,0 +1,35 @@
+# What screen readers get, read from the accessibility tree (Maestro reads
+# it the way TalkBack / VoiceOver do; it cannot hear speech).
+# Android: one node per visible page, "Page X of Y" + the page's text, in a
+# scrollable host. iOS: PDFKit's own text elements; the "Page X of Y"
+# announcement (UIAccessibility .pageScrolled) is speech-only and not
+# asserted here.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*", centerElement: true }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+- waitForAnimationToEnd
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - extendedWaitUntil: { visible: "(?s)Page 1 of 100\\n.*reprehenderit lorem commodo.*", timeout: 5000 }
+      - tapOn: "Last"
+      - extendedWaitUntil: { visible: "100 / 100", timeout: 5000 }
+      - extendedWaitUntil: { visible: "(?s)Page 100 of 100\\n.*", timeout: 5000 }
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - assertVisible: "reprehenderit lorem commodo est est magna.*"
+- tapOn: "‹ Back"
+
+# A localised label (the Embedded screen passes "Strona {page} z {pageCount}").
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - tapOn: "Embedded"
+      - extendedWaitUntil: { visible: "(?s)Strona 1 z \\d+.*", timeout: 15000 }
+      - tapOn: "Viewer"

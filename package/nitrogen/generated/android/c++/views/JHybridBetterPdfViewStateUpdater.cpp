@@ -124,6 +124,11 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
     hybridView->setScrollEnabled(newProps->scrollEnabled.get());
   }
   if (oldProps == nullptr
+        ? newProps->pageAccessibilityLabel.isProvided()
+        : !newProps->pageAccessibilityLabel.hasSameValue(oldProps->pageAccessibilityLabel)) {
+    hybridView->setPageAccessibilityLabel(newProps->pageAccessibilityLabel.get());
+  }
+  if (oldProps == nullptr
         ? newProps->showsVerticalScrollIndicator.isProvided()
         : !newProps->showsVerticalScrollIndicator.hasSameValue(oldProps->showsVerticalScrollIndicator)) {
     hybridView->setShowsVerticalScrollIndicator(newProps->showsVerticalScrollIndicator.get());

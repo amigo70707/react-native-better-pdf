@@ -34,6 +34,7 @@ namespace margelo::nitro::betterpdf::views {
     fitPolicy(nitro::ReactProp<std::optional<PdfFitPolicy>>::fromRawValue("BetterPdfView", "fitPolicy", rawProps, sourceProps.fitPolicy)),
     enableDoubleTapZoom(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "enableDoubleTapZoom", rawProps, sourceProps.enableDoubleTapZoom)),
     scrollEnabled(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "scrollEnabled", rawProps, sourceProps.scrollEnabled)),
+    pageAccessibilityLabel(nitro::ReactProp<std::optional<std::string>>::fromRawValue("BetterPdfView", "pageAccessibilityLabel", rawProps, sourceProps.pageAccessibilityLabel)),
     showsVerticalScrollIndicator(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "showsVerticalScrollIndicator", rawProps, sourceProps.showsVerticalScrollIndicator)),
     showsHorizontalScrollIndicator(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "showsHorizontalScrollIndicator", rawProps, sourceProps.showsHorizontalScrollIndicator)),
     enableTextSelection(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "enableTextSelection", rawProps, sourceProps.enableTextSelection)),
@@ -63,6 +64,7 @@ namespace margelo::nitro::betterpdf::views {
       case hashString("fitPolicy"): return true;
       case hashString("enableDoubleTapZoom"): return true;
       case hashString("scrollEnabled"): return true;
+      case hashString("pageAccessibilityLabel"): return true;
       case hashString("showsVerticalScrollIndicator"): return true;
       case hashString("showsHorizontalScrollIndicator"): return true;
       case hashString("enableTextSelection"): return true;

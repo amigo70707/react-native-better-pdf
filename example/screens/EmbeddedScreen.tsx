@@ -30,6 +30,8 @@ export function EmbeddedScreen() {
         source={require('../assets/sample.pdf')}
         testID="embedded-pdf"
         scrollEnabled={innerScroll}
+        // Screen readers announce pages in the app's language.
+        pageAccessibilityLabel="Strona {page} z {pageCount}"
         onPageChange={(event) => setPage(event.page)}
         style={styles.pdf}
       />

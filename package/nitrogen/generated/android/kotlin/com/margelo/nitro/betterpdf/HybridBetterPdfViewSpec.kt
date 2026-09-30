@@ -116,6 +116,12 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
+  abstract var pageAccessibilityLabel: String?
+  
+  @get:DoNotStrip
+  @get:Keep
+  @set:DoNotStrip
+  @set:Keep
   abstract var showsVerticalScrollIndicator: Boolean?
   
   @get:DoNotStrip

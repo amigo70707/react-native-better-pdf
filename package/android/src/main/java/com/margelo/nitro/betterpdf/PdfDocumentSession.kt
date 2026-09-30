@@ -69,6 +69,9 @@ class PdfDocumentSession(
 
     /** [selection] is null where [query] selects no text, or when the page could not be read. */
     fun onTextSelected(query: TextSelectionQuery, selection: PageTextSelection?)
+
+    /** [text] is null where the renderer exposes no text (before Android 15) or it could not be read. */
+    fun onPageText(page: Int, text: String?)
   }
 
   private val resolver = PdfSourceResolver(context.applicationContext)
@@ -95,7 +98,7 @@ class PdfDocumentSession(
    * Replaces the queue with [requests] (highest priority first). Queued
    * requests that are no longer wanted are dropped and counted as cancelled.
    */
-  fun submit(requests: List<RenderRequest>) = queue.submit(requests)
+  fun submit(requests: List<DocumentWork>) = queue.submit(requests)
 
   /**
    * Resolves [query] before any queued render, replacing a query that has
@@ -272,6 +275,7 @@ class PdfDocumentSession(
         when (work) {
           is RenderRequest -> render(work)
           is TextSelectionQuery -> resolveSelection(work)
+          is PageTextQuery -> readPageText(work)
         }
       } finally {
         queue.finish()
@@ -297,6 +301,19 @@ class PdfDocumentSession(
       Trace.endSection()
     }
     post { listener.onTextSelected(query, selection) }
+  }
+
+  private fun readPageText(query: PageTextQuery) {
+    val text = try {
+      rendererForNextPage().openPage(query.page).use { page ->
+        recordSize(query.page, PdfDocumentLayout.PageSize(page.width.toFloat(), page.height.toFloat()))
+        page.readText()
+      }
+    } catch (_: RuntimeException) {
+      // A page whose text cannot be read is announced by its label only.
+      null
+    }
+    post { listener.onPageText(query.page, text) }
   }
 
   private fun render(request: RenderRequest) {

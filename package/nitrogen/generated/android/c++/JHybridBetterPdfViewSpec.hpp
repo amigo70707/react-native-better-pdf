@@ -78,6 +78,8 @@ namespace margelo::nitro::betterpdf {
     void setEnableDoubleTapZoom(std::optional<bool> enableDoubleTapZoom) override;
     std::optional<bool> getScrollEnabled() override;
     void setScrollEnabled(std::optional<bool> scrollEnabled) override;
+    std::optional<std::string> getPageAccessibilityLabel() override;
+    void setPageAccessibilityLabel(const std::optional<std::string>& pageAccessibilityLabel) override;
     std::optional<bool> getShowsVerticalScrollIndicator() override;
     void setShowsVerticalScrollIndicator(std::optional<bool> showsVerticalScrollIndicator) override;
     std::optional<bool> getShowsHorizontalScrollIndicator() override;

@@ -12,13 +12,17 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Build
+import android.os.Bundle
 import android.os.SystemClock
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.ViewConfiguration
 import android.view.View
+import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
+import androidx.core.view.ViewCompat
 import android.widget.OverScroller
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -54,7 +58,7 @@ import kotlin.math.sqrt
  * `@Volatile` stats fields, which the JS thread reads.
  */
 @SuppressLint("ViewConstructor")
-class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scrollViewStyle) {
+class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scrollViewStyle), PdfAccessibilityHost {
   interface Listener {
     fun onPageChanged(page: Int, pageCount: Int)
     fun onRenderFailed(failure: PdfFailure)
@@ -139,7 +143,38 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   private var pagingFlingHandled = false
   private var currentPage = -1
   private var previousVisible: IntRange = IntRange.EMPTY
-  private var lastSubmitted: List<RenderRequest> = emptyList()
+
+  // region Accessibility
+
+  /**
+   * Page label for screen readers; `{page}` (1-based) and `{pageCount}` are
+   * replaced.
+   */
+  var pageAccessibilityLabel = DEFAULT_PAGE_ACCESSIBILITY_LABEL
+    set(value) {
+      field = value
+      accessibilityHelper.invalidateRoot()
+    }
+  /** Text of pages read for screen readers (null: none available); bounded by [MAX_PAGE_TEXTS]. */
+  private val pageTexts = HashMap<Int, String?>()
+  private val accessibilityManager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+  private val accessibilityHelper = PdfAccessibilityHelper(this, this)
+  private val accessibilityStateListener = AccessibilityManager.AccessibilityStateChangeListener {
+    // A screen reader just turned on: read the visible pages' text.
+    requestRenders(force = true)
+    accessibilityHelper.invalidateRoot()
+  }
+
+  /** Any accessibility service (TalkBack, Switch Access, UI automation) is on. */
+  private val isAccessibilityActive: Boolean get() = accessibilityManager.isEnabled
+
+  init {
+    ViewCompat.setAccessibilityDelegate(this, accessibilityHelper)
+    importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
+  }
+
+  // endregion
+  private var lastSubmitted: List<DocumentWork> = emptyList()
 
   // endregion
 
@@ -376,6 +411,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     pendingInitialPage = null
     failedPages.clear()
     pageLinks.clear()
+    pageTexts.clear()
     reportedOutOfMemory = false
     cache.clear()
     clearTiles()
@@ -457,6 +493,72 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   fun onPageLinks(page: Int, links: List<PageLink>) {
     pageLinks[page] = links
   }
+
+  fun onPageText(page: Int, text: String?) {
+    val layout = layout ?: return
+    if (page >= layout.pageCount) return
+    pageTexts[page] = text
+    if (pageTexts.size > MAX_PAGE_TEXTS) {
+      // Keep the pages nearest to the reader.
+      pageTexts.keys.sortedByDescending { kotlin.math.abs(it - currentPage) }
+        .take(pageTexts.size - MAX_PAGE_TEXTS)
+        .forEach { pageTexts.remove(it) }
+    }
+    accessibilityHelper.invalidateVirtualView(page)
+  }
+
+  // region PdfAccessibilityHost
+
+  override val accessibilityPageCount: Int get() = layout?.pageCount ?: 0
+
+  override fun accessibilityVisiblePages(): IntRange = visiblePages()
+
+  override fun accessibilityPageBounds(page: Int, out: RectF) {
+    val layout = layout
+    if (layout == null || page >= layout.pageCount) {
+      out.setEmpty()
+      return
+    }
+    out.set(
+      layout.pageLeft(page) * scale - offsetX,
+      layout.pageTop(page) * scale - offsetY,
+      layout.pageRight(page) * scale - offsetX,
+      layout.pageBottom(page) * scale - offsetY,
+    )
+    if (!out.intersect(0f, 0f, width.toFloat(), height.toFloat())) out.setEmpty()
+  }
+
+  override fun accessibilityPageAt(x: Float, y: Float): Int =
+    layout?.pagePointAt((offsetX + x) / scale, (offsetY + y) / scale)?.page ?: -1
+
+  override fun accessibilityPageLabel(page: Int): String = pageAccessibilityLabel
+    .replace("{page}", (page + 1).toString())
+    .replace("{pageCount}", accessibilityPageCount.toString())
+
+  override fun accessibilityPageText(page: Int): String? = pageTexts[page]
+
+  override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+    accessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
+
+  /** TalkBack's scroll gestures: a page in paged layouts, else most of a screen. */
+  override fun performAccessibilityAction(action: Int, arguments: Bundle?): Boolean {
+    val layout = layout
+    val forward = action == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+    if (layout == null || isSinglePage || (!forward && action != AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) {
+      return super.performAccessibilityAction(action, arguments)
+    }
+    if (isPaged) {
+      val target = if (forward) layout.nextInScrollOrder(currentPage) else layout.previousInScrollOrder(currentPage)
+      if (target !in 0 until layout.pageCount) return false
+      snapToPage(target)
+    } else {
+      val delta = mainViewportLength * ACCESSIBILITY_SCROLL_FRACTION * if (forward) 1 else -1
+      scrollToMain((mainOffset + delta) / scale, animated = true)
+    }
+    return true
+  }
+
+  // endregion
 
   fun onTextSelected(query: TextSelectionQuery, selection: PageTextSelection?) {
     textSelection.onResolved(query, selection)
@@ -635,6 +737,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
+    accessibilityManager.addAccessibilityStateChangeListener(accessibilityStateListener)
     context.applicationContext.registerComponentCallbacks(memoryCallbacks)
     bitmapPool.setMaxBytes(poolBudget())
     requestRenders(force = true)
@@ -644,6 +747,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     // Hidden screens (e.g. under a native stack) are detached; hold no pixels
     // while invisible. The document stays open and re-renders on attach.
     context.applicationContext.unregisterComponentCallbacks(memoryCallbacks)
+    accessibilityManager.removeAccessibilityStateChangeListener(accessibilityStateListener)
     scroller.forceFinished(true)
     zoomAnimator?.cancel()
     removeCallbacks(settleRunnable)
@@ -914,6 +1018,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
         if (cache.contains(page)) statHits++ else statMisses++
       }
       previousVisible = visible
+      if (isAccessibilityActive) accessibilityHelper.invalidateRoot()
     }
     val bounds = scrollBounds()
     val mainStart = if (isHorizontal) bounds.left else bounds.top
@@ -933,6 +1038,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     if (page >= 0 && page != currentPage) {
       currentPage = page
       listener?.onPageChanged(page, layout.pageCount)
+      // Read by TalkBack for the focused document, like a list's position.
+      ViewCompat.setStateDescription(this, accessibilityPageLabel(page))
     }
     textSelection.onViewportMoved()
     requestRenders()
@@ -986,7 +1093,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       updateCacheStats()
     }
 
-    val requests = ArrayList<RenderRequest>(fit.keep + visible.count())
+    val requests = ArrayList<DocumentWork>(fit.keep + visible.count() * 2)
     val settled = !isTouching && scroller.isFinished && zoomAnimator == null
     for (index in 0 until fit.keep) {
       val base = bases[index]
@@ -1001,8 +1108,15 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     if (settled) {
       // Tiles go after visible base pages but before prefetch.
       val tileRequests = visible.mapNotNull { page -> tileRequest(layout, page) }
-      val insertAt = requests.indexOfFirst { it.page !in visible }.let { if (it < 0) requests.size else it }
+      val insertAt = requests.indexOfFirst { (it as? RenderRequest)?.page !in visible }.let { if (it < 0) requests.size else it }
       requests.addAll(insertAt, tileRequests)
+    }
+    if (isAccessibilityActive) {
+      // Visible pages' text for screen readers, after their pixels but
+      // before prefetch; dropped with the rest when they scroll away.
+      val textQueries = visible.filter { it !in pageTexts }.map { PageTextQuery(it) }
+      val insertAt = requests.indexOfFirst { (it as? RenderRequest)?.page !in visible }.let { if (it < 0) requests.size else it }
+      requests.addAll(insertAt, textQueries)
     }
     if (!force && requests == lastSubmitted) return
     lastSubmitted = requests
@@ -1109,6 +1223,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   // endregion
 
   private companion object {
+    const val DEFAULT_PAGE_ACCESSIBILITY_LABEL = "Page {page} of {pageCount}"
+    const val MAX_PAGE_TEXTS = 32
+    const val ACCESSIBILITY_SCROLL_FRACTION = 0.9f
     const val SETTLE_DELAY_MS = 80L
 
     /** Zoom changes below this (0.1%) are not reported. */

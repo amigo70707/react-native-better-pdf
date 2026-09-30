@@ -142,6 +142,13 @@ export interface PdfViewProps extends ViewProps {
    * Default `true`.
    */
   scrollEnabled?: boolean;
+  /**
+   * How screen readers (VoiceOver, TalkBack) name a page, e.g. when it comes
+   * into view: `{page}` is replaced by the 1-based page number and
+   * `{pageCount}` by the number of pages. Localise it for your app's
+   * language. Default `'Page {page} of {pageCount}'`.
+   */
+  pageAccessibilityLabel?: string;
   /** Show the vertical scroll indicator while scrolling. Default `true`. */
   showsVerticalScrollIndicator?: boolean;
   /**
@@ -249,6 +256,7 @@ export function PdfView({
   fitPolicy,
   enableDoubleTapZoom,
   scrollEnabled,
+  pageAccessibilityLabel,
   showsVerticalScrollIndicator,
   showsHorizontalScrollIndicator,
   enableTextSelection,
@@ -374,6 +382,9 @@ export function PdfView({
       }
       enableDoubleTapZoom={enableDoubleTapZoom ?? true}
       scrollEnabled={scrollEnabled ?? true}
+      pageAccessibilityLabel={
+        pageAccessibilityLabel ?? 'Page {page} of {pageCount}'
+      }
       showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? true}
       showsHorizontalScrollIndicator={showsHorizontalScrollIndicator ?? true}
       enableTextSelection={enableTextSelection ?? true}

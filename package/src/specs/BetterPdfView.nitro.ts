@@ -47,6 +47,8 @@ export interface PdfViewProps extends HybridViewProps {
   enableDoubleTapZoom?: boolean;
   /** Drags scroll the document (else they go to parent views). Default true. */
   scrollEnabled?: boolean;
+  /** Screen-reader page label; {page} (1-based) and {pageCount} are replaced. Default 'Page {page} of {pageCount}'. */
+  pageAccessibilityLabel?: string;
   /** Default true. */
   showsVerticalScrollIndicator?: boolean;
   /** Default true. Only visible while zoomed wider than the view. */

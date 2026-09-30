@@ -13,6 +13,8 @@ internal class PlatformDocumentPage(private val page: PdfRenderer.Page) : Docume
 
   override fun readLinks(): List<PageLink> = page.readLinks()
 
+  override fun readText(): String? = page.readText()
+
   override fun selectText(query: TextSelectionQuery): PageTextSelection? = page.selectText(query)
 
   override fun close() = page.close()

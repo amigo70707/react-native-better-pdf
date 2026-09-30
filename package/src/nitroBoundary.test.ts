@@ -51,6 +51,7 @@ describe('Nitro boundary', () => {
         'onPageTap',
         'onScaleChange',
         'onTextSelectionChange',
+        'pageAccessibilityLabel',
         'pageSpacing',
         'scrollEnabled',
         'password',

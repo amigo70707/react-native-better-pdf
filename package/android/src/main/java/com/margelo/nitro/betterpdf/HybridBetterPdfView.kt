@@ -99,6 +99,11 @@ class HybridBetterPdfView(
       field = value
       documentView.isUserScrollEnabled = value ?: true
     }
+  override var pageAccessibilityLabel: String? = null
+    set(value) {
+      field = value
+      documentView.pageAccessibilityLabel = value ?: "Page {page} of {pageCount}"
+    }
   override var showsVerticalScrollIndicator: Boolean? = null
     set(value) {
       field = value
@@ -246,6 +251,10 @@ class HybridBetterPdfView(
 
   override fun onPageMeasured(page: Int, size: PdfDocumentLayout.PageSize) {
     documentView.onPageMeasured(page, size)
+  }
+
+  override fun onPageText(page: Int, text: String?) {
+    documentView.onPageText(page, text)
   }
 
   override fun onPageLinks(page: Int, links: List<PageLink>) {

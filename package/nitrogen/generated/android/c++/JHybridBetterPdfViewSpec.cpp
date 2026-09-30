@@ -233,6 +233,15 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JBoolean> /* scrollEnabled */)>("setScrollEnabled");
     method(_javaPart, scrollEnabled.has_value() ? jni::JBoolean::valueOf(scrollEnabled.value()) : nullptr);
   }
+  std::optional<std::string> JHybridBetterPdfViewSpec::getPageAccessibilityLabel() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getPageAccessibilityLabel");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toStdString()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setPageAccessibilityLabel(const std::optional<std::string>& pageAccessibilityLabel) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* pageAccessibilityLabel */)>("setPageAccessibilityLabel");
+    method(_javaPart, pageAccessibilityLabel.has_value() ? jni::make_jstring(pageAccessibilityLabel.value()) : nullptr);
+  }
   std::optional<bool> JHybridBetterPdfViewSpec::getShowsVerticalScrollIndicator() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JBoolean>()>("getShowsVerticalScrollIndicator");
     auto __result = method(_javaPart);

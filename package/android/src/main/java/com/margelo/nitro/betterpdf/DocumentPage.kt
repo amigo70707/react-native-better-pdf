@@ -19,6 +19,9 @@ internal interface DocumentPage : AutoCloseable {
   /** Links on the page, internal first; empty where the renderer exposes none. */
   fun readLinks(): List<PageLink>
 
+  /** The page's text for screen readers; null where the renderer exposes no text. */
+  fun readText(): String?
+
   /** Resolves a text selection; null where it selects nothing or text is unavailable. */
   fun selectText(query: TextSelectionQuery): PageTextSelection?
 }

@@ -111,6 +111,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setEnableDoubleTapZoom(std::optional<bool> enableDoubleTapZoom) = 0;
       virtual std::optional<bool> getScrollEnabled() = 0;
       virtual void setScrollEnabled(std::optional<bool> scrollEnabled) = 0;
+      virtual std::optional<std::string> getPageAccessibilityLabel() = 0;
+      virtual void setPageAccessibilityLabel(const std::optional<std::string>& pageAccessibilityLabel) = 0;
       virtual std::optional<bool> getShowsVerticalScrollIndicator() = 0;
       virtual void setShowsVerticalScrollIndicator(std::optional<bool> showsVerticalScrollIndicator) = 0;
       virtual std::optional<bool> getShowsHorizontalScrollIndicator() = 0;

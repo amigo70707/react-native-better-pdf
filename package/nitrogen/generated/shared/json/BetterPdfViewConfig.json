@@ -18,6 +18,7 @@
     "fitPolicy": true,
     "enableDoubleTapZoom": true,
     "scrollEnabled": true,
+    "pageAccessibilityLabel": true,
     "showsVerticalScrollIndicator": true,
     "showsHorizontalScrollIndicator": true,
     "enableTextSelection": true,

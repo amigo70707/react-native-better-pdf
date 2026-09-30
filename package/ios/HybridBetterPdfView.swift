@@ -53,6 +53,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var enableDoubleTapZoom: Bool? {
     didSet { container.isDoubleTapZoomEnabled = enableDoubleTapZoom ?? true }
   }
+  var pageAccessibilityLabel: String?
   var scrollEnabled: Bool? {
     didSet { applyScrollEnabled() }
   }
@@ -449,6 +450,13 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     return scrollView.isScrolledToEnd(horizontal: isHorizontalLayout)
   }
 
+  /// `pageAccessibilityLabel` with `{page}` (1-based) and `{pageCount}` filled in.
+  private func accessibilityLabel(forPage index: Int, of pageCount: Int) -> String {
+    (pageAccessibilityLabel ?? "Page {page} of {pageCount}")
+      .replacingOccurrences(of: "{page}", with: String(index + 1))
+      .replacingOccurrences(of: "{pageCount}", with: String(pageCount))
+  }
+
   private func reportCurrentPage() {
     guard let pdfView, let document = pdfView.document, document.pageCount > 0 else { return }
     let index: Int
@@ -464,6 +472,11 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     guard index != NSNotFound, index != lastReportedPage else { return }
     lastReportedPage = index
     onPageChange?(PdfPageChangeEvent(page: Double(index), pageCount: Double(document.pageCount)))
+    // PDFKit exposes the page text to VoiceOver but never says which page
+    // is showing (its scroll bar counts screens, not pages).
+    if UIAccessibility.isVoiceOverRunning {
+      UIAccessibility.post(notification: .pageScrolled, argument: accessibilityLabel(forPage: index, of: document.pageCount))
+    }
   }
 
   /// PDFView scrolls with an internal UIScrollView; there is no public

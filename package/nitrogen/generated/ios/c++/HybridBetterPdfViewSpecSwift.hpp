@@ -203,6 +203,13 @@ namespace margelo::nitro::betterpdf {
     inline void setScrollEnabled(std::optional<bool> scrollEnabled) noexcept override {
       _swiftPart.setScrollEnabled(scrollEnabled);
     }
+    inline std::optional<std::string> getPageAccessibilityLabel() noexcept override {
+      auto __result = _swiftPart.getPageAccessibilityLabel();
+      return __result;
+    }
+    inline void setPageAccessibilityLabel(const std::optional<std::string>& pageAccessibilityLabel) noexcept override {
+      _swiftPart.setPageAccessibilityLabel(pageAccessibilityLabel);
+    }
     inline std::optional<bool> getShowsVerticalScrollIndicator() noexcept override {
       auto __result = _swiftPart.getShowsVerticalScrollIndicator();
       return __result;

@@ -268,6 +268,7 @@ describe('PdfView', () => {
       enableRTL: false,
       scrollEnabled: true,
       enableDoubleTapZoom: true,
+      pageAccessibilityLabel: 'Page {page} of {pageCount}',
       enableTextSelection: true,
     });
     // Still subscribed, but the removed handler is no longer called.

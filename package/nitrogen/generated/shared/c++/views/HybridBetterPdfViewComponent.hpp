@@ -67,6 +67,7 @@ namespace margelo::nitro::betterpdf::views {
     nitro::ReactProp<std::optional<PdfFitPolicy>> fitPolicy;
     nitro::ReactProp<std::optional<bool>> enableDoubleTapZoom;
     nitro::ReactProp<std::optional<bool>> scrollEnabled;
+    nitro::ReactProp<std::optional<std::string>> pageAccessibilityLabel;
     nitro::ReactProp<std::optional<bool>> showsVerticalScrollIndicator;
     nitro::ReactProp<std::optional<bool>> showsHorizontalScrollIndicator;
     nitro::ReactProp<std::optional<bool>> enableTextSelection;
@@ -96,6 +97,7 @@ namespace margelo::nitro::betterpdf::views {
              fitPolicy.hasSameValue(other.fitPolicy) &&
              enableDoubleTapZoom.hasSameValue(other.enableDoubleTapZoom) &&
              scrollEnabled.hasSameValue(other.scrollEnabled) &&
+             pageAccessibilityLabel.hasSameValue(other.pageAccessibilityLabel) &&
              showsVerticalScrollIndicator.hasSameValue(other.showsVerticalScrollIndicator) &&
              showsHorizontalScrollIndicator.hasSameValue(other.showsHorizontalScrollIndicator) &&
              enableTextSelection.hasSameValue(other.enableTextSelection) &&
@@ -126,6 +128,7 @@ namespace margelo::nitro::betterpdf::views {
              fitPolicy.isProvided() ||
              enableDoubleTapZoom.isProvided() ||
              scrollEnabled.isProvided() ||
+             pageAccessibilityLabel.isProvided() ||
              showsVerticalScrollIndicator.isProvided() ||
              showsHorizontalScrollIndicator.isProvided() ||
              enableTextSelection.isProvided() ||

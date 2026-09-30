@@ -221,6 +221,16 @@ a `View` created in code to get its scroll bar drawables initialized
 (`initializeScrollbars(TypedArray)` was removed from the SDK). No JS is
 involved; the bars fade on the platform's schedule.
 
+### Accessibility
+
+`PdfAccessibilityHelper` describes the canvas to accessibility services:
+one virtual node per visible page (label + text), the host as a scrollable
+list. `PdfDocumentView` implements `PdfAccessibilityHost` (visible pages,
+page bounds in view coordinates, hit testing, labels, cached text) and
+queues `PageTextQuery` work for visible pages without text only while
+`AccessibilityManager.isEnabled`. The render thread answers it through
+`DocumentPage.readText()`.
+
 ### Zoom
 
 Pinch zooms around the focal point; double-tap toggles between `minScale`

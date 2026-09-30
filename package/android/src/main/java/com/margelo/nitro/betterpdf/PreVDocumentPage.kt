@@ -22,6 +22,8 @@ internal class PreVDocumentPage(private val page: PdfRendererPreV.Page) : Docume
   override fun readLinks(): List<PageLink> =
     page.gotoLinks.map { it.toPageLink() } + page.linkContents.map { it.toPageLink() }
 
+  override fun readText(): String = joinPageText(page.textContents.map { it.text })
+
   override fun selectText(query: TextSelectionQuery): PageTextSelection? {
     val selection = page.selectContent(query.start.toSelectionBoundary(), query.stop.toSelectionBoundary()) ?: return null
     return selection.toPageTextSelection(query.page)

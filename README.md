@@ -128,6 +128,7 @@ document.
 | `pageSpacing` | `number` | `8` | dp / pt |
 | `enableDoubleTapZoom` | `boolean` | `true` | double tap toggles zoom; `false` also delivers `onPageTap` without the ~300 ms double-tap wait |
 | `scrollEnabled` | `boolean` | `true` | `false`: drags go to parent views (a surrounding `ScrollView` scrolls); zoom, taps and `goToPage` still work |
+| `pageAccessibilityLabel` | `string` | `'Page {page} of {pageCount}'` | how screen readers name a page; localise it |
 | `showsVerticalScrollIndicator` | `boolean` | `true` | platform scroll bar while scrolling |
 | `showsHorizontalScrollIndicator` | `boolean` | `true` | shown only while zoomed wider than the view |
 | `enableTextSelection` | `boolean` | `true` | long press selects text, handles adjust it, the system menu copies; `false` turns selection off (Android: API 35+) |
@@ -187,6 +188,22 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Native page virtualization, render cache, prefetch and cancellation
   (Android; PDFKit handles these on iOS)
 - Memory-pressure handling and release of all pixels while a screen is hidden
+
+## Accessibility
+
+Screen readers get the document's text and position:
+
+- **Android (TalkBack):** each page on screen is an accessibility node that
+  reads "Page 3 of 12" followed by the page's text (Android 15+, or 12–14
+  with SDK extension 13; older versions read the label only). The document
+  is a scrollable list, so TalkBack's scroll gestures move through it (one
+  page at a time with `enablePaging`).
+- **iOS (VoiceOver):** PDFKit exposes the page text; the viewer adds a "Page
+  3 of 12" announcement when the page changes.
+- Localise the label with `pageAccessibilityLabel`, e.g.
+  `"Strona {page} z {pageCount}"`.
+- Images inside pages have no descriptions on either platform (PDF alt text
+  is not read by the platform renderers).
 
 ## Limitations
 

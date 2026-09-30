@@ -182,6 +182,12 @@ using namespace margelo::nitro::betterpdf::views;
           : !newViewProps.scrollEnabled.hasSameValue(oldViewProps->scrollEnabled)) {
       swiftPart.setScrollEnabled(newViewProps.scrollEnabled.get());
     }
+    // pageAccessibilityLabel: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.pageAccessibilityLabel.isProvided()
+          : !newViewProps.pageAccessibilityLabel.hasSameValue(oldViewProps->pageAccessibilityLabel)) {
+      swiftPart.setPageAccessibilityLabel(newViewProps.pageAccessibilityLabel.get());
+    }
     // showsVerticalScrollIndicator: optional
     if (oldViewProps == nullptr
           ? newViewProps.showsVerticalScrollIndicator.isProvided()

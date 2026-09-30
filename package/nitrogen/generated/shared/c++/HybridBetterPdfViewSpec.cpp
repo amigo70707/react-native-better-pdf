@@ -42,6 +42,8 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("enableDoubleTapZoom", &HybridBetterPdfViewSpec::setEnableDoubleTapZoom);
       prototype.registerHybridGetter("scrollEnabled", &HybridBetterPdfViewSpec::getScrollEnabled);
       prototype.registerHybridSetter("scrollEnabled", &HybridBetterPdfViewSpec::setScrollEnabled);
+      prototype.registerHybridGetter("pageAccessibilityLabel", &HybridBetterPdfViewSpec::getPageAccessibilityLabel);
+      prototype.registerHybridSetter("pageAccessibilityLabel", &HybridBetterPdfViewSpec::setPageAccessibilityLabel);
       prototype.registerHybridGetter("showsVerticalScrollIndicator", &HybridBetterPdfViewSpec::getShowsVerticalScrollIndicator);
       prototype.registerHybridSetter("showsVerticalScrollIndicator", &HybridBetterPdfViewSpec::setShowsVerticalScrollIndicator);
       prototype.registerHybridGetter("showsHorizontalScrollIndicator", &HybridBetterPdfViewSpec::getShowsHorizontalScrollIndicator);
