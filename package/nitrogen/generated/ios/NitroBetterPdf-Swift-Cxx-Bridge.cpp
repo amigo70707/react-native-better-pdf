@@ -78,6 +78,14 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const PdfViewportChangeEvent& /* event */)>
+  Func_void_PdfViewportChangeEvent create_Func_void_PdfViewportChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_PdfViewportChangeEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PdfViewportChangeEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
   // pragma MARK: std::function<void(const PdfTextSelectionChangeEvent& /* event */)>
   Func_void_PdfTextSelectionChangeEvent create_Func_void_PdfTextSelectionChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = NitroBetterPdf::Func_void_PdfTextSelectionChangeEvent::fromUnsafe(swiftClosureWrapper);

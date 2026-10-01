@@ -6,8 +6,7 @@
   "validAttributes": {
     "source": true,
     "password": true,
-    "initialPage": true,
-    "initialScale": true,
+    "initialPosition": true,
     "minScale": true,
     "maxScale": true,
     "pageSpacing": true,
@@ -32,6 +31,7 @@
     "onPageTap": true,
     "onScaleChange": true,
     "onSearchChange": true,
+    "onViewportChange": true,
     "onTextSelectionChange": true,
     "hybridRef": true
   }

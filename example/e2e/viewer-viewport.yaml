@@ -1,0 +1,111 @@
+# onViewportChange, ref.goToViewport and initialViewport on the `outline`
+# fixture (12 pages). The status line shows "p <page> · y <pt> · <zoom>x",
+# plus "· end" once the end of the last page is on screen; restoring a saved
+# position must reproduce it exactly.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "outline(, .*)?", centerElement: true }
+- tapOn: "outline(, .*)?"
+- extendedWaitUntil: { visible: "1 / 12", timeout: 15000 }
+# One event after loading: the top of page 1 (y ≤ 0, the margin above it).
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · y (0|-[0-9]+) · 1\\.00x" }
+    timeout: 5000
+- tapOn: "+10"
+- extendedWaitUntil: { visible: "11 / 12", timeout: 5000 }
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 11 · y (0|-[0-9]+) · 1\\.00x" }
+    timeout: 5000
+
+# Zoomed in and scrolled into the page: not a page top.
+- tapOn: "2.5×"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 11 · .* · 2\\.50x" }
+    timeout: 5000
+- swipe: { start: "50%, 75%", end: "50%, 50%", duration: 1500 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 11 · y [1-9][0-9]* · 2\\.50x" }
+    timeout: 5000
+- tapOn: "Mark"
+- copyTextFrom: { id: "viewport-status" }
+
+# ref.goToViewport brings back the exact position.
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 12", timeout: 5000 }
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · .*" }
+    timeout: 5000
+- tapOn: "Return"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "${maestro.copiedText}" }
+    timeout: 5000
+- assertVisible: "11 / 12"
+
+# The top of the last page zoomed in is not the end. Scrolled as far as it
+# goes, the last page's bottom is on screen; the top-left corner may then
+# lie on the page before (whether the page is shorter than the view depends
+# on the screen).
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "12 / 12", timeout: 5000 }
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 12 · .* · 2\\.50x" }
+    timeout: 5000
+- tapOn: "1×"
+- tapOn: "Last"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1[12] · .* · 1\\.00x.*" }
+    timeout: 5000
+- swipe: { start: "50%, 75%", end: "50%, 40%", duration: 800 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1[12] · .* · 1\\.00x · end" }
+    timeout: 5000
+- copyTextFrom: { id: "viewport-status" }
+
+# initialViewport: reopening with "Resume" starts where the reader left off.
+- tapOn: "‹ Back"
+- scrollUntilVisible: { element: "Resume p\\. 1[12]", centerElement: true }
+- tapOn: "Resume p\\. 1[12]"
+- extendedWaitUntil: { visible: "12 / 12", timeout: 15000 }
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "${maestro.copiedText}" }
+    timeout: 5000
+
+# Horizontal and paged layouts save and restore positions too.
+- tapOn: "Vertical"
+- extendedWaitUntil: { visible: "Horizontal", timeout: 5000 }
+- tapOn: "−10"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p [123] · .*" }
+    timeout: 5000
+- tapOn: "Mark"
+- copyTextFrom: { id: "viewport-status" }
+- tapOn: "Last"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1[12] · .* · end" }
+    timeout: 5000
+- tapOn: "Return"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "${maestro.copiedText}" }
+    timeout: 5000
+- tapOn: "Horizontal"
+- extendedWaitUntil: { visible: "Paged", timeout: 5000 }
+- tapOn: "+10"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1[12] · .*" }
+    timeout: 5000
+- tapOn: "Mark"
+- copyTextFrom: { id: "viewport-status" }
+- tapOn: "First"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · .*" }
+    timeout: 5000
+- tapOn: "Return"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "${maestro.copiedText}" }
+    timeout: 5000
+- tapOn: "‹ Back"

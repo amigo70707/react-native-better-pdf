@@ -162,12 +162,12 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
-  public final var initialPage: bridge.std__optional_double_ {
+  public final var initialPosition: bridge.std__optional_PdfInitialPosition_ {
     @inline(__always)
     get {
-      return { () -> bridge.std__optional_double_ in
-        if let __unwrappedValue = self.__implementation.initialPage {
-          return bridge.create_std__optional_double_(__unwrappedValue)
+      return { () -> bridge.std__optional_PdfInitialPosition_ in
+        if let __unwrappedValue = self.__implementation.initialPosition {
+          return bridge.create_std__optional_PdfInitialPosition_(__unwrappedValue)
         } else {
           return .init()
         }
@@ -175,38 +175,7 @@ open class HybridBetterPdfViewSpec_cxx {
     }
     @inline(__always)
     set {
-      self.__implementation.initialPage = { () -> Double? in
-        if bridge.has_value_std__optional_double_(newValue) {
-          let __unwrapped = bridge.get_std__optional_double_(newValue)
-          return __unwrapped
-        } else {
-          return nil
-        }
-      }()
-    }
-  }
-  
-  public final var initialScale: bridge.std__optional_double_ {
-    @inline(__always)
-    get {
-      return { () -> bridge.std__optional_double_ in
-        if let __unwrappedValue = self.__implementation.initialScale {
-          return bridge.create_std__optional_double_(__unwrappedValue)
-        } else {
-          return .init()
-        }
-      }()
-    }
-    @inline(__always)
-    set {
-      self.__implementation.initialScale = { () -> Double? in
-        if bridge.has_value_std__optional_double_(newValue) {
-          let __unwrapped = bridge.get_std__optional_double_(newValue)
-          return __unwrapped
-        } else {
-          return nil
-        }
-      }()
+      self.__implementation.initialPosition = newValue.value
     }
   }
   
@@ -843,6 +812,38 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var onViewportChange: bridge.std__optional_std__function_void_const_PdfViewportChangeEvent_____event______ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__function_void_const_PdfViewportChangeEvent_____event______ in
+        if let __unwrappedValue = self.__implementation.onViewportChange {
+          return bridge.create_std__optional_std__function_void_const_PdfViewportChangeEvent_____event______({ () -> bridge.Func_void_PdfViewportChangeEvent in
+            let __closureWrapper = Func_void_PdfViewportChangeEvent(__unwrappedValue)
+            return bridge.create_Func_void_PdfViewportChangeEvent(__closureWrapper.toUnsafe())
+          }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onViewportChange = { () -> ((_ event: PdfViewportChangeEvent) -> Void)? in
+        if bridge.has_value_std__optional_std__function_void_const_PdfViewportChangeEvent_____event______(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__function_void_const_PdfViewportChangeEvent_____event______(newValue)
+          return { () -> (PdfViewportChangeEvent) -> Void in
+            let __wrappedFunction = bridge.wrap_Func_void_PdfViewportChangeEvent(__unwrapped)
+            return { (__event: PdfViewportChangeEvent) -> Void in
+              __wrappedFunction.call(__event)
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
   public final var onTextSelectionChange: bridge.std__optional_std__function_void_const_PdfTextSelectionChangeEvent_____event______ {
     @inline(__always)
     get {
@@ -907,6 +908,17 @@ open class HybridBetterPdfViewSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_PdfViewStats_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func goToViewport(viewport: PdfViewport) -> bridge.Result_void_ {
+    do {
+      try self.__implementation.goToViewport(viewport: viewport)
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
     }
   }
   

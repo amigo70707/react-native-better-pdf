@@ -48,8 +48,7 @@ class HybridBetterPdfView(
       if (value != field) needsReload = true
       field = value
     }
-  override var initialPage: Double? = null
-  override var initialScale: Double? = null
+  override var initialPosition: PdfInitialPosition? = null
   override var minScale: Double? = null
     set(value) {
       field = value
@@ -139,6 +138,7 @@ class HybridBetterPdfView(
   override var onLinkPress: ((event: PdfLinkPressEvent) -> Unit)? = null
   override var onPageTap: ((event: PdfPageTapEvent) -> Unit)? = null
   override var onScaleChange: ((event: PdfScaleChangeEvent) -> Unit)? = null
+  override var onViewportChange: ((event: PdfViewportChangeEvent) -> Unit)? = null
   override var onSearchChange: ((event: PdfSearchChangeEvent) -> Unit)? = null
   override var onTextSelectionChange: ((event: PdfTextSelectionChangeEvent) -> Unit)? = null
 
@@ -188,6 +188,13 @@ class HybridBetterPdfView(
   override fun zoomTo(scale: Double, animated: Boolean) {
     if (!scale.isFinite()) return
     mainHandler.post { documentView.zoomTo(scale.toFloat(), animated) }
+  }
+
+  override fun goToViewport(viewport: PdfViewport) {
+    val values = listOf(viewport.page, viewport.x, viewport.y, viewport.scale)
+    if (!values.all { it.isFinite() } || viewport.scale <= 0) return
+    val point = PagePoint(viewport.page.toInt(), viewport.x.toFloat(), viewport.y.toFloat())
+    mainHandler.post { documentView.goToViewport(point, viewport.scale.toFloat()) }
   }
 
   override fun search(query: String) {
@@ -257,9 +264,10 @@ class HybridBetterPdfView(
 
   override fun onOpened(pageSizes: List<PdfDocumentLayout.PageSize>, filePath: String?) {
     val session = session ?: return
-    val initial = initialPage?.takeIf { it.isFinite() }?.toInt() ?: 0
-    val scale = initialScale?.takeIf { it.isFinite() && it > 0 }?.toFloat() ?: 1f
-    documentView.setDocument(session, pageSizes, initial, scale)
+    val position = initialPosition
+    val initial = position?.page?.takeIf { it.isFinite() }?.toInt() ?: 0
+    val scale = position?.scale?.takeIf { it.isFinite() && it > 0 }?.toFloat() ?: 1f
+    documentView.setDocument(session, pageSizes, initial, scale, position?.pagePoint)
     loadedSession = session
     searchController.onDocumentChanged(session)
     val first = pageSizes.first()
@@ -323,6 +331,10 @@ class HybridBetterPdfView(
 
   override fun onScaleSettled(scale: Float) {
     onScaleChange?.invoke(PdfScaleChangeEvent(scale.toDouble()))
+  }
+
+  override fun onViewportSettled(viewport: DocumentViewport) {
+    onViewportChange?.invoke(viewport.toPdfViewportChangeEvent())
   }
 
   override fun onTextSelectionChanged(text: String) {

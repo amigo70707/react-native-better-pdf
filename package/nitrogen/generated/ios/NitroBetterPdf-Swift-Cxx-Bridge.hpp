@@ -18,6 +18,8 @@ namespace margelo::nitro::betterpdf { enum class PdfErrorCode; }
 namespace margelo::nitro::betterpdf { struct PdfError; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfInitialPosition` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfLinkPressEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLinkPressEvent; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -38,6 +40,10 @@ namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfViewStats; }
+// Forward declaration of `PdfViewportChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
+// Forward declaration of `PdfViewport` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewport; }
 
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridBetterPdfViewSpec_cxx` to properly resolve imports.
@@ -49,6 +55,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfInitialPosition.hpp"
 #include "PdfLinkPressEvent.hpp"
 #include "PdfLoadEvent.hpp"
 #include "PdfLoadProgressEvent.hpp"
@@ -59,6 +66,8 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
+#include "PdfViewport.hpp"
+#include "PdfViewportChangeEvent.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/PromiseHolder.hpp>
 #include <NitroModules/Result.hpp>
@@ -158,6 +167,21 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline double get_std__optional_double_(const std::optional<double>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<PdfInitialPosition>
+  /**
+   * Specialized version of `std::optional<PdfInitialPosition>`.
+   */
+  using std__optional_PdfInitialPosition_ = std::optional<PdfInitialPosition>;
+  inline std::optional<PdfInitialPosition> create_std__optional_PdfInitialPosition_(const PdfInitialPosition& value) noexcept {
+    return std::optional<PdfInitialPosition>(value);
+  }
+  inline bool has_value_std__optional_PdfInitialPosition_(const std::optional<PdfInitialPosition>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PdfInitialPosition get_std__optional_PdfInitialPosition_(const std::optional<PdfInitialPosition>& optional) noexcept {
     return optional.value();
   }
   
@@ -484,6 +508,43 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline std::function<void(const PdfSearchChangeEvent& /* event */)> get_std__optional_std__function_void_const_PdfSearchChangeEvent_____event______(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::function<void(const PdfViewportChangeEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const PdfViewportChangeEvent&)>`.
+   */
+  using Func_void_PdfViewportChangeEvent = std::function<void(const PdfViewportChangeEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PdfViewportChangeEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_PdfViewportChangeEvent_Wrapper final {
+  public:
+    explicit Func_void_PdfViewportChangeEvent_Wrapper(std::function<void(const PdfViewportChangeEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const PdfViewportChangeEvent& /* event */)>>(std::move(func))) {}
+    inline void call(PdfViewportChangeEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PdfViewportChangeEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PdfViewportChangeEvent create_Func_void_PdfViewportChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PdfViewportChangeEvent_Wrapper wrap_Func_void_PdfViewportChangeEvent(Func_void_PdfViewportChangeEvent value) noexcept {
+    return Func_void_PdfViewportChangeEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const PdfViewportChangeEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_PdfViewportChangeEvent_____event______ = std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>;
+  inline std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> create_std__optional_std__function_void_const_PdfViewportChangeEvent_____event______(const std::function<void(const PdfViewportChangeEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_PdfViewportChangeEvent_____event______(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const PdfViewportChangeEvent& /* event */)> get_std__optional_std__function_void_const_PdfViewportChangeEvent_____event______(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& optional) noexcept {
     return optional.value();
   }
   

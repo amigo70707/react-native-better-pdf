@@ -13,4 +13,6 @@ export type { PdfPageTapEvent } from './types/PdfPageTapEvent';
 export type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 export type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
 export type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
+export type { PdfViewport } from './types/PdfViewport';
+export type { PdfViewportChangeEvent } from './types/PdfViewportChangeEvent';
 export type { PdfViewStats } from './types/PdfViewStats';

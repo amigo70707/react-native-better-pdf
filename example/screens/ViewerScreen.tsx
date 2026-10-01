@@ -15,6 +15,8 @@ import {
   type PdfOutlineItem,
   type PdfSearchChangeEvent,
   type PdfSource,
+  type PdfViewport,
+  type PdfViewportChangeEvent,
   type PdfViewRef,
   type PdfViewStats,
 } from 'react-native-better-pdf';
@@ -41,6 +43,12 @@ const FITS = [
   { title: 'Fit H', fitPolicy: 'height' },
   { title: 'Fit P', fitPolicy: 'page' },
 ] as const;
+
+/**
+ * Where each document was left, by entry id, for "Resume" in the list. In
+ * memory only; a real app would persist it (e.g. AsyncStorage / MMKV).
+ */
+const savedViewports = new Map<string, PdfViewport>();
 
 type LoadState =
   | { kind: 'idle' }
@@ -71,6 +79,11 @@ export function ViewerScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState<PdfSearchChangeEvent | null>(null);
   const [customSearchColor, setCustomSearchColor] = useState(false);
+  /** Opened with "Resume": the saved position, applied on load. */
+  const [resumeViewport, setResumeViewport] = useState<PdfViewport>();
+  const [viewport, setViewport] = useState<PdfViewportChangeEvent | null>(null);
+  /** Set by "Mark", restored by "Return" (ref.goToViewport). */
+  const mark = useRef<PdfViewport | null>(null);
   const [doubleTapZoom, setDoubleTapZoom] = useState(true);
   const [textSelection, setTextSelection] = useState(true);
   /** Counts onTextSelectionChange events: one per settled selection. */
@@ -81,42 +94,55 @@ export function ViewerScreen() {
   const fit = FITS[fitIndex] ?? FITS[0];
   const [progress, setProgress] = useState<PdfLoadProgressEvent | null>(null);
 
-  const open = useCallback(async (next: DocumentEntry) => {
-    setEntry(next);
-    setPassword(undefined);
-    setPasswordDraft('');
-    setAttempt((value) => value + 1);
-    setPage(0);
-    setStats(null);
-    setLastEvent('');
-    setProgress(null);
-    setOutline(null);
-    setSearch(null);
-    setShowSearch(false);
-    scaleEvents.current = 0;
-    selectionEvents.current = 0;
-    setState({ kind: 'resolving' });
-    try {
-      const source = await next.resolve();
-      setState({ kind: 'loading', source });
-    } catch (error) {
-      setState({ kind: 'failed', source: null, error: String(error) });
-    }
-  }, []);
+  const open = useCallback(
+    async (next: DocumentEntry, resume?: PdfViewport) => {
+      setEntry(next);
+      setResumeViewport(resume);
+      setViewport(null);
+      mark.current = null;
+      setPassword(undefined);
+      setPasswordDraft('');
+      setAttempt((value) => value + 1);
+      setPage(0);
+      setStats(null);
+      setLastEvent('');
+      setProgress(null);
+      setOutline(null);
+      setSearch(null);
+      setShowSearch(false);
+      scaleEvents.current = 0;
+      selectionEvents.current = 0;
+      setState({ kind: 'resolving' });
+      try {
+        const source = await next.resolve();
+        setState({ kind: 'loading', source });
+      } catch (error) {
+        setState({ kind: 'failed', source: null, error: String(error) });
+      }
+    },
+    [],
+  );
 
   if (entry == null) {
     return (
       <ScrollView contentContainerStyle={styles.list}>
-        {DOCUMENTS.map((document) => (
-          <Pressable
-            key={document.id}
-            style={styles.row}
-            onPress={() => open(document)}
-          >
-            <Text style={styles.rowTitle}>{document.title}</Text>
-            <Text style={styles.rowSubtitle}>{document.subtitle}</Text>
-          </Pressable>
-        ))}
+        {DOCUMENTS.map((document) => {
+          const saved = savedViewports.get(document.id);
+          return (
+            <View key={document.id} style={styles.rowWithAction}>
+              <Pressable style={styles.rowMain} onPress={() => open(document)}>
+                <Text style={styles.rowTitle}>{document.title}</Text>
+                <Text style={styles.rowSubtitle}>{document.subtitle}</Text>
+              </Pressable>
+              {saved != null && (
+                <Button
+                  title={`Resume p. ${saved.page + 1}`}
+                  onPress={() => open(document, saved)}
+                />
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
     );
   }
@@ -200,6 +226,18 @@ export function ViewerScreen() {
             setShowSearch((value) => !value);
           }}
         />
+        <Button
+          title="Mark"
+          onPress={() => {
+            mark.current = viewport?.viewport ?? null;
+          }}
+        />
+        <Button
+          title="Return"
+          onPress={() => {
+            if (mark.current != null) ref.current?.goToViewport(mark.current);
+          }}
+        />
       </View>
 
       {showSearch && (
@@ -221,9 +259,14 @@ export function ViewerScreen() {
       )}
 
       {/* Always rendered: a row appearing mid-gesture would resize the viewer. */}
-      <Text style={styles.lastEvent} numberOfLines={1}>
-        {lastEvent === '' ? ' ' : lastEvent}
-      </Text>
+      <View style={styles.eventRow}>
+        <Text style={styles.lastEvent} numberOfLines={1}>
+          {lastEvent === '' ? ' ' : lastEvent}
+        </Text>
+        <Text testID="viewport-status" style={styles.viewport}>
+          {formatViewport(viewport)}
+        </Text>
+      </View>
 
       <View style={styles.fill}>
         {source != null && (
@@ -244,6 +287,11 @@ export function ViewerScreen() {
             onLoadProgress={setProgress}
             initialPage={entry.initialPage}
             initialScale={entry.initialScale}
+            initialViewport={resumeViewport}
+            onViewportChange={(event) => {
+              setViewport(event);
+              savedViewports.set(entry.id, event.viewport);
+            }}
             onLoad={(event) => {
               setState({ kind: 'loaded', source, pageCount: event.pageCount });
               // The local file behind the document, e.g. for sharing.
@@ -383,6 +431,14 @@ export function ViewerScreen() {
   );
 }
 
+/** "p 3 · y 120 · 1.00x", plus "· end" once the end is on screen. */
+function formatViewport(event: PdfViewportChangeEvent | null): string {
+  if (event == null) return '';
+  const { page, y, scale } = event.viewport;
+  const end = event.isAtEnd ? ' · end' : '';
+  return `p ${page + 1} · y ${Math.round(y)} · ${scale.toFixed(2)}x${end}`;
+}
+
 function formatProgress({
   loadedBytes,
   totalBytes,
@@ -409,7 +465,14 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   pdf: { flex: 1, backgroundColor: colors.canvas },
   list: { padding: 12, gap: 8 },
-  row: { padding: 14, borderRadius: 10, backgroundColor: colors.card },
+  rowWithAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: colors.card,
+    paddingRight: 8,
+  },
+  rowMain: { flex: 1, padding: 14 },
   rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   rowSubtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
   // Many toggles: wrap on narrow screens rather than push the last off-screen.
@@ -429,12 +492,18 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontVariant: ['tabular-nums'],
   },
-  lastEvent: {
+  eventRow: {
+    flexDirection: 'row',
     paddingHorizontal: 12,
     paddingVertical: 4,
+    gap: 8,
+    backgroundColor: colors.card,
+  },
+  lastEvent: { flex: 1, fontSize: 13, color: colors.muted },
+  viewport: {
     fontSize: 13,
     color: colors.muted,
-    backgroundColor: colors.card,
+    fontVariant: ['tabular-nums'],
   },
   pageLabel: {
     fontSize: 15,

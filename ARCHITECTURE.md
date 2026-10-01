@@ -42,6 +42,7 @@ package/
     HybridBetterPdfView.swift      PDFView host, scale mapping, events, lifecycle
     PdfContainerView.swift         taps, links, text selection settle / disable
     PdfSearchController.swift      PDFKit async find, highlights, next/previous
+    SettleDebouncer.swift          "viewport stopped moving" for scale and viewport events
     PdfDocumentLoader.swift        source resolution, URLSession download, PDFDocument open
     PdfLoadFailure.swift           Swift error → PdfError
   android/src/main/java/com/margelo/nitro/betterpdf/
@@ -54,6 +55,7 @@ package/
     SearchController.kt            search(), next/previous, onSearchChange throttling
     PdfSearchTask.kt               search thread with its own renderer (duplicated FD)
     SearchResults.kt               pure: matches by page, current match, wrapping
+    DocumentViewport.kt            pure: settled position (page point, zoom, visible pages, end)
     PdfDocumentLayout.kt           pure: page geometry, O(log n) lookups
     PrefetchPlanner.kt             pure: render priority order
     LruByteCache.kt                pure: byte-budgeted LRU
@@ -84,6 +86,7 @@ per-frame path without a second caller. See the research notes.
 | Cache insert / evict / draw                 | PDFKit internal                      | main only (no locking needed)                    |
 | Bitmap pool                                 | —                                    | acquire: render thread, release: main (locked)   |
 | Text selection                              | PDFKit (main); settle reported on main | query: render thread (urgent queue slot); UI: main |
+| Viewport events (`onViewportChange`)        | settle detected on main (scroll-offset KVO + 100 ms debounce) | settle detected on main (same settle as tiles and zoom) |
 | Search                                      | PDFKit async find (background); matches and highlights on main | `BetterPdf-search` thread with its own renderer; results on main |
 | Event callbacks                             | invoked on main; Nitro hops to JS    | invoked on main; Nitro hops to JS                |
 

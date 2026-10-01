@@ -64,14 +64,9 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
     hybridView->setPassword(newProps->password.get());
   }
   if (oldProps == nullptr
-        ? newProps->initialPage.isProvided()
-        : !newProps->initialPage.hasSameValue(oldProps->initialPage)) {
-    hybridView->setInitialPage(newProps->initialPage.get());
-  }
-  if (oldProps == nullptr
-        ? newProps->initialScale.isProvided()
-        : !newProps->initialScale.hasSameValue(oldProps->initialScale)) {
-    hybridView->setInitialScale(newProps->initialScale.get());
+        ? newProps->initialPosition.isProvided()
+        : !newProps->initialPosition.hasSameValue(oldProps->initialPosition)) {
+    hybridView->setInitialPosition(newProps->initialPosition.get());
   }
   if (oldProps == nullptr
         ? newProps->minScale.isProvided()
@@ -192,6 +187,11 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
         ? newProps->onSearchChange.isProvided()
         : !newProps->onSearchChange.hasSameValue(oldProps->onSearchChange)) {
     hybridView->setOnSearchChange(newProps->onSearchChange.get());
+  }
+  if (oldProps == nullptr
+        ? newProps->onViewportChange.isProvided()
+        : !newProps->onViewportChange.hasSameValue(oldProps->onViewportChange)) {
+    hybridView->setOnViewportChange(newProps->onViewportChange.get());
   }
   if (oldProps == nullptr
         ? newProps->onTextSelectionChange.isProvided()

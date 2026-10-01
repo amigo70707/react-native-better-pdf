@@ -724,6 +724,66 @@ The most requested missing feature of react-native-pdf (7 issues, see
   matches. `SearchResultsTest` covers ordering, indexes and
   wrapping.
 
+## Viewport (v0.2)
+
+```ts
+// props
+initialViewport?: PdfViewport;
+onViewportChange?: (event: PdfViewportChangeEvent) => void;
+// ref
+goToViewport(viewport: PdfViewport): void;
+
+interface PdfViewport { page: number; x: number; y: number; scale: number }
+interface PdfViewportChangeEvent {
+  viewport: PdfViewport;
+  firstVisiblePage: number;
+  lastVisiblePage: number;
+  isAtEnd: boolean;
+}
+```
+
+The second most requested feature of react-native-pdf (11 issues: save and
+restore the position, scroll events, "read to the end"; see
+`community-requests.md`).
+
+- **A position is a page point, not a scroll offset.** Offsets depend on the
+  screen size, zoom, page spacing and layout mode; a point on a page in PDF
+  points does not, so a saved position survives rotation, another device or
+  a switch to horizontal. The anchor is the view's top-left corner, the
+  same corner on every layout (including RTL), so saving and restoring are
+  exact inverses. The page is the one nearest to the corner, and
+  `x` / `y` go negative in the margin or gap before it rather than snapping
+  to the page, so restoring is exact there too. Verified end-to-end: a
+  zoomed, scrolled position is reproduced to the rounding of the display
+  (whole points) on both platforms, also through `initialViewport`.
+- **Settled, never per frame.** Like `onScaleChange`: once the view stops
+  (same settle rule as zoom on both platforms), and only when the position
+  moved by more than rounding noise (0.5 pt, 0.001 zoom) or the visible
+  pages or `isAtEnd` changed. Also once after loading (and after a
+  rotation), so an app has a position without the user scrolling. There is
+  no per-frame scroll event: it would put JS on the hot path, and every use
+  case found (save, restore, read tracking) needs only settled positions.
+- **The saved value is what the event carries.** `viewport` is nested
+  rather than spread into the event so it can be stored and passed back
+  unchanged (`initialViewport={saved}`, `goToViewport(saved)`); the event's
+  other fields describe the screen, not the position.
+- **`isAtEnd` is derived natively** because JS cannot know it: whether the
+  last page's far edge (bottom; right, or left in RTL) is on screen depends
+  on page sizes and spacing. The half gap around a page counts as the page's
+  (a page exactly as wide as the view is "at the end" at its own slot).
+- **`initialViewport` in addition to `goToViewport`:** calling the method
+  from `onLoad` would show the first page for a frame. The native prop for
+  the initial position is one internal struct (`page`, `scale`, optional
+  `x` / `y`) that `PdfView` builds from `initialPage` / `initialScale` or
+  `initialViewport`, so there is one code path per platform.
+- **No animation** for `goToViewport`: it changes zoom and position at once,
+  and its uses (resume, go back) are jumps. `goToPage` stays the animated
+  navigation.
+- **Paged layouts** restore page and zoom. Android also restores the point
+  when zoomed in; iOS's page view controller has one scroll view per page,
+  so the point within a zoomed page is not restored there. Both settle on
+  the page when not zoomed, as a swipe does.
+
 ## Open questions
 
 - A `PdfDocument` Hybrid Object for metadata/page count without mounting a view.

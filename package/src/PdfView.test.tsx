@@ -35,6 +35,8 @@ const nativeInstance = {
   searchNext: () => nativeCalls.push('searchNext()'),
   searchPrevious: () => nativeCalls.push('searchPrevious()'),
   clearSearch: () => nativeCalls.push('clearSearch()'),
+  goToViewport: (viewport: object) =>
+    nativeCalls.push(`goToViewport(${JSON.stringify(viewport)})`),
   getOutline: () =>
     Promise.resolve([
       { title: 'Chapter', page: 0, depth: 0 },
@@ -267,8 +269,7 @@ describe('PdfView', () => {
     act(() => renderer.update(<PdfView source={{ uri: 'x' }} />));
     expect(lastHost()).toMatchObject({
       password: '',
-      initialPage: 0,
-      initialScale: 1,
+      initialPosition: { page: 0, scale: 1 },
       minScale: 1,
       maxScale: 4,
       pageSpacing: 8,
@@ -340,7 +341,7 @@ describe('PdfView', () => {
       />,
     );
     expect(lastHost()).toMatchObject({
-      initialPage: 4,
+      initialPosition: { page: 4, scale: 1 },
       minScale: 0.5,
       maxScale: 6,
       pageSpacing: 0,
@@ -373,6 +374,70 @@ describe('PdfView', () => {
       'zoomTo(2, true)',
     ]);
     expect(ref.current?.getStats()).toBe(stats);
+  });
+
+  test('initialViewport takes precedence and keeps the native prop stable', () => {
+    const viewport = { page: 7, x: -4, y: 120.5, scale: 2 };
+    const renderer = render(
+      <PdfView
+        source={{ uri: 'x' }}
+        initialPage={3}
+        initialScale={1.5}
+        initialViewport={viewport}
+      />,
+    );
+    const position = lastHost().initialPosition;
+    expect(position).toEqual({ page: 7, scale: 2, x: -4, y: 120.5 });
+    act(() =>
+      renderer.update(
+        <PdfView
+          source={{ uri: 'x' }}
+          initialPage={3}
+          initialScale={1.5}
+          initialViewport={{ ...viewport }}
+        />,
+      ),
+    );
+    expect(lastHost().initialPosition).toBe(position);
+    act(() =>
+      renderer.update(
+        <PdfView source={{ uri: 'x' }} initialPage={3} initialScale={1.5} />,
+      ),
+    );
+    expect(lastHost().initialPosition).toEqual({ page: 3, scale: 1.5 });
+  });
+
+  test('goToViewport sends only the position fields', () => {
+    const ref = createRef<PdfViewRef>();
+    render(<PdfView ref={ref} source={{ uri: 'x' }} />);
+    const hybridRef = lastHost().hybridRef as {
+      f: (instance: typeof nativeInstance) => void;
+    };
+    hybridRef.f(nativeInstance);
+    // e.g. a whole saved event spread into the viewport.
+    const saved = { page: 2, x: 0, y: 10, scale: 1, isAtEnd: false };
+    ref.current?.goToViewport(saved);
+    expect(nativeCalls).toEqual([
+      'goToViewport({"page":2,"x":0,"y":10,"scale":1})',
+    ]);
+  });
+
+  test('forwards viewport changes through a stable callback', () => {
+    const events: unknown[] = [];
+    render(
+      <PdfView
+        source={{ uri: 'x' }}
+        onViewportChange={(e) => events.push(e)}
+      />,
+    );
+    const event = {
+      viewport: { page: 1, x: 0, y: 3, scale: 1 },
+      firstVisiblePage: 1,
+      lastVisiblePage: 2,
+      isAtEnd: false,
+    };
+    (lastHost().onViewportChange as { f: (e: unknown) => void }).f(event);
+    expect(events).toEqual([event]);
   });
 
   test('search methods forward to the native view', () => {

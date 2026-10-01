@@ -22,8 +22,7 @@ namespace margelo::nitro::betterpdf::views {
     react::ViewProps(context, sourceProps, rawProps, filterObjectKeys),
     source(nitro::ReactProp<std::optional<NativePdfSource>>::fromRawValue("BetterPdfView", "source", rawProps, sourceProps.source)),
     password(nitro::ReactProp<std::optional<std::string>>::fromRawValue("BetterPdfView", "password", rawProps, sourceProps.password)),
-    initialPage(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "initialPage", rawProps, sourceProps.initialPage)),
-    initialScale(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "initialScale", rawProps, sourceProps.initialScale)),
+    initialPosition(nitro::ReactProp<std::optional<PdfInitialPosition>>::fromRawValue("BetterPdfView", "initialPosition", rawProps, sourceProps.initialPosition)),
     minScale(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "minScale", rawProps, sourceProps.minScale)),
     maxScale(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "maxScale", rawProps, sourceProps.maxScale)),
     pageSpacing(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "pageSpacing", rawProps, sourceProps.pageSpacing)),
@@ -48,6 +47,7 @@ namespace margelo::nitro::betterpdf::views {
     onPageTap(nitro::ReactProp<std::optional<std::function<void(const PdfPageTapEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onPageTap", rawProps, sourceProps.onPageTap)),
     onScaleChange(nitro::ReactProp<std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onScaleChange", rawProps, sourceProps.onScaleChange)),
     onSearchChange(nitro::ReactProp<std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onSearchChange", rawProps, sourceProps.onSearchChange)),
+    onViewportChange(nitro::ReactProp<std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onViewportChange", rawProps, sourceProps.onViewportChange)),
     onTextSelectionChange(nitro::ReactProp<std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onTextSelectionChange", rawProps, sourceProps.onTextSelectionChange)),
     hybridRef(nitro::ReactProp<std::optional<std::function<void(const std::shared_ptr<HybridBetterPdfViewSpec>& /* ref */)>>>::fromRawValue("BetterPdfView", "hybridRef", rawProps, sourceProps.hybridRef)) { }
 
@@ -55,8 +55,7 @@ namespace margelo::nitro::betterpdf::views {
     switch (hashString(propName)) {
       case hashString("source"): return true;
       case hashString("password"): return true;
-      case hashString("initialPage"): return true;
-      case hashString("initialScale"): return true;
+      case hashString("initialPosition"): return true;
       case hashString("minScale"): return true;
       case hashString("maxScale"): return true;
       case hashString("pageSpacing"): return true;
@@ -81,6 +80,7 @@ namespace margelo::nitro::betterpdf::views {
       case hashString("onPageTap"): return true;
       case hashString("onScaleChange"): return true;
       case hashString("onSearchChange"): return true;
+      case hashString("onViewportChange"): return true;
       case hashString("onTextSelectionChange"): return true;
       case hashString("hybridRef"): return true;
       default: return false;

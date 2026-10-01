@@ -44,13 +44,7 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
-  abstract var initialPage: Double?
-  
-  @get:DoNotStrip
-  @get:Keep
-  @set:DoNotStrip
-  @set:Keep
-  abstract var initialScale: Double?
+  abstract var initialPosition: PdfInitialPosition?
   
   @get:DoNotStrip
   @get:Keep
@@ -260,6 +254,20 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
       onSearchChange = value?.let { it }
     }
   
+  abstract var onViewportChange: ((event: PdfViewportChangeEvent) -> Unit)?
+  
+  private var onViewportChange_cxx: Func_void_PdfViewportChangeEvent?
+    @Keep
+    @DoNotStrip
+    get() {
+      return onViewportChange?.let { Func_void_PdfViewportChangeEvent_java(it) }
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onViewportChange = value?.let { it }
+    }
+  
   abstract var onTextSelectionChange: ((event: PdfTextSelectionChangeEvent) -> Unit)?
   
   private var onTextSelectionChange_cxx: Func_void_PdfTextSelectionChangeEvent?
@@ -286,6 +294,10 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @DoNotStrip
   @Keep
   abstract fun getStats(): PdfViewStats
+  
+  @DoNotStrip
+  @Keep
+  abstract fun goToViewport(viewport: PdfViewport): Unit
   
   @DoNotStrip
   @Keep

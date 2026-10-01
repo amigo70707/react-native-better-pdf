@@ -20,6 +20,7 @@
 #include "NativePdfSource.hpp"
 #include <optional>
 #include <string>
+#include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
@@ -30,6 +31,7 @@
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
+#include "PdfViewportChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include <memory>
 #include "HybridBetterPdfViewSpec.hpp"
@@ -56,8 +58,7 @@ namespace margelo::nitro::betterpdf::views {
   public:
     nitro::ReactProp<std::optional<NativePdfSource>> source;
     nitro::ReactProp<std::optional<std::string>> password;
-    nitro::ReactProp<std::optional<double>> initialPage;
-    nitro::ReactProp<std::optional<double>> initialScale;
+    nitro::ReactProp<std::optional<PdfInitialPosition>> initialPosition;
     nitro::ReactProp<std::optional<double>> minScale;
     nitro::ReactProp<std::optional<double>> maxScale;
     nitro::ReactProp<std::optional<double>> pageSpacing;
@@ -82,6 +83,7 @@ namespace margelo::nitro::betterpdf::views {
     nitro::ReactProp<std::optional<std::function<void(const PdfPageTapEvent& /* event */)>>> onPageTap;
     nitro::ReactProp<std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>> onScaleChange;
     nitro::ReactProp<std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>> onSearchChange;
+    nitro::ReactProp<std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>> onViewportChange;
     nitro::ReactProp<std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>> onTextSelectionChange;
     nitro::ReactProp<std::optional<std::function<void(const std::shared_ptr<HybridBetterPdfViewSpec>& /* ref */)>>> hybridRef;
 
@@ -89,8 +91,7 @@ namespace margelo::nitro::betterpdf::views {
     bool hasSameProps(const HybridBetterPdfViewProps& other) const noexcept {
       return source.hasSameValue(other.source) &&
              password.hasSameValue(other.password) &&
-             initialPage.hasSameValue(other.initialPage) &&
-             initialScale.hasSameValue(other.initialScale) &&
+             initialPosition.hasSameValue(other.initialPosition) &&
              minScale.hasSameValue(other.minScale) &&
              maxScale.hasSameValue(other.maxScale) &&
              pageSpacing.hasSameValue(other.pageSpacing) &&
@@ -115,6 +116,7 @@ namespace margelo::nitro::betterpdf::views {
              onPageTap.hasSameValue(other.onPageTap) &&
              onScaleChange.hasSameValue(other.onScaleChange) &&
              onSearchChange.hasSameValue(other.onSearchChange) &&
+             onViewportChange.hasSameValue(other.onViewportChange) &&
              onTextSelectionChange.hasSameValue(other.onTextSelectionChange) &&
              hybridRef.hasSameValue(other.hybridRef);
     }
@@ -123,8 +125,7 @@ namespace margelo::nitro::betterpdf::views {
     bool hasAnyProvidedProps() const noexcept {
       return source.isProvided() ||
              password.isProvided() ||
-             initialPage.isProvided() ||
-             initialScale.isProvided() ||
+             initialPosition.isProvided() ||
              minScale.isProvided() ||
              maxScale.isProvided() ||
              pageSpacing.isProvided() ||
@@ -149,6 +150,7 @@ namespace margelo::nitro::betterpdf::views {
              onPageTap.isProvided() ||
              onScaleChange.isProvided() ||
              onSearchChange.isProvided() ||
+             onViewportChange.isProvided() ||
              onTextSelectionChange.isProvided() ||
              hybridRef.isProvided();
     }

@@ -39,8 +39,7 @@ describe('Nitro boundary', () => {
         'fitPolicy',
         'horizontal',
         'hybridRef',
-        'initialPage',
-        'initialScale',
+        'initialPosition',
         'maxScale',
         'minScale',
         'onError',
@@ -52,6 +51,7 @@ describe('Nitro boundary', () => {
         'onScaleChange',
         'onSearchChange',
         'onTextSelectionChange',
+        'onViewportChange',
         'pageAccessibilityLabel',
         'pageSpacing',
         'scrollEnabled',
@@ -78,6 +78,9 @@ describe('Nitro boundary', () => {
       // Once per settled selection, never per handle move (react-native-pdf
       // sent one per move; see docs/api-design.md "Text selection").
       'onTextSelectionChange',
+      // Once per settled scroll / zoom and once after loading, never per
+      // frame (see docs/api-design.md "Viewport").
+      'onViewportChange',
     ]);
     const perFrame = attributes.filter(
       (name) =>

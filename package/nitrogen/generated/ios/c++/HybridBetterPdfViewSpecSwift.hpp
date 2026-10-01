@@ -14,6 +14,8 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 
 // Forward declaration of `NativePdfSource` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfSource; }
+// Forward declaration of `PdfInitialPosition` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -34,6 +36,10 @@ namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
+// Forward declaration of `PdfViewportChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
+// Forward declaration of `PdfViewport` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewport; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -45,6 +51,7 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
@@ -56,6 +63,8 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
+#include "PdfViewportChangeEvent.hpp"
+#include "PdfViewport.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfOutlineEntry.hpp"
@@ -122,19 +131,12 @@ namespace margelo::nitro::betterpdf {
     inline void setPassword(const std::optional<std::string>& password) noexcept override {
       _swiftPart.setPassword(password);
     }
-    inline std::optional<double> getInitialPage() noexcept override {
-      auto __result = _swiftPart.getInitialPage();
+    inline std::optional<PdfInitialPosition> getInitialPosition() noexcept override {
+      auto __result = _swiftPart.getInitialPosition();
       return __result;
     }
-    inline void setInitialPage(std::optional<double> initialPage) noexcept override {
-      _swiftPart.setInitialPage(initialPage);
-    }
-    inline std::optional<double> getInitialScale() noexcept override {
-      auto __result = _swiftPart.getInitialScale();
-      return __result;
-    }
-    inline void setInitialScale(std::optional<double> initialScale) noexcept override {
-      _swiftPart.setInitialScale(initialScale);
+    inline void setInitialPosition(const std::optional<PdfInitialPosition>& initialPosition) noexcept override {
+      _swiftPart.setInitialPosition(initialPosition);
     }
     inline std::optional<double> getMinScale() noexcept override {
       auto __result = _swiftPart.getMinScale();
@@ -304,6 +306,13 @@ namespace margelo::nitro::betterpdf {
     inline void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) noexcept override {
       _swiftPart.setOnSearchChange(onSearchChange);
     }
+    inline std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> getOnViewportChange() noexcept override {
+      auto __result = _swiftPart.getOnViewportChange();
+      return __result;
+    }
+    inline void setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) noexcept override {
+      _swiftPart.setOnViewportChange(onViewportChange);
+    }
     inline std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() noexcept override {
       auto __result = _swiftPart.getOnTextSelectionChange();
       return __result;
@@ -333,6 +342,12 @@ namespace margelo::nitro::betterpdf {
       }
       auto __value = std::move(__result.value());
       return __value;
+    }
+    inline void goToViewport(const PdfViewport& viewport) override {
+      auto __result = _swiftPart.goToViewport(std::forward<decltype(viewport)>(viewport));
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
     }
     inline std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() override {
       auto __result = _swiftPart.getOutline();

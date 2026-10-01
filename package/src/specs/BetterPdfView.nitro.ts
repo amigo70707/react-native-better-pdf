@@ -6,6 +6,7 @@ import type {
 import type { NativePdfSource } from '../types/NativePdfSource';
 import type { PdfError } from '../types/PdfError';
 import type { PdfFitPolicy } from '../types/PdfFitPolicy';
+import type { PdfInitialPosition } from '../types/PdfInitialPosition';
 import type { PdfLinkPressEvent } from '../types/PdfLinkPressEvent';
 import type { PdfLoadProgressEvent } from '../types/PdfLoadProgressEvent';
 import type { PdfLoadEvent } from '../types/PdfLoadEvent';
@@ -15,6 +16,8 @@ import type { PdfPageTapEvent } from '../types/PdfPageTapEvent';
 import type { PdfScaleChangeEvent } from '../types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from '../types/PdfSearchChangeEvent';
 import type { PdfTextSelectionChangeEvent } from '../types/PdfTextSelectionChangeEvent';
+import type { PdfViewport } from '../types/PdfViewport';
+import type { PdfViewportChangeEvent } from '../types/PdfViewportChangeEvent';
 import type { PdfViewStats } from '../types/PdfViewStats';
 
 /**
@@ -24,10 +27,8 @@ import type { PdfViewStats } from '../types/PdfViewStats';
 export interface PdfViewProps extends HybridViewProps {
   source?: NativePdfSource;
   password?: string;
-  /** Zero-based page shown once a document finishes loading. */
-  initialPage?: number;
-  /** Zoom applied once a document finishes loading, relative to the fitted page. Default 1. */
-  initialScale?: number;
+  /** Position applied once a document finishes loading. */
+  initialPosition?: PdfInitialPosition;
   /** Relative to the fitted page. Default 1. */
   minScale?: number;
   /** Relative to the fitted page. Default 4. */
@@ -70,6 +71,8 @@ export interface PdfViewProps extends HybridViewProps {
   onScaleChange?: (event: PdfScaleChangeEvent) => void;
   /** Search progress and navigation; at most 10 per second while searching, plus one on completion. */
   onSearchChange?: (event: PdfSearchChangeEvent) => void;
+  /** Once per settled scroll or zoom (and once after loading), never per frame. */
+  onViewportChange?: (event: PdfViewportChangeEvent) => void;
   /** Once per settled selection change (gesture end), never per handle move. */
   onTextSelectionChange?: (event: PdfTextSelectionChangeEvent) => void;
 }
@@ -81,6 +84,8 @@ export interface PdfViewMethods extends HybridViewMethods {
   /** Zooms around the viewport center. `scale` is relative to the fitted page and clamped to [minScale, maxScale]. */
   zoomTo(scale: number, animated: boolean): void;
   getStats(): PdfViewStats;
+  /** Jumps (without animation) so `viewport`'s page point is at the top-left corner, at its zoom. */
+  goToViewport(viewport: PdfViewport): void;
   /**
    * The document outline, flattened depth-first. Parsed off the main thread
    * on first call and cached. Rejects before a document has loaded, and on

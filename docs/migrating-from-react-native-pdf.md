@@ -167,6 +167,20 @@ Replace message matching with the stable code:
 + <Text>{page + 1} / {total}</Text>
 ```
 
+### Remembering where the reader was
+
+react-native-pdf could only report the page. Save the full position (page,
+point on the page and zoom) and pass it back when the document is opened
+again:
+
+```tsx
+<PdfView
+  source={source}
+  initialViewport={saved}
+  onViewportChange={({ viewport }) => save(viewport)}
+/>
+```
+
 ### Jumping to a page from a prop
 
 react-native-pdf applied `page` whenever it changed. Keep that behaviour with

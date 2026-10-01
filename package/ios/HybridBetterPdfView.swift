@@ -27,8 +27,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var password: String? {
     didSet { if password != oldValue { needsReload = true } }
   }
-  var initialPage: Double?
-  var initialScale: Double?
+  var initialPosition: PdfInitialPosition?
   var minScale: Double? {
     didSet { needsScaleUpdate = true }
   }
@@ -88,6 +87,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var onLinkPress: ((PdfLinkPressEvent) -> Void)?
   var onPageTap: ((PdfPageTapEvent) -> Void)?
   var onScaleChange: ((PdfScaleChangeEvent) -> Void)?
+  var onViewportChange: ((PdfViewportChangeEvent) -> Void)?
   var onSearchChange: ((PdfSearchChangeEvent) -> Void)?
   var onTextSelectionChange: ((PdfTextSelectionChangeEvent) -> Void)?
 
@@ -99,6 +99,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private var pageChangeObserver: NSObjectProtocol?
   private var loadTask: PdfLoadTask?
   private var pendingInitialPage: Int?
+  /// With `pendingInitialPage`: the page point to put at the top-left corner.
+  private var pendingInitialPoint: CGPoint?
   /// `initialScale`, applied with the document's first fit.
   private var pendingInitialScale: Double?
   private var fitScale: CGFloat = 0
@@ -106,8 +108,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// document's first fit, which is the baseline rather than a change.
   private var lastReportedScale: Double?
   private var scaleObserver: NSObjectProtocol?
-  private var scaleSettleWork: DispatchWorkItem?
-  private var observedScaleFactor: CGFloat = 0
+  /// Scale and viewport events wait for the viewport to stop moving.
+  private lazy var settle = SettleDebouncer(delay: Self.settleDelay) { [weak self] in
+    self?.reportIfSettled()
+  }
+  /// Last `onViewportChange` event; nil until the document's first.
+  private var lastReportedViewport: PdfViewportChangeEvent?
   /// Paged layouts: the scale PDFKit showed the current page at on arrival.
   private var pagedFitScale: CGFloat?
   private var lastReportedPage = -1
@@ -140,7 +146,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     scaleObserver = NotificationCenter.default.addObserver(
       forName: .PDFViewScaleChanged, object: container.pdfView, queue: .main
     ) { [weak self] _ in
-      self?.scheduleScaleReport()
+      self?.settle.noteMotion()
     }
   }
 
@@ -164,7 +170,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     offsetObservation = nil
     if let scaleObserver { NotificationCenter.default.removeObserver(scaleObserver) }
     scaleObserver = nil
-    scaleSettleWork?.cancel()
+    settle.cancel()
     if let pageChangeObserver { NotificationCenter.default.removeObserver(pageChangeObserver) }
     pageChangeObserver = nil
     loadTask?.cancel()
@@ -181,6 +187,17 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   func goToPage(page: Double, animated: Bool) throws {
     DispatchQueue.main.async { [weak self] in
       self?.scrollToPage(Int(page.rounded()), animated: animated)
+    }
+  }
+
+  func goToViewport(viewport: PdfViewport) throws {
+    guard [viewport.page, viewport.x, viewport.y, viewport.scale].allSatisfy(\.isFinite), viewport.scale > 0 else { return }
+    DispatchQueue.main.async { [weak self] in
+      self?.applyViewport(
+        page: Int(viewport.page.rounded()),
+        point: CGPoint(x: viewport.x, y: viewport.y),
+        scale: viewport.scale
+      )
     }
   }
 
@@ -301,11 +318,18 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private func present(_ document: PDFDocument) {
     searchController.clear()
     lastReportedScale = nil
+    lastReportedViewport = nil
     outlineCache = nil
     guard let pdfView else { return }
     let pageCount = document.pageCount
-    pendingInitialPage = min(max(Int((initialPage ?? 0).rounded()), 0), pageCount - 1)
-    pendingInitialScale = initialScale.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+    let position = initialPosition
+    let requestedPage = position.map { $0.page.isFinite ? Int($0.page.rounded()) : 0 } ?? 0
+    pendingInitialPage = min(max(requestedPage, 0), pageCount - 1)
+    pendingInitialScale = position.flatMap { $0.scale.isFinite && $0.scale > 0 ? $0.scale : nil }
+    pendingInitialPoint = nil
+    if let x = position?.x, let y = position?.y, x.isFinite, y.isFinite, pendingInitialPage == requestedPage {
+      pendingInitialPoint = CGPoint(x: x, y: y)
+    }
     pdfView.document = document
     setStatsPageCount(pageCount)
     // A new document starts at initialPage, not at the previous one's page.
@@ -333,10 +357,44 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     }
     if let page = pendingInitialPage, fitScale > 0 {
       pendingInitialPage = nil
+      let point = pendingInitialPoint
+      pendingInitialPoint = nil
       pdfView.layoutIfNeeded()
-      scrollToPage(page, animated: false, centeredHorizontally: true)
+      if let point, !isPagedLayout, !isSinglePage, let scrollView, let pdfPage = pdfView.document?.page(at: page) {
+        pdfView.scroll(scrollView, topLeftTo: point, on: pdfPage)
+      } else {
+        scrollToPage(page, animated: false, centeredHorizontally: true)
+      }
       reportCurrentPage()
     }
+    // The first layout and rotations move the viewport without scrolling.
+    settle.noteMotion()
+  }
+
+  /// `goToViewport`: continuous layouts put the page point at the top-left
+  /// corner; paged and single-page layouts (one page view per page, no
+  /// scroll view spanning the document) go to the page at the zoom.
+  private func applyViewport(page index: Int, point: CGPoint, scale: Double) {
+    guard let pdfView, let document = pdfView.document, document.pageCount > 0, fitScale > 0 else { return }
+    let clamped = min(max(index, 0), document.pageCount - 1)
+    guard let page = document.page(at: clamped) else { return }
+    if isPagedLayout || isSinglePage {
+      // Same placement as goToPage; the zoom is relative to the page view
+      // controller's own fit (see relativeScale), applied only if it differs.
+      let fit = isPagedLayout ? (pagedFitScale ?? pdfView.scaleFactor) : fitScale
+      scrollToPage(clamped, animated: false)
+      let target = fit * CGFloat(clampScale(scale))
+      if abs(pdfView.scaleFactor - target) > 0.0001 { pdfView.scaleFactor = target }
+      settle.noteMotion()
+      return
+    }
+    pdfView.scaleFactor = fitScale * CGFloat(clampScale(scale))
+    pdfView.layoutIfNeeded()
+    if let scrollView {
+      // A page outside the document is shown from its top.
+      pdfView.scroll(scrollView, topLeftTo: clamped == index ? point : .zero, on: page)
+    }
+    settle.noteMotion()
   }
 
   /// Scale props are relative to the fitted page; PDFKit's are absolute. Re-derive
@@ -360,26 +418,24 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     if lastReportedScale == nil { lastReportedScale = relativeScale(pdfView) }
   }
 
-  /// The zoom has settled when no scale change arrived for
-  /// `scaleSettleDelay` and no pinch, drag, deceleration or zoom bounce is in progress —
-  /// the same rule as Android's settle.
-  private func scheduleScaleReport() {
-    scaleSettleWork?.cancel()
-    let work = DispatchWorkItem { [weak self] in self?.reportScaleIfSettled() }
-    scaleSettleWork = work
-    DispatchQueue.main.asyncAfter(deadline: .now() + Self.scaleSettleDelay, execute: work)
-  }
-
-  private func reportScaleIfSettled() {
-    guard let pdfView, fitScale > 0, let last = lastReportedScale else { return }
+  /// The viewport has settled when it did not move for `settleDelay` and no
+  /// pinch, drag, deceleration or zoom bounce is in progress — the same rule
+  /// as Android's settle.
+  private func reportIfSettled() {
     // Also wait out page turns: during one, the page view controller updates
     // `currentPage` and `scaleFactor` at different times.
     if let scrollView,
        scrollView.isZooming || scrollView.isZoomBouncing || scrollView.isTracking
         || scrollView.isDragging || scrollView.isDecelerating {
-      scheduleScaleReport()
+      settle.noteMotion()
       return
     }
+    reportScale()
+    reportViewport()
+  }
+
+  private func reportScale() {
+    guard let pdfView, fitScale > 0, let last = lastReportedScale else { return }
     guard let scale = relativeScale(pdfView) else { return }
     guard abs(scale - last) > 0.001 else { return }
     lastReportedScale = scale
@@ -403,7 +459,27 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     return Double(pdfView.scaleFactor / fit)
   }
 
-  private static let scaleSettleDelay = DispatchTimeInterval.milliseconds(100)
+  private func reportViewport() {
+    guard let pdfView, let document = pdfView.document, fitScale > 0,
+          let scale = relativeScale(pdfView), let anchor = pdfView.topLeftAnchor() else { return }
+    let page = document.index(for: anchor.page)
+    let visible = pdfView.visiblePages.map { document.index(for: $0) }.filter { $0 != NSNotFound }
+    guard page != NSNotFound, let first = visible.min(), let last = visible.max() else { return }
+    let isAtEnd = isPagedLayout || isSinglePage
+      ? last == document.pageCount - 1 && pdfView.isDocumentEndVisible()
+      : pdfView.isDocumentEndVisible()
+    let event = PdfViewportChangeEvent(
+      viewport: PdfViewport(page: Double(page), x: Double(anchor.point.x), y: Double(anchor.point.y), scale: scale),
+      firstVisiblePage: Double(first),
+      lastVisiblePage: Double(last),
+      isAtEnd: isAtEnd
+    )
+    if let lastReportedViewport, lastReportedViewport.isClose(to: event) { return }
+    lastReportedViewport = event
+    onViewportChange?(event)
+  }
+
+  private static let settleDelay: CFTimeInterval = 0.1
 
   /// PDFKit applies one scale to every page. Fit width in a vertical layout
   /// uses PDFKit's own size-to-fit, which fits the widest page; the other
@@ -525,12 +601,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     applyScrollEnabled()
     offsetObservation = scrollView?.observe(\.contentOffset, options: []) { [weak self] _, _ in
       self?.reportCurrentPage()
-      // Animated zooms (PDFKit's double tap) post PDFViewScaleChanged only
-      // when they start; the offset changes on every frame until they end.
-      if let self, let pdfView = self.pdfView, pdfView.scaleFactor != self.observedScaleFactor {
-        self.observedScaleFactor = pdfView.scaleFactor
-        self.scheduleScaleReport()
-      }
+      // Every scroll frame, including animated zooms (PDFKit's double tap
+      // posts PDFViewScaleChanged only when it starts).
+      self?.settle.noteMotion()
     }
   }
 
@@ -564,7 +637,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         self?.reportCurrentPage()
         // The relative zoom is measured against the page that just arrived.
         self?.pagedFitScale = nil
-        self?.scheduleScaleReport()
+        self?.settle.noteMotion()
       }
     }
     observeScrollOffset()

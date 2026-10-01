@@ -210,6 +210,46 @@ class PdfDocumentLayout(
     return PagePoint(page, (x - pageLeft(page)) / scale, (y - pageTop(page)) / scale)
   }
 
+  /**
+   * Content-space ([x], [y]) as a point of the page whose slot contains it
+   * along the main axis (the nearest page; the later one at a gap's
+   * midpoint), in PDF points from its top-left corner — negative or past the
+   * page when outside it. Inverse of [contentX] / [contentY]. Null when empty.
+   */
+  fun pagePointNear(x: Float, y: Float): PagePoint? {
+    if (pageCount == 0) return null
+    // Scrolling to a slot start can stop up to a pixel short of it
+    // (OverScroller works in whole pixels); that still belongs to the slot.
+    val page = slotAt((if (axis == Axis.HORIZONTAL) x else y) + SLOT_EPSILON)
+    val scale = pointsToPixels(page)
+    return PagePoint(page, (x - pageLeft(page)) / scale, (y - pageTop(page)) / scale)
+  }
+
+  /** Content-space x of [point] (see [pagePointNear]); its page must exist. */
+  fun contentX(point: PagePoint): Float = pageLeft(point.page) + point.x * pointsToPixels(point.page)
+
+  /** Content-space y of [point] (see [pagePointNear]); its page must exist. */
+  fun contentY(point: PagePoint): Float = pageTop(point.page) + point.y * pointsToPixels(point.page)
+
+  /**
+   * Whether the far end of the last page (its bottom; in horizontal layouts
+   * its right edge, or left in RTL) lies within the main-axis band
+   * [start, end]. The half gap around a page belongs to no page, so an edge
+   * hidden only by it counts (e.g. a page exactly as wide as the view,
+   * reached with goToPage), plus half a pixel of rounding.
+   */
+  fun isEndVisible(start: Float, end: Float): Boolean {
+    if (pageCount == 0) return false
+    val last = pageCount - 1
+    val edge = when {
+      axis == Axis.VERTICAL -> pageBottom(last)
+      isReversed -> pageLeft(last)
+      else -> pageRight(last)
+    }
+    val tolerance = spacing / 2f + EDGE_TOLERANCE
+    return edge >= start - tolerance && edge <= end + tolerance
+  }
+
   /** Pages intersecting the main-axis band [start, end], in page order; empty when none. */
   fun visibleRange(start: Float, end: Float): IntRange {
     if (pageCount == 0 || end < start) return IntRange.EMPTY
@@ -219,5 +259,10 @@ class PdfDocumentLayout(
     if (mainStartOfSlot(last) > end && last > 0) last--
     if (last < first) return IntRange.EMPTY
     return if (isReversed) visual(last)..visual(first) else first..last
+  }
+
+  private companion object {
+    const val EDGE_TOLERANCE = 0.5f
+    const val SLOT_EPSILON = 1f
   }
 }

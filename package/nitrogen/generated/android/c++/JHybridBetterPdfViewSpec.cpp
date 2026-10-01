@@ -9,6 +9,8 @@
 
 // Forward declaration of `NativePdfSource` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfSource; }
+// Forward declaration of `PdfInitialPosition` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -29,6 +31,10 @@ namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
+// Forward declaration of `PdfViewportChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
+// Forward declaration of `PdfViewport` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewport; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -41,6 +47,8 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "JNativePdfSource.hpp"
 #include <string>
 #include <unordered_map>
+#include "PdfInitialPosition.hpp"
+#include "JPdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "JPdfFitPolicy.hpp"
 #include "PdfLoadEvent.hpp"
@@ -71,6 +79,11 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "PdfSearchChangeEvent.hpp"
 #include "JFunc_void_PdfSearchChangeEvent.hpp"
 #include "JPdfSearchChangeEvent.hpp"
+#include "PdfViewportChangeEvent.hpp"
+#include "JFunc_void_PdfViewportChangeEvent.hpp"
+#include "JPdfViewportChangeEvent.hpp"
+#include "PdfViewport.hpp"
+#include "JPdfViewport.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "JFunc_void_PdfTextSelectionChangeEvent.hpp"
 #include "JPdfTextSelectionChangeEvent.hpp"
@@ -130,23 +143,14 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* password */)>("setPassword");
     method(_javaPart, password.has_value() ? jni::make_jstring(password.value()) : nullptr);
   }
-  std::optional<double> JHybridBetterPdfViewSpec::getInitialPage() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getInitialPage");
+  std::optional<PdfInitialPosition> JHybridBetterPdfViewSpec::getInitialPosition() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPdfInitialPosition>()>("getInitialPosition");
     auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->value()) : std::nullopt;
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
   }
-  void JHybridBetterPdfViewSpec::setInitialPage(std::optional<double> initialPage) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* initialPage */)>("setInitialPage");
-    method(_javaPart, initialPage.has_value() ? jni::JDouble::valueOf(initialPage.value()) : nullptr);
-  }
-  std::optional<double> JHybridBetterPdfViewSpec::getInitialScale() {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getInitialScale");
-    auto __result = method(_javaPart);
-    return __result != nullptr ? std::make_optional(__result->value()) : std::nullopt;
-  }
-  void JHybridBetterPdfViewSpec::setInitialScale(std::optional<double> initialScale) {
-    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JDouble> /* initialScale */)>("setInitialScale");
-    method(_javaPart, initialScale.has_value() ? jni::JDouble::valueOf(initialScale.value()) : nullptr);
+  void JHybridBetterPdfViewSpec::setInitialPosition(const std::optional<PdfInitialPosition>& initialPosition) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JPdfInitialPosition> /* initialPosition */)>("setInitialPosition");
+    method(_javaPart, initialPosition.has_value() ? JPdfInitialPosition::fromCpp(initialPosition.value()) : nullptr);
   }
   std::optional<double> JHybridBetterPdfViewSpec::getMinScale() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getMinScale");
@@ -428,6 +432,23 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PdfSearchChangeEvent::javaobject> /* onSearchChange */)>("setOnSearchChange_cxx");
     method(_javaPart, onSearchChange.has_value() ? JFunc_void_PdfSearchChangeEvent_cxx::fromCpp(onSearchChange.value()) : nullptr);
   }
+  std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnViewportChange() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PdfViewportChangeEvent::javaobject>()>("getOnViewportChange_cxx");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const PdfViewportChangeEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_PdfViewportChangeEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_PdfViewportChangeEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_PdfViewportChangeEvent, void(PdfViewportChangeEvent)>(std::move(__resultRef));
+      }
+    }()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PdfViewportChangeEvent::javaobject> /* onViewportChange */)>("setOnViewportChange_cxx");
+    method(_javaPart, onViewportChange.has_value() ? JFunc_void_PdfViewportChangeEvent_cxx::fromCpp(onViewportChange.value()) : nullptr);
+  }
   std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnTextSelectionChange() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PdfTextSelectionChangeEvent::javaobject>()>("getOnTextSelectionChange_cxx");
     auto __result = method(_javaPart);
@@ -459,6 +480,10 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPdfViewStats>()>("getStats");
     auto __result = method(_javaPart);
     return __result->toCpp();
+  }
+  void JHybridBetterPdfViewSpec::goToViewport(const PdfViewport& viewport) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JPdfViewport> /* viewport */)>("goToViewport");
+    method(_javaPart, JPdfViewport::fromCpp(viewport));
   }
   std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> JHybridBetterPdfViewSpec::getOutline() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("getOutline");

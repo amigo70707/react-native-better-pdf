@@ -103,6 +103,7 @@ const toc = await pdf.current?.getOutline();   // [{ title, page?, children }]
 pdf.current?.search('invoice');                // highlights matches, see onSearchChange
 pdf.current?.searchNext();                     // wraps around; searchPrevious() too
 pdf.current?.clearSearch();                    // or search('')
+pdf.current?.goToViewport(saved);              // a position from onViewportChange
 ```
 
 ### Sources
@@ -127,6 +128,7 @@ document.
 | `password` | `string` | — | changing it re-opens the document (no re-download) |
 | `initialPage` | `number` | `0` | zero-based, applied once per loaded document |
 | `initialScale` | `number` | `1` | zoom applied once per loaded document, relative to the fitted page |
+| `initialViewport` | `PdfViewport` | | position applied once per loaded document, e.g. where the reader left off; takes precedence over `initialPage` / `initialScale`; see [Reading position](#reading-position) |
 | `minScale` / `maxScale` | `number` | `1` / `4` | relative to the fitted page (see `fitPolicy`) |
 | `pageSpacing` | `number` | `8` | dp / pt |
 | `enableDoubleTapZoom` | `boolean` | `true` | double tap toggles zoom; `false` also delivers `onPageTap` without the ~300 ms double-tap wait |
@@ -150,6 +152,7 @@ document.
 | `onPageTap` | `({ page, x, y }) => void` | | tap on a page outside links; zero-based page, `x`/`y` in PDF points from the page's top-left |
 | `onScaleChange` | `({ scale }) => void` | | once per settled zoom change (pinch/double-tap end, `zoomTo`); relative to the fitted page |
 | `onTextSelectionChange` | `({ text }) => void` | | once per settled selection (long press, handle drag or Select all ends); `text` is `''` when cleared |
+| `onViewportChange` | `({ viewport, firstVisiblePage, lastVisiblePage, isAtEnd }) => void` | | once after loading and after every settled scroll, zoom or rotation, never per frame; see [Reading position](#reading-position) |
 | `onSearchChange` | `({ query, matchCount, currentMatch?, currentPage?, isComplete, isSupported }) => void` | | search progress and the current match; see [Search](#search) |
 
 Plus all `View` props (`style`, `testID`, …).
@@ -185,6 +188,8 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Vertical continuous scrolling, fling, platform scroll indicators
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
+- Reading position: settled viewport events, restore on open or on demand,
+  end-of-document detection
 - Page-change, load and typed error events
 - Link presses (URL links reported to JS; links to other pages followed
   natively) and page taps in PDF coordinates
@@ -196,6 +201,38 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Native page virtualization, render cache, prefetch and cancellation
   (Android; PDFKit handles these on iOS)
 - Memory-pressure handling and release of all pixels while a screen is hidden
+
+## Reading position
+
+Reopen a document where the reader left off, and know what they have read:
+
+```tsx
+const saved = storage.get(documentId); // a PdfViewport, or undefined
+
+<PdfView
+  source={source}
+  initialViewport={saved}
+  onViewportChange={({ viewport, isAtEnd }) => {
+    storage.set(documentId, viewport);
+    if (isAtEnd) markAsRead(documentId);
+  }}
+/>;
+```
+
+- A `PdfViewport` is `{ page, x, y, scale }`: the point of `page` (in PDF
+  points from its top-left corner) at the view's top-left corner, and the
+  zoom. PDF points do not depend on the screen, so a position survives
+  rotation, another device or another layout mode. `x` / `y` are negative
+  when the corner is in the margin or gap before the page.
+- `onViewportChange` fires once after loading and then whenever the view
+  stops moving (scroll, fling, zoom, page turn, rotation, `goToPage`…),
+  only when the position changed. `firstVisiblePage` / `lastVisiblePage`
+  give the pages on screen; `isAtEnd` is true while the end of the last
+  page is on screen.
+- `ref.goToViewport(viewport)` jumps back to a position without animation,
+  e.g. for "back to where I was" after following a table-of-contents entry.
+- Paged layouts (`enablePaging`, `singlePage`) restore the page and zoom;
+  on iOS the position within a zoomed page is not restored.
 
 ## Search
 

@@ -12,8 +12,7 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   // Properties
   var source: NativePdfSource? { get set }
   var password: String? { get set }
-  var initialPage: Double? { get set }
-  var initialScale: Double? { get set }
+  var initialPosition: PdfInitialPosition? { get set }
   var minScale: Double? { get set }
   var maxScale: Double? { get set }
   var pageSpacing: Double? { get set }
@@ -38,12 +37,14 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   var onPageTap: ((_ event: PdfPageTapEvent) -> Void)? { get set }
   var onScaleChange: ((_ event: PdfScaleChangeEvent) -> Void)? { get set }
   var onSearchChange: ((_ event: PdfSearchChangeEvent) -> Void)? { get set }
+  var onViewportChange: ((_ event: PdfViewportChangeEvent) -> Void)? { get set }
   var onTextSelectionChange: ((_ event: PdfTextSelectionChangeEvent) -> Void)? { get set }
 
   // Methods
   func goToPage(page: Double, animated: Bool) throws -> Void
   func zoomTo(scale: Double, animated: Bool) throws -> Void
   func getStats() throws -> PdfViewStats
+  func goToViewport(viewport: PdfViewport) throws -> Void
   func getOutline() throws -> Promise<[PdfOutlineEntry]>
   func search(query: String) throws -> Void
   func searchNext() throws -> Void

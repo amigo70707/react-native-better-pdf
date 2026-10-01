@@ -18,6 +18,8 @@ namespace margelo::nitro::betterpdf { enum class PdfErrorCode; }
 namespace margelo::nitro::betterpdf { struct PdfError; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfInitialPosition` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfLinkPressEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLinkPressEvent; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -38,6 +40,10 @@ namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfViewStats; }
+// Forward declaration of `PdfViewportChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
+// Forward declaration of `PdfViewport` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewport; }
 
 // Include C++ defined types
 #include "HybridBetterPdfViewSpec.hpp"
@@ -45,6 +51,7 @@ namespace margelo::nitro::betterpdf { struct PdfViewStats; }
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfInitialPosition.hpp"
 #include "PdfLinkPressEvent.hpp"
 #include "PdfLoadEvent.hpp"
 #include "PdfLoadProgressEvent.hpp"
@@ -55,6 +62,8 @@ namespace margelo::nitro::betterpdf { struct PdfViewStats; }
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
+#include "PdfViewport.hpp"
+#include "PdfViewportChangeEvent.hpp"
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/Result.hpp>
 #include <exception>

@@ -54,10 +54,8 @@ namespace margelo::nitro::betterpdf {
     void setSource(const std::optional<NativePdfSource>& source) override;
     std::optional<std::string> getPassword() override;
     void setPassword(const std::optional<std::string>& password) override;
-    std::optional<double> getInitialPage() override;
-    void setInitialPage(std::optional<double> initialPage) override;
-    std::optional<double> getInitialScale() override;
-    void setInitialScale(std::optional<double> initialScale) override;
+    std::optional<PdfInitialPosition> getInitialPosition() override;
+    void setInitialPosition(const std::optional<PdfInitialPosition>& initialPosition) override;
     std::optional<double> getMinScale() override;
     void setMinScale(std::optional<double> minScale) override;
     std::optional<double> getMaxScale() override;
@@ -106,6 +104,8 @@ namespace margelo::nitro::betterpdf {
     void setOnScaleChange(const std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>& onScaleChange) override;
     std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> getOnSearchChange() override;
     void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) override;
+    std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> getOnViewportChange() override;
+    void setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) override;
     std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() override;
     void setOnTextSelectionChange(const std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>& onTextSelectionChange) override;
 
@@ -114,6 +114,7 @@ namespace margelo::nitro::betterpdf {
     void goToPage(double page, bool animated) override;
     void zoomTo(double scale, bool animated) override;
     PdfViewStats getStats() override;
+    void goToViewport(const PdfViewport& viewport) override;
     std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() override;
     void search(const std::string& query) override;
     void searchNext() override;

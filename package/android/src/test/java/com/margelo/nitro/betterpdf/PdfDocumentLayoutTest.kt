@@ -248,4 +248,61 @@ class PdfDocumentLayoutTest {
     assertEquals(0f, layout.slotStart(0), 0f)
     assertEquals(1, layout.nextInScrollOrder(0))
   }
+
+  @Test
+  fun `pagePointNear maps any content point to the nearest page, also outside it`() {
+    // A4 at 1 px per point, 100 px gaps: page 1 starts at 50 + 842 + 100.
+    val layout = PdfDocumentLayout(List(3) { a4 }, viewportWidth = 595f, spacing = 100f)
+    val inPage = layout.pagePointNear(10f, 50f + 842f + 100f + 20f)!!
+    assertEquals(PagePoint(1, 10f, 20f), inPage)
+    // In the gap just above page 1: negative y on page 1.
+    val inGap = layout.pagePointNear(0f, 50f + 842f + 100f - 30f)!!
+    assertEquals(1, inGap.page)
+    assertEquals(-30f, inGap.y, 0.001f)
+    assertNull(PdfDocumentLayout(emptyList(), viewportWidth = 595f, spacing = 0f).pagePointNear(0f, 0f))
+    // goToPage puts the slot start (mid-gap) at the top: that is the next
+    // page, also when the scroller stops a pixel short.
+    assertEquals(1, layout.pagePointNear(0f, layout.slotStart(1))!!.page)
+    assertEquals(1, layout.pagePointNear(0f, layout.slotStart(1) - 0.9f)!!.page)
+    assertEquals(-50f, layout.pagePointNear(0f, layout.slotStart(1))!!.y, 0.001f)
+  }
+
+  @Test
+  fun `contentX and contentY invert pagePointNear across zoom-independent points`() {
+    val layout = PdfDocumentLayout(List(5) { a4 }, viewportWidth = 1190f, spacing = 16f)
+    for (y in listOf(-8f, 0f, 1234.5f, 5000f)) {
+      val point = layout.pagePointNear(37f, y)!!
+      assertEquals(37f, layout.contentX(point), 0.01f)
+      assertEquals(y, layout.contentY(point), 0.01f)
+    }
+    // 2 px per point: a point is half as many content pixels from the page top.
+    assertEquals(layout.pageTop(3) + 200f, layout.contentY(PagePoint(3, 0f, 100f)), 0.01f)
+  }
+
+  @Test
+  fun `isEndVisible is true only while the last page's far edge is on screen`() {
+    val layout = PdfDocumentLayout(List(3) { a4 }, viewportWidth = 595f, spacing = 0f)
+    val end = 3 * 842f
+    assertTrue(layout.isEndVisible(end - 800f, end))
+    assertFalse(layout.isEndVisible(end - 900f, end - 100f))
+    // A short document that fits entirely.
+    val single = PdfDocumentLayout(listOf(a4), viewportWidth = 595f, spacing = 0f)
+    assertTrue(single.isEndVisible(0f, 2000f))
+    // Hidden only by the half gap after it: still the end.
+    val spaced = PdfDocumentLayout(List(3) { a4 }, viewportWidth = 595f, spacing = 20f)
+    assertTrue(spaced.isEndVisible(spaced.pageBottom(2) - 800f - 10f, spaced.pageBottom(2) - 10f))
+    assertFalse(spaced.isEndVisible(spaced.pageBottom(2) - 800f - 11f, spaced.pageBottom(2) - 11f))
+  }
+
+  @Test
+  fun `isEndVisible uses the far edge of the last page in horizontal and right-to-left layouts`() {
+    val sizes = List(3) { a4 }
+    val ltr = PdfDocumentLayout(sizes, 595f, 0f, 842f, PdfDocumentLayout.Axis.HORIZONTAL, fit = PdfDocumentLayout.Fit.PAGE)
+    assertTrue(ltr.isEndVisible(ltr.pageRight(2) - 595f, ltr.pageRight(2)))
+    assertFalse(ltr.isEndVisible(0f, 595f))
+    val rtl = PdfDocumentLayout(sizes, 595f, 0f, 842f, PdfDocumentLayout.Axis.HORIZONTAL, fit = PdfDocumentLayout.Fit.PAGE, isRightToLeft = true)
+    // The last page is leftmost in RTL.
+    assertTrue(rtl.isEndVisible(0f, 595f))
+    assertFalse(rtl.isEndVisible(rtl.contentWidth - 595f, rtl.contentWidth))
+  }
 }

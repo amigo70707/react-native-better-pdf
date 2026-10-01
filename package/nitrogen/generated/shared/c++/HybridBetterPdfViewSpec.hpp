@@ -15,6 +15,8 @@
 
 // Forward declaration of `NativePdfSource` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfSource; }
+// Forward declaration of `PdfInitialPosition` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -33,16 +35,21 @@ namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
+// Forward declaration of `PdfViewportChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfViewStats; }
+// Forward declaration of `PdfViewport` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfViewport; }
 // Forward declaration of `PdfOutlineEntry` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
 #include <string>
+#include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
@@ -53,8 +60,10 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
+#include "PdfViewportChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
+#include "PdfViewport.hpp"
 #include "PdfOutlineEntry.hpp"
 #include <vector>
 #include <NitroModules/Promise.hpp>
@@ -90,10 +99,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setSource(const std::optional<NativePdfSource>& source) = 0;
       virtual std::optional<std::string> getPassword() = 0;
       virtual void setPassword(const std::optional<std::string>& password) = 0;
-      virtual std::optional<double> getInitialPage() = 0;
-      virtual void setInitialPage(std::optional<double> initialPage) = 0;
-      virtual std::optional<double> getInitialScale() = 0;
-      virtual void setInitialScale(std::optional<double> initialScale) = 0;
+      virtual std::optional<PdfInitialPosition> getInitialPosition() = 0;
+      virtual void setInitialPosition(const std::optional<PdfInitialPosition>& initialPosition) = 0;
       virtual std::optional<double> getMinScale() = 0;
       virtual void setMinScale(std::optional<double> minScale) = 0;
       virtual std::optional<double> getMaxScale() = 0;
@@ -142,6 +149,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setOnScaleChange(const std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>& onScaleChange) = 0;
       virtual std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>> getOnSearchChange() = 0;
       virtual void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) = 0;
+      virtual std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> getOnViewportChange() = 0;
+      virtual void setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) = 0;
       virtual std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() = 0;
       virtual void setOnTextSelectionChange(const std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>& onTextSelectionChange) = 0;
 
@@ -150,6 +159,7 @@ namespace margelo::nitro::betterpdf {
       virtual void goToPage(double page, bool animated) = 0;
       virtual void zoomTo(double scale, bool animated) = 0;
       virtual PdfViewStats getStats() = 0;
+      virtual void goToViewport(const PdfViewport& viewport) = 0;
       virtual std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() = 0;
       virtual void search(const std::string& query) = 0;
       virtual void searchNext() = 0;

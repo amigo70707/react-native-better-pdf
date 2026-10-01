@@ -110,17 +110,11 @@ using namespace margelo::nitro::betterpdf::views;
           : !newViewProps.password.hasSameValue(oldViewProps->password)) {
       swiftPart.setPassword(newViewProps.password.get());
     }
-    // initialPage: optional
+    // initialPosition: optional
     if (oldViewProps == nullptr
-          ? newViewProps.initialPage.isProvided()
-          : !newViewProps.initialPage.hasSameValue(oldViewProps->initialPage)) {
-      swiftPart.setInitialPage(newViewProps.initialPage.get());
-    }
-    // initialScale: optional
-    if (oldViewProps == nullptr
-          ? newViewProps.initialScale.isProvided()
-          : !newViewProps.initialScale.hasSameValue(oldViewProps->initialScale)) {
-      swiftPart.setInitialScale(newViewProps.initialScale.get());
+          ? newViewProps.initialPosition.isProvided()
+          : !newViewProps.initialPosition.hasSameValue(oldViewProps->initialPosition)) {
+      swiftPart.setInitialPosition(newViewProps.initialPosition.get());
     }
     // minScale: optional
     if (oldViewProps == nullptr
@@ -265,6 +259,12 @@ using namespace margelo::nitro::betterpdf::views;
           ? newViewProps.onSearchChange.isProvided()
           : !newViewProps.onSearchChange.hasSameValue(oldViewProps->onSearchChange)) {
       swiftPart.setOnSearchChange(newViewProps.onSearchChange.get());
+    }
+    // onViewportChange: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.onViewportChange.isProvided()
+          : !newViewProps.onViewportChange.hasSameValue(oldViewProps->onViewportChange)) {
+      swiftPart.setOnViewportChange(newViewProps.onViewportChange.get());
     }
     // onTextSelectionChange: optional
     if (oldViewProps == nullptr

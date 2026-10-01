@@ -68,6 +68,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     /** The zoom settled at a new [scale] (relative to the fitted page). */
     fun onScaleSettled(scale: Float)
 
+    /** The viewport settled at a new position; also once per document after its first layout. */
+    fun onViewportSettled(viewport: DocumentViewport)
+
     /** The text selection settled at new [text]; empty when cleared. */
     fun onTextSelectionChanged(text: String)
   }
@@ -82,6 +85,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   private var relayoutPending = false
   private var layout: PdfDocumentLayout? = null
   private var pendingInitialPage: Int? = null
+  /** With [pendingInitialPage]: the page point to put at the top-left corner, instead of the page's top. */
+  private var pendingInitialPoint: PagePoint? = null
   private val failedPages = HashSet<Int>()
   /** Links of pages rendered so far that have any (see [PdfDocumentSession.Listener.onPageLinks]). */
   private val pageLinks = HashMap<Int, List<PageLink>>()
@@ -136,6 +141,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   private var isRightToLeft = false
   /** Last zoom sent through [Listener.onScaleSettled]. */
   private var lastReportedScale = 1f
+  /** Last position sent through [Listener.onViewportSettled]; null until the document's first. */
+  private var lastReportedViewport: DocumentViewport? = null
 
   /**
    * Whether dragging and flinging scroll the document. When false the drag
@@ -412,11 +419,13 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     pageSizes: List<PdfDocumentLayout.PageSize>,
     initialPage: Int,
     initialScale: Float,
+    initialPoint: PagePoint?,
   ) {
     clearDocument()
     this.session = session
     this.pageSizes = pageSizes.toMutableList()
     pendingInitialPage = initialPage.coerceIn(0, pageSizes.size - 1)
+    pendingInitialPoint = initialPoint?.takeIf { it.page == initialPage }
     // Applied by rebuildLayout's initial-page branch (clamped, cross-axis centred).
     scale = initialScale
     rebuildLayout()
@@ -437,6 +446,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     relayoutPending = false
     layout = null
     pendingInitialPage = null
+    pendingInitialPoint = null
+    lastReportedViewport = null
     failedPages.clear()
     pageLinks.clear()
     pageTexts.clear()
@@ -532,9 +543,33 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     scrollToMain(target, animated = true)
   }
 
+  /**
+   * Jumps so [point] (a page point in PDF points) is at the top-left corner,
+   * at [scale]; see [DocumentViewport]. A page outside the document is
+   * clamped and shown from its top.
+   */
+  fun goToViewport(point: PagePoint, scale: Float) {
+    if (pageSizes.isEmpty()) return
+    val page = point.page.coerceIn(0, pageSizes.size - 1)
+    scroller.forceFinished(true)
+    zoomAnimator?.cancel()
+    this.scale = scale.coerceIn(minScale, maxScale)
+    val layout = layout
+    if (layout == null) {
+      pendingInitialPage = page
+      pendingInitialPoint = point.takeIf { it.page == page }
+      return
+    }
+    if (isSinglePage) shownPage = page
+    val target = if (point.page == page) point else PagePoint(page, 0f, 0f)
+    setOffsets(layout.contentX(target) * this.scale, layout.contentY(target) * this.scale)
+    scheduleSettle()
+  }
+
   fun goToPage(page: Int, animated: Boolean) {
     val layout = layout ?: run {
       pendingInitialPage = page
+      pendingInitialPoint = null
       return
     }
     val target = page.coerceIn(0, layout.pageCount - 1)
@@ -969,8 +1004,18 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     lastSubmitted = emptyList()
 
     val initial = pendingInitialPage
-    if (initial != null) {
+    val initialPoint = pendingInitialPoint
+    if (initial != null && initialPoint != null && initialPoint.page < newLayout.pageCount) {
       pendingInitialPage = null
+      pendingInitialPoint = null
+      shownPage = initialPoint.page
+      scale = scale.coerceIn(minScale, maxScale)
+      // Clamped by clampAndRefresh below.
+      offsetX = newLayout.contentX(initialPoint) * scale
+      offsetY = newLayout.contentY(initialPoint) * scale
+    } else if (initial != null) {
+      pendingInitialPage = null
+      pendingInitialPoint = null
       shownPage = initial.coerceIn(0, newLayout.pageCount - 1)
       scale = scale.coerceIn(minScale, maxScale)
       setMainOffsetRaw(clampMain(newLayout.slotStart(initial.coerceIn(0, newLayout.pageCount - 1)) * scale))
@@ -984,6 +1029,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       setMainOffsetRaw(clampMain((newLayout.slotStart(anchorPage) + anchorFraction * slotLength) * scale))
     }
     clampAndRefresh()
+    // Tiles were dropped and the position may have moved (rotation, first layout).
+    scheduleSettle()
   }
 
   private val isHorizontal: Boolean get() = axis == PdfDocumentLayout.Axis.HORIZONTAL
@@ -1154,11 +1201,34 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       lastReportedScale = scale
       listener?.onScaleSettled(scale)
     }
+    reportViewport()
     tileGeneration++
     val visible = visiblePages()
     tiles.keys.filter { it !in visible }.forEach { page -> tiles.remove(page)?.let { releaseAfterFrame(it.bitmap) } }
     requestRenders(force = true)
     textSelection.onViewportSettled()
+  }
+
+  private fun reportViewport() {
+    val viewport = currentViewport() ?: return
+    val last = lastReportedViewport
+    if (last != null && last.isCloseTo(viewport)) return
+    lastReportedViewport = viewport
+    listener?.onViewportSettled(viewport)
+  }
+
+  private fun currentViewport(): DocumentViewport? {
+    val layout = layout ?: return null
+    if (width <= 0 || height <= 0) return null
+    val anchor = layout.pagePointNear(offsetX / scale, offsetY / scale) ?: return null
+    val visible = visiblePages()
+    if (visible.isEmpty()) return null
+    val isAtEnd = if (isSinglePage) {
+      shownPage == layout.pageCount - 1
+    } else {
+      layout.isEndVisible(mainOffset / scale, (mainOffset + mainViewportLength) / scale)
+    }
+    return DocumentViewport(anchor, scale, visible, isAtEnd)
   }
 
   private fun requestRenders(force: Boolean = false) {

@@ -22,6 +22,7 @@ import type {
 import type { NativePdfSource } from './types/NativePdfSource';
 import type { PdfError } from './types/PdfError';
 import type { PdfFitPolicy } from './types/PdfFitPolicy';
+import type { PdfInitialPosition } from './types/PdfInitialPosition';
 import type { PdfLinkPressEvent } from './types/PdfLinkPressEvent';
 import type { PdfLoadEvent } from './types/PdfLoadEvent';
 import type { PdfLoadProgressEvent } from './types/PdfLoadProgressEvent';
@@ -31,6 +32,8 @@ import type { PdfPageTapEvent } from './types/PdfPageTapEvent';
 import type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
 import type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
+import type { PdfViewport } from './types/PdfViewport';
+import type { PdfViewportChangeEvent } from './types/PdfViewportChangeEvent';
 import type { PdfViewStats } from './types/PdfViewStats';
 
 const NativeBetterPdfView = getHostComponent<NativeProps, PdfViewMethods>(
@@ -54,6 +57,14 @@ export interface PdfViewRef {
   goToPage(page: number, options?: NavigationOptions): void;
   /** Zooms around the viewport center. Relative to the fitted page, clamped to [minScale, maxScale]. */
   zoomTo(scale: number, options?: NavigationOptions): void;
+  /**
+   * Jumps, without animation, to a position saved from
+   * {@linkcode PdfViewProps.onViewportChange}: its page point at the view's
+   * top-left corner, at its zoom. The page is clamped to the document and
+   * the position to the scrollable area. Paged layouts settle on the page
+   * unless zoomed in. Ignored before {@linkcode PdfViewProps.onLoad}.
+   */
+  goToViewport(viewport: PdfViewport): void;
   /** Native diagnostics. `null` before the native view has mounted. */
   getStats(): PdfViewStats | null;
   /**
@@ -92,6 +103,14 @@ export interface PdfViewProps extends ViewProps {
    * {@linkcode PdfViewProps.onScaleChange}. Default `1`.
    */
   initialScale?: number;
+  /**
+   * Position shown when a document finishes loading, e.g. where the reader
+   * left off (from {@linkcode PdfViewProps.onViewportChange}). Takes
+   * precedence over {@linkcode PdfViewProps.initialPage} and
+   * {@linkcode PdfViewProps.initialScale}; like them, later changes have no
+   * effect (use `ref.goToViewport()`).
+   */
+  initialViewport?: PdfViewport;
   /** Relative to the fitted page (see {@linkcode PdfViewProps.fitPolicy}). Default `1`. */
   minScale?: number;
   /** Relative to the fitted page (see {@linkcode PdfViewProps.fitPolicy}). Default `4`. */
@@ -245,6 +264,13 @@ export interface PdfViewProps extends ViewProps {
    * per second while searching, plus one on completion.
    */
   onSearchChange?: (event: PdfSearchChangeEvent) => void;
+  /**
+   * The viewport settled at a new position: once after loading, then after
+   * each scroll, fling, zoom, page turn, rotation or `ref` navigation ends —
+   * never while it moves. Save `event.viewport` to reopen the document where
+   * the reader left off; `isAtEnd` tells that the end was reached.
+   */
+  onViewportChange?: (event: PdfViewportChangeEvent) => void;
   ref?: Ref<PdfViewRef>;
 }
 
@@ -259,7 +285,30 @@ type Handlers = Pick<
   | 'onScaleChange'
   | 'onTextSelectionChange'
   | 'onSearchChange'
+  | 'onViewportChange'
 >;
+
+/**
+ * The native initial position, stable while its values are unchanged
+ * (Nitro diffs props by identity).
+ */
+function useInitialPosition(
+  initialPage: number | undefined,
+  initialScale: number | undefined,
+  initialViewport: PdfViewport | undefined,
+): PdfInitialPosition {
+  const page = initialViewport?.page ?? initialPage ?? 0;
+  const scale = initialViewport?.scale ?? initialScale ?? 1;
+  const x = initialViewport?.x;
+  const y = initialViewport?.y;
+  return useMemo(
+    () =>
+      x === undefined || y === undefined
+        ? { page, scale }
+        : { page, scale, x, y },
+    [page, scale, x, y],
+  );
+}
 
 /**
  * Keeps the native source prop referentially stable while its value is
@@ -286,6 +335,7 @@ export function PdfView({
   password,
   initialPage,
   initialScale,
+  initialViewport,
   minScale,
   maxScale,
   pageSpacing,
@@ -311,10 +361,16 @@ export function PdfView({
   onScaleChange,
   onTextSelectionChange,
   onSearchChange,
+  onViewportChange,
   ref,
   ...viewProps
 }: PdfViewProps) {
   const nativeSource = useStableSource(source);
+  const initialPosition = useInitialPosition(
+    initialPage,
+    initialScale,
+    initialViewport,
+  );
 
   // Callbacks read the latest handler through a ref so the wrapped functions
   // handed to native never change identity after mount.
@@ -328,6 +384,7 @@ export function PdfView({
     onScaleChange,
     onTextSelectionChange,
     onSearchChange,
+    onViewportChange,
   };
   const handlers = useRef(renderedHandlers);
   useLayoutEffect(() => {
@@ -360,6 +417,9 @@ export function PdfView({
       onSearchChange: callback((event: PdfSearchChangeEvent) =>
         handlers.current.onSearchChange?.(event),
       ),
+      onViewportChange: callback((event: PdfViewportChangeEvent) =>
+        handlers.current.onViewportChange?.(event),
+      ),
     }),
     [],
   );
@@ -386,6 +446,10 @@ export function PdfView({
         const native = nativeRef.current;
         if (native == null) throw new Error('The PDF view is not mounted');
         return buildOutlineTree(await native.getOutline());
+      },
+      goToViewport(viewport) {
+        const { page, x, y, scale } = viewport;
+        nativeRef.current?.goToViewport({ page, x, y, scale });
       },
       getStats() {
         return nativeRef.current?.getStats() ?? null;
@@ -424,8 +488,7 @@ export function PdfView({
       // removed, Fabric sends `null`, which Nitro's optional converters reject.
       // An empty password means "none" on both platforms.
       password={password ?? ''}
-      initialPage={initialPage ?? 0}
-      initialScale={initialScale ?? 1}
+      initialPosition={initialPosition}
       minScale={minScale ?? 1}
       maxScale={maxScale ?? 4}
       pageSpacing={pageSpacing ?? 8}
@@ -464,6 +527,7 @@ export function PdfView({
       onScaleChange={subscription('onScaleChange')}
       onTextSelectionChange={subscription('onTextSelectionChange')}
       onSearchChange={subscription('onSearchChange')}
+      onViewportChange={subscription('onViewportChange')}
       hybridRef={hybridRef}
     />
   );

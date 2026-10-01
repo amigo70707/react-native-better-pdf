@@ -18,10 +18,8 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("source", &HybridBetterPdfViewSpec::setSource);
       prototype.registerHybridGetter("password", &HybridBetterPdfViewSpec::getPassword);
       prototype.registerHybridSetter("password", &HybridBetterPdfViewSpec::setPassword);
-      prototype.registerHybridGetter("initialPage", &HybridBetterPdfViewSpec::getInitialPage);
-      prototype.registerHybridSetter("initialPage", &HybridBetterPdfViewSpec::setInitialPage);
-      prototype.registerHybridGetter("initialScale", &HybridBetterPdfViewSpec::getInitialScale);
-      prototype.registerHybridSetter("initialScale", &HybridBetterPdfViewSpec::setInitialScale);
+      prototype.registerHybridGetter("initialPosition", &HybridBetterPdfViewSpec::getInitialPosition);
+      prototype.registerHybridSetter("initialPosition", &HybridBetterPdfViewSpec::setInitialPosition);
       prototype.registerHybridGetter("minScale", &HybridBetterPdfViewSpec::getMinScale);
       prototype.registerHybridSetter("minScale", &HybridBetterPdfViewSpec::setMinScale);
       prototype.registerHybridGetter("maxScale", &HybridBetterPdfViewSpec::getMaxScale);
@@ -70,11 +68,14 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("onScaleChange", &HybridBetterPdfViewSpec::setOnScaleChange);
       prototype.registerHybridGetter("onSearchChange", &HybridBetterPdfViewSpec::getOnSearchChange);
       prototype.registerHybridSetter("onSearchChange", &HybridBetterPdfViewSpec::setOnSearchChange);
+      prototype.registerHybridGetter("onViewportChange", &HybridBetterPdfViewSpec::getOnViewportChange);
+      prototype.registerHybridSetter("onViewportChange", &HybridBetterPdfViewSpec::setOnViewportChange);
       prototype.registerHybridGetter("onTextSelectionChange", &HybridBetterPdfViewSpec::getOnTextSelectionChange);
       prototype.registerHybridSetter("onTextSelectionChange", &HybridBetterPdfViewSpec::setOnTextSelectionChange);
       prototype.registerHybridMethod("goToPage", &HybridBetterPdfViewSpec::goToPage);
       prototype.registerHybridMethod("zoomTo", &HybridBetterPdfViewSpec::zoomTo);
       prototype.registerHybridMethod("getStats", &HybridBetterPdfViewSpec::getStats);
+      prototype.registerHybridMethod("goToViewport", &HybridBetterPdfViewSpec::goToViewport);
       prototype.registerHybridMethod("getOutline", &HybridBetterPdfViewSpec::getOutline);
       prototype.registerHybridMethod("search", &HybridBetterPdfViewSpec::search);
       prototype.registerHybridMethod("searchNext", &HybridBetterPdfViewSpec::searchNext);
