@@ -224,6 +224,16 @@ class HybridBetterPdfView(
     }
   }
 
+  override fun getPageSizes(): Promise<Array<PdfPageSize>> {
+    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val pageCount = documentView.pageCount
+    return Promise.parallel {
+      session.readPageSizes(pageCount)
+        .map { PdfPageSize(it.widthPoints.toDouble(), it.heightPoints.toDouble()) }
+        .toTypedArray()
+    }
+  }
+
   override fun getStats(): PdfViewStats {
     val session = session
     return PdfViewStats(

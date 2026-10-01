@@ -41,6 +41,8 @@ namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfViewStats; }
 // Forward declaration of `PdfOutlineEntry` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
+// Forward declaration of `PdfPageSize` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -94,6 +96,8 @@ namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JPdfOutlineEntry.hpp"
+#include "PdfPageSize.hpp"
+#include "JPdfPageSize.hpp"
 
 namespace margelo::nitro::betterpdf {
 
@@ -495,6 +499,31 @@ namespace margelo::nitro::betterpdf {
         __promise->resolve([&](auto&& __input) {
           size_t __size = __input->size();
           std::vector<PdfOutlineEntry> __vector;
+          __vector.reserve(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            auto __element = __input->getElement(__i);
+            __vector.push_back(__element->toCpp());
+          }
+          return __vector;
+        }(__result));
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<std::vector<PdfPageSize>>> JHybridBetterPdfViewSpec::getPageSizes() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("getPageSizes");
+    auto __result = method(_javaPart);
+    return [&]() {
+      auto __promise = Promise<std::vector<PdfPageSize>>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<jni::JArrayClass<JPdfPageSize>>(__boxedResult);
+        __promise->resolve([&](auto&& __input) {
+          size_t __size = __input->size();
+          std::vector<PdfPageSize> __vector;
           __vector.reserve(__size);
           for (size_t __i = 0; __i < __size; __i++) {
             auto __element = __input->getElement(__i);

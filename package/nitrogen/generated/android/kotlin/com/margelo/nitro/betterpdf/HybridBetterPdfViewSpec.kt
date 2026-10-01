@@ -305,6 +305,10 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   
   @DoNotStrip
   @Keep
+  abstract fun getPageSizes(): Promise<Array<PdfPageSize>>
+  
+  @DoNotStrip
+  @Keep
   abstract fun search(query: String): Unit
   
   @DoNotStrip

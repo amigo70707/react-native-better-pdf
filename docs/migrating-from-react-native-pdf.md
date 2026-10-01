@@ -97,7 +97,7 @@ users see.
 
 | react-native-pdf | react-native-better-pdf |
 | --- | --- |
-| `onLoadComplete(numberOfPages, path, { width, height }, tableContents)` | `onLoad({ pageCount, firstPageWidth, firstPageHeight, filePath })` — `filePath` is `path` (absolute, no `file://`); table of contents via `ref.getOutline()` |
+| `onLoadComplete(numberOfPages, path, { width, height }, tableContents)` | `onLoad({ pageCount, firstPageWidth, firstPageHeight, filePath })` — `filePath` is `path` (absolute, no `file://`); table of contents via `ref.getOutline()`; every page's size (not only the first) via `ref.getPageSizes()` |
 | `onPageChanged(page, numberOfPages)` — 1-based | `onPageChange({ page, pageCount })` — 0-based |
 | `onLoadProgress(fraction)` | `onLoadProgress({ loadedBytes, totalBytes? })` — throttled to ≤ 10 per second |
 | `onError(error: Error)` | `onError({ code, message, page?, httpStatus?, nativeDescription? })` |

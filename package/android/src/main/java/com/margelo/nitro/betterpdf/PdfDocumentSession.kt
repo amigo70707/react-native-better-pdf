@@ -14,7 +14,9 @@ import android.os.Trace
 import com.margelo.nitro.betterpdf.outline.FileChannelByteSource
 import com.margelo.nitro.betterpdf.outline.OutlineEntry
 import com.margelo.nitro.betterpdf.outline.PdfDocumentReader
+import com.margelo.nitro.betterpdf.outline.PdfFormatException
 import com.margelo.nitro.betterpdf.outline.PdfOutlineReader
+import com.margelo.nitro.betterpdf.outline.PdfPageSizeReader
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
@@ -117,16 +119,74 @@ class PdfDocumentSession(
    */
   fun readOutline(): List<OutlineEntry> {
     outline?.let { return it }
-    // Duplicated under the lock so the worker cannot close (and the OS reuse)
-    // the descriptor number in between; the duplicate is ours to close.
-    val descriptor = synchronized(descriptorLock) { master?.dup() }
-      ?: throw IllegalStateException("The document is not open")
+    val descriptor = duplicateDescriptor()
     val entries = ParcelFileDescriptor.AutoCloseInputStream(descriptor).channel.use { channel ->
       PdfOutlineReader(PdfDocumentReader(FileChannelByteSource(channel))).read()
     }
     outline = entries
     return entries
   }
+
+  /**
+   * Every page's displayed size (see [PdfPageSizeReader]), [pageCount] of
+   * them. Read from the page tree, so no page is opened and PDFium caches
+   * nothing; documents the parser cannot read (encrypted, or a page tree
+   * that disagrees with the renderer) are measured by opening each page on
+   * a separate renderer, recycled like the render thread's. Blocking: call
+   * off the main thread. Cached.
+   *
+   * @throws IllegalStateException when the document is not open.
+   */
+  fun readPageSizes(pageCount: Int): List<PdfDocumentLayout.PageSize> {
+    pageSizes?.let { return it }
+    val sizes = readPageSizesFromTree()?.takeIf { it.size == pageCount } ?: measurePageSizes(pageCount)
+    pageSizes = sizes
+    return sizes
+  }
+
+  private fun readPageSizesFromTree(): List<PdfDocumentLayout.PageSize>? {
+    val descriptor = duplicateDescriptor()
+    return try {
+      ParcelFileDescriptor.AutoCloseInputStream(descriptor).channel.use { channel ->
+        PdfPageSizeReader(PdfDocumentReader(FileChannelByteSource(channel))).read()
+      }
+    } catch (_: PdfFormatException) {
+      // Encrypted, or not readable as PDF syntax.
+      null
+    } catch (_: RuntimeException) {
+      // A structure the parser does not expect; the renderer decides.
+      null
+    }
+  }
+
+  private fun measurePageSizes(pageCount: Int): List<PdfDocumentLayout.PageSize> {
+    val descriptor = duplicateDescriptor()
+    try {
+      // Renderers own (and close) the descriptor they get; keep ours for recycling.
+      var renderer = DocumentRenderer.open(descriptor.dup(), password)
+      try {
+        return List(pageCount) { index ->
+          if (index > 0 && index % RECYCLE_AFTER_PAGES == 0) {
+            renderer.close()
+            renderer = DocumentRenderer.open(descriptor.dup(), password)
+          }
+          renderer.openPage(index).use { PdfDocumentLayout.PageSize(it.width.toFloat(), it.height.toFloat()) }
+        }
+      } finally {
+        renderer.close()
+      }
+    } finally {
+      descriptor.closeQuietly()
+    }
+  }
+
+  /**
+   * A duplicate of the open document's descriptor, ours to close. Taken
+   * under the lock so the worker cannot close (and the OS reuse) the
+   * descriptor number in between.
+   */
+  private fun duplicateDescriptor(): ParcelFileDescriptor =
+    synchronized(descriptorLock) { master?.dup() } ?: throw IllegalStateException("The document is not open")
 
   /**
    * Starts searching the open document on its own thread (see
@@ -162,6 +222,7 @@ class PdfDocumentSession(
   /** Guards [master] against [readOutline] duplicating it while it closes. */
   private val descriptorLock = Any()
   @Volatile private var outline: List<OutlineEntry>? = null
+  @Volatile private var pageSizes: List<PdfDocumentLayout.PageSize>? = null
   private var renderer: DocumentRenderer? = null
   private var pagesOpenedByRenderer = 0
   private var filePath: String? = null

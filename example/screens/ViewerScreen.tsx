@@ -227,6 +227,28 @@ export function ViewerScreen() {
           }}
         />
         <Button
+          title="Sizes"
+          onPress={() => {
+            const started = performance.now();
+            ref.current
+              ?.getPageSizes()
+              .then((sizes) => {
+                const ms = Math.round(performance.now() - started);
+                const list = sizes
+                  .slice(0, 8)
+                  .map(
+                    (size) =>
+                      `${Math.round(size.width)}x${Math.round(size.height)}`,
+                  )
+                  .join(' ');
+                setLastEvent(`sizes ${sizes.length}: ${list} (${ms} ms)`);
+              })
+              .catch((error: unknown) =>
+                setLastEvent(`sizes: ${String(error)}`),
+              );
+          }}
+        />
+        <Button
           title="Mark"
           onPress={() => {
             mark.current = viewport?.viewport ?? null;

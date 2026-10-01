@@ -119,7 +119,10 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private var lastReportedPage = -1
   /// `getOutline()` result for the displayed file (main thread).
   private var outlineCache: (url: URL, entries: [PdfOutlineEntry])?
-  private static let outlineQueue = DispatchQueue(label: "com.betterpdf.outline", qos: .userInitiated)
+  /// `getPageSizes()` result for the displayed file (main thread).
+  private var pageSizesCache: (url: URL, sizes: [PdfPageSize])?
+  /// Reads separate instances of the displayed file (outline, page sizes).
+  private static let readQueue = DispatchQueue(label: "com.betterpdf.read", qos: .userInitiated)
   /// Scroll-offset observation of PDFView's internal scroll view; drives
   /// `onPageChange` with the same rule as Android (see `reportCurrentPage`).
   private var offsetObservation: NSKeyValueObservation?
@@ -236,7 +239,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       // entries) and PDFKit objects are not thread-safe, while the view's
       // document is in use by PDFView on the main thread. Read a separate
       // instance of the same file off the main thread instead.
-      Self.outlineQueue.async {
+      Self.readQueue.async {
         guard let document = PDFDocument(url: url) else {
           promise.reject(withError: RuntimeError.error(withMessage: "The outline could not be read"))
           return
@@ -247,6 +250,37 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
           if self?.pdfView?.document?.documentURL == url { self?.outlineCache = (url, entries) }
         }
         promise.resolve(withResult: entries)
+      }
+    }
+    return promise
+  }
+
+  func getPageSizes() throws -> Promise<[PdfPageSize]> {
+    let promise = Promise<[PdfPageSize]>()
+    DispatchQueue.main.async { [weak self] in
+      guard let self, let url = self.pdfView?.document?.documentURL else {
+        promise.reject(withError: RuntimeError.error(withMessage: "No document is loaded"))
+        return
+      }
+      if let cached = self.pageSizesCache, cached.url == url {
+        promise.resolve(withResult: cached.sizes)
+        return
+      }
+      let password = self.password
+      // Like getOutline: a separate instance of the same file, off the main
+      // thread, so a long document does not stall the view's.
+      Self.readQueue.async {
+        guard let document = PDFDocument(url: url) else {
+          promise.reject(withError: RuntimeError.error(withMessage: "The page sizes could not be read"))
+          return
+        }
+        if document.isLocked { _ = document.unlock(withPassword: password ?? "") }
+        let sizes = (0..<document.pageCount).compactMap { document.page(at: $0)?.displaySize }
+          .map { PdfPageSize(width: Double($0.width), height: Double($0.height)) }
+        DispatchQueue.main.async { [weak self] in
+          if self?.pdfView?.document?.documentURL == url { self?.pageSizesCache = (url, sizes) }
+        }
+        promise.resolve(withResult: sizes)
       }
     }
     return promise
@@ -320,6 +354,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     lastReportedScale = nil
     lastReportedViewport = nil
     outlineCache = nil
+    pageSizesCache = nil
     guard let pdfView else { return }
     let pageCount = document.pageCount
     let position = initialPosition
@@ -337,7 +372,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     container.applyDoubleTapZoom()
     container.applyTextSelection()
 
-    let firstPage = document.page(at: 0)?.bounds(for: .mediaBox).size ?? .zero
+    let firstPage = document.page(at: 0)?.displaySize ?? .zero
     onLoad?(PdfLoadEvent(
       pageCount: Double(pageCount),
       firstPageWidth: Double(firstPage.width),

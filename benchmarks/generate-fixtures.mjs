@@ -274,6 +274,10 @@ function buildDocument({
   password,
   catalogEntries,
   objectStreams = false,
+  // Replaces a page's `/MediaBox [...]`, e.g. to add /CropBox and /Rotate or
+  // leave the box to inheritance; `pagesEntries` goes into the /Pages node.
+  pageBoxes,
+  pagesEntries = '',
 }) {
   const writer = new PdfWriter();
   const catalog = writer.reserve();
@@ -302,12 +306,13 @@ function buildDocument({
       ? writer.add('<< /Filter /FlateDecode >>', deflateSync(raw))
       : writer.add('<< >>', raw);
     const size = pageSize(index);
+    const boxes = pageBoxes?.(index) ?? `/MediaBox [0 0 ${size.width} ${size.height}]`;
     const annots = annotationRefs.length
       ? ` /Annots [${annotationRefs.map((ref) => `${ref} 0 R`).join(' ')}]`
       : '';
     writer.set(
       pageRefs[index],
-      `<< /Type /Page /Parent ${pages} 0 R /MediaBox [0 0 ${size.width} ${size.height}] ` +
+      `<< /Type /Page /Parent ${pages} 0 R ${boxes} ` +
         `/Resources << /Font << /F1 ${font} 0 R >> /XObject << ${xobjects.join(' ')} >> >> ` +
         `/Contents ${stream} 0 R${annots} >>`,
     );
@@ -315,7 +320,7 @@ function buildDocument({
 
   writer.set(
     pages,
-    `<< /Type /Pages /Kids [${pageRefs.map((r) => `${r} 0 R`).join(' ')}] /Count ${pageCount} >>`,
+    `<< /Type /Pages /Kids [${pageRefs.map((r) => `${r} 0 R`).join(' ')}] /Count ${pageCount}${pagesEntries ? ` ${pagesEntries}` : ''} >>`,
   );
   const extra = catalogEntries ? ` ${catalogEntries(writer, pageRefs)}` : '';
   if (writer.pendingAnnots) {
@@ -689,6 +694,12 @@ const FIXTURES = {
           : { content: textPage(i, { fontSize: 10 }) },
     }),
 
+  'page-boxes': () => pageBoxesDocument(),
+  // Same pages: the parser's object-stream path, and the renderer fallback
+  // Android uses for encrypted documents (password "secret").
+  'page-boxes-compressed': () => pageBoxesDocument({ objectStreams: true }),
+  'page-boxes-encrypted': () => pageBoxesDocument({ password: 'secret' }),
+
   'mixed-sizes': () => {
     // Portrait, landscape, a very tall "receipt" and a square page: exercises
     // layout and the base bitmap pixel cap.
@@ -706,6 +717,32 @@ const FIXTURES = {
     });
   },
 };
+
+/**
+ * Page sizes as displayed: crop box (clipped to the media box), rotated by
+ * /Rotate, with inheritance from the /Pages node. Each page's heading holds
+ * its expected size (width × height in points).
+ */
+function pageBoxesDocument(options = {}) {
+  const pages = [
+    { boxes: '', expect: '612 x 792 inherited media box' },
+    { boxes: '/MediaBox [0 0 595 842] /Rotate 90', expect: '842 x 595 rotate 90' },
+    { boxes: '/MediaBox [0 0 600 800] /CropBox [50 100 550 700]', expect: '500 x 600 crop box' },
+    { boxes: '/CropBox [0 0 400 792] /Rotate 270', expect: '792 x 400 inherited, crop, rotate 270' },
+    { boxes: '/MediaBox [100 100 400 500] /Rotate 180', expect: '300 x 400 offset origin, rotate 180' },
+    { boxes: '/MediaBox [0 0 595 842] /CropBox [-50 -50 700 900]', expect: '595 x 842 crop clipped to media' },
+    { boxes: '/MediaBox [0 0 300 500] /Rotate -90', expect: '500 x 300 rotate -90' },
+  ];
+  return buildDocument({
+    ...options,
+    pageCount: pages.length,
+    pagesEntries: '/MediaBox [0 0 612 792]',
+    pageBoxes: (i) => pages[i].boxes,
+    pageContent: (i) => ({
+      content: `BT /F1 14 Tf 20 60 Td (Page ${i + 1}: ${pages[i].expect}) Tj ET`,
+    }),
+  });
+}
 
 function scanned(pageCount, image) {
   const scans = imagePool(12, image);

@@ -28,6 +28,7 @@ import type { PdfLoadEvent } from './types/PdfLoadEvent';
 import type { PdfLoadProgressEvent } from './types/PdfLoadProgressEvent';
 import type { PdfOutlineItem } from './types/PdfOutlineItem';
 import type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
+import type { PdfPageSize } from './types/PdfPageSize';
 import type { PdfPageTapEvent } from './types/PdfPageTapEvent';
 import type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
@@ -74,6 +75,14 @@ export interface PdfViewRef {
    * documents (their titles are encrypted).
    */
   getOutline(): Promise<PdfOutlineItem[]>;
+  /**
+   * Every page's size as displayed (crop box, rotation applied) in PDF
+   * points, indexed by zero-based page — e.g. to lay out overlays or
+   * thumbnails of a document with mixed page sizes. Read off the main thread
+   * on first call, then cached; cheap even for long documents (no page is
+   * rendered). Rejects before {@linkcode PdfViewProps.onLoad}.
+   */
+  getPageSizes(): Promise<PdfPageSize[]>;
   /**
    * Searches the document's text (case-insensitive), replacing any previous
    * search; `''` clears it. Results arrive through
@@ -450,6 +459,11 @@ export function PdfView({
       goToViewport(viewport) {
         const { page, x, y, scale } = viewport;
         nativeRef.current?.goToViewport({ page, x, y, scale });
+      },
+      async getPageSizes() {
+        const native = nativeRef.current;
+        if (native == null) throw new Error('The PDF view is not mounted');
+        return native.getPageSizes();
       },
       getStats() {
         return nativeRef.current?.getStats() ?? null;

@@ -30,6 +30,8 @@ namespace margelo::nitro::betterpdf { struct PdfLoadProgressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageChangeEvent; }
+// Forward declaration of `PdfPageSize` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 // Forward declaration of `PdfPageTapEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
@@ -61,6 +63,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfLoadProgressEvent.hpp"
 #include "PdfOutlineEntry.hpp"
 #include "PdfPageChangeEvent.hpp"
+#include "PdfPageSize.hpp"
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
@@ -652,6 +655,51 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return Func_void_std__exception_ptr_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::vector<PdfPageSize>
+  /**
+   * Specialized version of `std::vector<PdfPageSize>`.
+   */
+  using std__vector_PdfPageSize_ = std::vector<PdfPageSize>;
+  inline std::vector<PdfPageSize> create_std__vector_PdfPageSize_(size_t size) noexcept {
+    std::vector<PdfPageSize> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::vector<PdfPageSize>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::vector<PdfPageSize>>>`.
+   */
+  using std__shared_ptr_Promise_std__vector_PdfPageSize___ = std::shared_ptr<Promise<std::vector<PdfPageSize>>>;
+  inline std::shared_ptr<Promise<std::vector<PdfPageSize>>> create_std__shared_ptr_Promise_std__vector_PdfPageSize___() noexcept {
+    return Promise<std::vector<PdfPageSize>>::create();
+  }
+  inline PromiseHolder<std::vector<PdfPageSize>> wrap_std__shared_ptr_Promise_std__vector_PdfPageSize___(std::shared_ptr<Promise<std::vector<PdfPageSize>>> promise) noexcept {
+    return PromiseHolder<std::vector<PdfPageSize>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::vector<PdfPageSize>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::vector<PdfPageSize>&)>`.
+   */
+  using Func_void_std__vector_PdfPageSize_ = std::function<void(const std::vector<PdfPageSize>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::vector<PdfPageSize>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__vector_PdfPageSize__Wrapper final {
+  public:
+    explicit Func_void_std__vector_PdfPageSize__Wrapper(std::function<void(const std::vector<PdfPageSize>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<PdfPageSize>& /* result */)>>(std::move(func))) {}
+    inline void call(std::vector<PdfPageSize> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::vector<PdfPageSize>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__vector_PdfPageSize_ create_Func_void_std__vector_PdfPageSize_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__vector_PdfPageSize__Wrapper wrap_Func_void_std__vector_PdfPageSize_(Func_void_std__vector_PdfPageSize_ value) noexcept {
+    return Func_void_std__vector_PdfPageSize__Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridBetterPdfViewSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridBetterPdfViewSpec>`.
@@ -689,6 +737,15 @@ namespace margelo::nitro::betterpdf::bridge::swift {
   }
   inline Result_std__shared_ptr_Promise_std__vector_PdfOutlineEntry____ create_Result_std__shared_ptr_Promise_std__vector_PdfOutlineEntry____(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<PdfPageSize>>>>
+  using Result_std__shared_ptr_Promise_std__vector_PdfPageSize____ = Result<std::shared_ptr<Promise<std::vector<PdfPageSize>>>>;
+  inline Result_std__shared_ptr_Promise_std__vector_PdfPageSize____ create_Result_std__shared_ptr_Promise_std__vector_PdfPageSize____(const std::shared_ptr<Promise<std::vector<PdfPageSize>>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<PdfPageSize>>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_std__vector_PdfPageSize____ create_Result_std__shared_ptr_Promise_std__vector_PdfPageSize____(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<PdfPageSize>>>>::withError(error);
   }
 
 } // namespace margelo::nitro::betterpdf::bridge::swift

@@ -12,6 +12,7 @@ import type { PdfLoadProgressEvent } from '../types/PdfLoadProgressEvent';
 import type { PdfLoadEvent } from '../types/PdfLoadEvent';
 import type { PdfOutlineEntry } from '../types/PdfOutlineEntry';
 import type { PdfPageChangeEvent } from '../types/PdfPageChangeEvent';
+import type { PdfPageSize } from '../types/PdfPageSize';
 import type { PdfPageTapEvent } from '../types/PdfPageTapEvent';
 import type { PdfScaleChangeEvent } from '../types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from '../types/PdfSearchChangeEvent';
@@ -92,6 +93,11 @@ export interface PdfViewMethods extends HybridViewMethods {
    * Android for encrypted documents.
    */
   getOutline(): Promise<PdfOutlineEntry[]>;
+  /**
+   * Every page's displayed size, by zero-based page. Read off the main
+   * thread on first call and cached. Rejects before a document has loaded.
+   */
+  getPageSizes(): Promise<PdfPageSize[]>;
   /** Starts a case-insensitive text search, replacing any previous one; '' clears it. */
   search(query: string): void;
   /** Moves to the next match (wrapping) and scrolls it into view. */

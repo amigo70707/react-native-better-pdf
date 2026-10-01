@@ -9,6 +9,7 @@ export type { PdfLoadEvent } from './types/PdfLoadEvent';
 export type { PdfLoadProgressEvent } from './types/PdfLoadProgressEvent';
 export type { PdfOutlineItem } from './types/PdfOutlineItem';
 export type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
+export type { PdfPageSize } from './types/PdfPageSize';
 export type { PdfPageTapEvent } from './types/PdfPageTapEvent';
 export type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 export type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';

@@ -784,6 +784,45 @@ restore the position, scroll events, "read to the end"; see
   so the point within a zoomed page is not restored there. Both settle on
   the page when not zoomed, as a swipe does.
 
+## Page sizes (v0.2)
+
+```ts
+// ref
+getPageSizes(): Promise<PdfPageSize[]>; // index = zero-based page
+interface PdfPageSize { width: number; height: number } // PDF points
+```
+
+react-native-pdf reported only the first page's size (#302, #346, #898 ask
+for every page: overlays, thumbnails and layouts for mixed-size documents).
+
+- **All pages at once, asynchronously.** One call answers every use case
+  found (they all need many pages); a per-page method would be a native
+  round trip per page. Async because it reads the file off the main thread,
+  and cached for the document.
+- **As displayed**: the crop box clipped to the media box, width and height
+  swapped for /Rotate 90° / 270° — what both platforms draw, and what
+  `onLoad`'s first-page size now reports on both (iOS used to report the
+  unrotated media box).
+- **Android without PdfRenderer:** opening every page in the renderer makes
+  PDFium keep everything it parsed (measured: 400 MB of native heap for a
+  1000-page scan, see `PdfDocumentSession`). The page tree already holds
+  the boxes, so the `outline/` parser reads them — MediaBox, CropBox and
+  Rotate with inheritance from `/Pages` nodes, PDFium's defaults (Letter
+  when the media box is missing, no crop box when it misses the media box,
+  quarter turns) — without opening a page. Encrypted documents (the parser
+  has no security handler) and trees whose page count disagrees with the
+  renderer fall back to opening each page on a separate renderer, recycled
+  every 48 pages like the render thread's.
+- **Tested** against PDFKit on a fixture with an inherited media box,
+  rotations of 90°, 270°, 180° and −90°, a crop box, an offset origin and a
+  crop box larger than the media box (`page-boxes`): unit tests for the
+  parser (classic xref and object streams), and `viewer-page-sizes` on both
+  platforms, including the encrypted copy that takes Android's renderer
+  path.
+- **Not used for layout yet.** Android's layout still starts from the first
+  page's size and corrects pages as they are rendered (see README,
+  Limitations); the page-tree sizes could remove that re-anchoring.
+
 ## Open questions
 
 - A `PdfDocument` Hybrid Object for metadata/page count without mounting a view.

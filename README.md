@@ -100,6 +100,7 @@ pdf.current?.goToPage(0, { animated: false });
 pdf.current?.zoomTo(2);                        // relative to the fitted page
 pdf.current?.zoomTo(1);                        // reset
 const toc = await pdf.current?.getOutline();   // [{ title, page?, children }]
+const sizes = await pdf.current?.getPageSizes(); // [{ width, height }] per page, PDF points
 pdf.current?.search('invoice');                // highlights matches, see onSearchChange
 pdf.current?.searchNext();                     // wraps around; searchPrevious() too
 pdf.current?.clearSearch();                    // or search('')
@@ -144,7 +145,7 @@ document.
 | `fitPolicy` | `'width' \| 'height' \| 'page'` | `'width'`, or `'page'` with `horizontal` / `enablePaging` | how pages are scaled at zoom 1 |
 | `searchHighlightColor` | `ColorValue` | `'rgba(255, 214, 0, 0.4)'` | background of search matches; use a translucent colour |
 | `searchCurrentHighlightColor` | `ColorValue` | `'rgba(255, 140, 0, 0.6)'` | background of the current match |
-| `onLoad` | `({ pageCount, firstPageWidth, firstPageHeight, filePath? }) => void` | | sizes in PDF points; `filePath`: the local file being displayed (downloaded copy, local file or extracted asset; not for `content://`) |
+| `onLoad` | `({ pageCount, firstPageWidth, firstPageHeight, filePath? }) => void` | | first page's size in PDF points, as displayed (crop box, rotation applied); `filePath`: the local file being displayed (downloaded copy, local file or extracted asset; not for `content://`) |
 | `onLoadProgress` | `({ loadedBytes, totalBytes? }) => void` | | remote downloads only; at most every 100 ms plus once on completion |
 | `onPageChange` | `({ page, pageCount }) => void` | | zero-based |
 | `onError` | `(error: PdfError) => void` | | |
@@ -188,6 +189,7 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Vertical continuous scrolling, fling, platform scroll indicators
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
+- Every page's size (`getPageSizes`), cheap even for long documents
 - Reading position: settled viewport events, restore on open or on demand,
   end-of-document detection
 - Page-change, load and typed error events

@@ -15,6 +15,8 @@ export const FIXTURES = [
   'outline-compressed',
   'outline-large',
   'annotations',
+  'page-boxes',
+  'page-boxes-encrypted',
   'encrypted',
   'malformed-not-a-pdf',
   'malformed-empty',
