@@ -117,6 +117,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// Paged layouts: the scale PDFKit showed the current page at on arrival.
   private var pagedFitScale: CGFloat?
   private var lastReportedPage = -1
+  /// While a layout mode switch or resize is applied: PDFKit passes through
+  /// other pages (often page 1) on the way, which must not count as the
+  /// reader's page or reach `onPageChange`.
+  private var isRelayingOut = false
+  /// The container size of the last layout; a change is a resize.
+  private var lastLayoutSize: CGSize = .zero
   /// `getOutline()` result for the displayed file (main thread).
   private var outlineCache: (url: URL, entries: [PdfOutlineEntry])?
   /// `getPageSizes()` result for the displayed file (main thread).
@@ -385,7 +391,18 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   // MARK: Layout & scale
 
   private func layoutDidChange() {
+    let wasRelayingOut = isRelayingOut
+    isRelayingOut = true
+    defer {
+      isRelayingOut = wasRelayingOut
+      if !wasRelayingOut { reportCurrentPage() }
+    }
     guard let pdfView, pdfView.document != nil, container.bounds.width > 0 else { return }
+    // PDFKit does not keep the page across every resize (measured: a
+    // horizontal layout returns to page 1), so the reader's page is restored.
+    let isResize = lastLayoutSize != .zero && container.bounds.size != lastLayoutSize
+    lastLayoutSize = container.bounds.size
+    let pageToKeep = isResize && pendingInitialPage == nil ? lastReportedPage : -1
     let newFit = currentFitScale(pdfView)
     if newFit > 0, abs(newFit - fitScale) > 0.0001 {
       applyScaleLimits(preservingRelativeScale: fitScale > 0)
@@ -401,6 +418,10 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         scrollToPage(page, animated: false, centeredHorizontally: true)
       }
       reportCurrentPage()
+    }
+    if pageToKeep >= 0, currentPageIndex() != pageToKeep, let page = pdfView.document?.page(at: pageToKeep) {
+      pdfView.layoutIfNeeded()
+      pdfView.go(to: page)
     }
     // The first layout and rotations move the viewport without scrolling.
     settle.noteMotion()
@@ -605,8 +626,10 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       .replacingOccurrences(of: "{pageCount}", with: String(pageCount))
   }
 
-  private func reportCurrentPage() {
-    guard let pdfView, let document = pdfView.document, document.pageCount > 0 else { return }
+  /// The page under the viewport's centre, or the last page once scrolled
+  /// to the end (see `reportCurrentPage`); nil without a document.
+  private func currentPageIndex() -> Int? {
+    guard let pdfView, let document = pdfView.document, document.pageCount > 0 else { return nil }
     let index: Int
     if isPagedLayout || isSinglePage, let page = pdfView.currentPage {
       index = document.index(for: page)
@@ -614,10 +637,15 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       index = document.pageCount - 1
     } else {
       let center = CGPoint(x: pdfView.bounds.midX, y: pdfView.bounds.midY)
-      guard let page = pdfView.page(for: center, nearest: true) else { return }
+      guard let page = pdfView.page(for: center, nearest: true) else { return nil }
       index = document.index(for: page)
     }
-    guard index != NSNotFound, index != lastReportedPage else { return }
+    return index == NSNotFound ? nil : index
+  }
+
+  private func reportCurrentPage() {
+    guard !isRelayingOut, let document = pdfView?.document, let index = currentPageIndex() else { return }
+    guard index != lastReportedPage else { return }
     lastReportedPage = index
     onPageChange?(PdfPageChangeEvent(page: Double(index), pageCount: Double(document.pageCount)))
     // PDFKit exposes the page text to VoiceOver but never says which page
@@ -648,6 +676,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// `displayDirection`.
   private func applyLayoutMode(keepingCurrentPage: Bool = true) {
     guard let pdfView, pdfView.document != nil else { return }
+    let wasRelayingOut = isRelayingOut
+    isRelayingOut = true
+    defer {
+      isRelayingOut = wasRelayingOut
+      if !wasRelayingOut { reportCurrentPage() }
+    }
     // The page the app was told about (centre / end rule), not PDFKit's
     // top-of-viewport `currentPage`: they differ on a short last page.
     let currentPage = lastReportedPage >= 0 ? pdfView.document?.page(at: lastReportedPage) : pdfView.currentPage

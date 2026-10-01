@@ -294,6 +294,11 @@ double-tap, page virtualization and background tile rendering. The wrapper:
 - applies `initialPage` after the first layout with a non-zero fit scale
   (`go(to:)` before layout is ignored by PDFKit);
 - reports `PDFViewPageChanged` as `onPageChange`, de-duplicated;
+- keeps the reader's page through layout mode switches and resizes: PDFKit
+  passes through other pages while it relays out (and after a resize of a
+  horizontal layout settles on page 1, measured), so pages seen during a
+  relayout are not reported, and the page from before a resize is restored
+  if PDFKit lost it;
 - searches with `beginFindString` (asynchronous; matches arrive through
   `PDFDocumentDidFindMatch`) and shows them with `highlightedSelections`;
 - sets `document = nil` in `onDropView` so PDFKit releases its tiles
