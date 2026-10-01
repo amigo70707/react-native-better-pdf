@@ -1,6 +1,7 @@
 package com.margelo.nitro.betterpdf
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -9,6 +10,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.ThemedReactContext
 import com.margelo.nitro.betterpdf.outline.PdfFormatException
 import com.margelo.nitro.core.Promise
+import kotlin.math.roundToInt
 
 /**
  * Android implementation of `BetterPdfView`.
@@ -234,6 +236,29 @@ class HybridBetterPdfView(
     }
   }
 
+  override fun renderPage(page: Double, options: PdfRenderPageOptions): Promise<PdfPageImage> {
+    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val pageCount = documentView.pageCount
+    if (!page.isFinite() || page != Math.floor(page) || page < 0 || page >= pageCount) {
+      return Promise.rejected(IllegalArgumentException("Page $page is outside the document (0–${pageCount - 1})"))
+    }
+    val width = options.width
+    if (!width.isFinite() || width < 1 || width > MAX_RENDER_WIDTH) {
+      return Promise.rejected(IllegalArgumentException("width must be 1–$MAX_RENDER_WIDTH pixels, got $width"))
+    }
+    val format = options.format ?: PdfImageFormat.PNG
+    val quality = options.quality?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0) ?: DEFAULT_JPEG_QUALITY
+    return Promise.parallel {
+      val bitmap = session.renderPageImage(page.toInt(), width.roundToInt())
+      try {
+        val file = bitmap.writeToCache(context, format, quality)
+        PdfPageImage(Uri.fromFile(file).toString(), bitmap.width.toDouble(), bitmap.height.toDouble())
+      } finally {
+        bitmap.recycle()
+      }
+    }
+  }
+
   override fun getStats(): PdfViewStats {
     val session = session
     return PdfViewStats(
@@ -356,4 +381,9 @@ class HybridBetterPdfView(
   }
 
   // endregion
+
+  private companion object {
+    const val MAX_RENDER_WIDTH = 4096.0
+    const val DEFAULT_JPEG_QUALITY = 0.9
+  }
 }

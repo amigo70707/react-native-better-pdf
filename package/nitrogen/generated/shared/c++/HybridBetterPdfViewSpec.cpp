@@ -78,6 +78,7 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridMethod("goToViewport", &HybridBetterPdfViewSpec::goToViewport);
       prototype.registerHybridMethod("getOutline", &HybridBetterPdfViewSpec::getOutline);
       prototype.registerHybridMethod("getPageSizes", &HybridBetterPdfViewSpec::getPageSizes);
+      prototype.registerHybridMethod("renderPage", &HybridBetterPdfViewSpec::renderPage);
       prototype.registerHybridMethod("search", &HybridBetterPdfViewSpec::search);
       prototype.registerHybridMethod("searchNext", &HybridBetterPdfViewSpec::searchNext);
       prototype.registerHybridMethod("searchPrevious", &HybridBetterPdfViewSpec::searchPrevious);

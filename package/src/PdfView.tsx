@@ -28,8 +28,10 @@ import type { PdfLoadEvent } from './types/PdfLoadEvent';
 import type { PdfLoadProgressEvent } from './types/PdfLoadProgressEvent';
 import type { PdfOutlineItem } from './types/PdfOutlineItem';
 import type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
+import type { PdfPageImage } from './types/PdfPageImage';
 import type { PdfPageSize } from './types/PdfPageSize';
 import type { PdfPageTapEvent } from './types/PdfPageTapEvent';
+import type { PdfRenderPageOptions } from './types/PdfRenderPageOptions';
 import type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
 import type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
@@ -83,6 +85,17 @@ export interface PdfViewRef {
    * rendered). Rejects before {@linkcode PdfViewProps.onLoad}.
    */
   getPageSizes(): Promise<PdfPageSize[]>;
+  /**
+   * Renders zero-based `page` to a PNG or JPEG file — for thumbnails, share
+   * previews or covers — on a white background, with the annotations the
+   * viewer draws. Runs off the main thread on a separate renderer, so the
+   * view keeps scrolling. Rejects before {@linkcode PdfViewProps.onLoad},
+   * for a page outside the document, and for a `width` outside 1–4096 px.
+   */
+  renderPage(
+    page: number,
+    options: PdfRenderPageOptions,
+  ): Promise<PdfPageImage>;
   /**
    * Searches the document's text (case-insensitive), replacing any previous
    * search; `''` clears it. Results arrive through
@@ -464,6 +477,11 @@ export function PdfView({
         const native = nativeRef.current;
         if (native == null) throw new Error('The PDF view is not mounted');
         return native.getPageSizes();
+      },
+      async renderPage(page, options) {
+        const native = nativeRef.current;
+        if (native == null) throw new Error('The PDF view is not mounted');
+        return native.renderPage(page, options);
       },
       getStats() {
         return nativeRef.current?.getStats() ?? null;

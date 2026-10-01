@@ -117,6 +117,7 @@ namespace margelo::nitro::betterpdf {
     void goToViewport(const PdfViewport& viewport) override;
     std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() override;
     std::shared_ptr<Promise<std::vector<PdfPageSize>>> getPageSizes() override;
+    std::shared_ptr<Promise<PdfPageImage>> renderPage(double page, const PdfRenderPageOptions& options) override;
     void search(const std::string& query) override;
     void searchNext() override;
     void searchPrevious() override;

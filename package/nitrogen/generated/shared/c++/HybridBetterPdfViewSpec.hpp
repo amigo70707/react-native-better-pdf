@@ -47,6 +47,10 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageSize` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
+// Forward declaration of `PdfPageImage` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageImage; }
+// Forward declaration of `PdfRenderPageOptions` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -70,6 +74,8 @@ namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 #include <vector>
 #include <NitroModules/Promise.hpp>
 #include "PdfPageSize.hpp"
+#include "PdfPageImage.hpp"
+#include "PdfRenderPageOptions.hpp"
 
 namespace margelo::nitro::betterpdf {
 
@@ -165,6 +171,7 @@ namespace margelo::nitro::betterpdf {
       virtual void goToViewport(const PdfViewport& viewport) = 0;
       virtual std::shared_ptr<Promise<std::vector<PdfOutlineEntry>>> getOutline() = 0;
       virtual std::shared_ptr<Promise<std::vector<PdfPageSize>>> getPageSizes() = 0;
+      virtual std::shared_ptr<Promise<PdfPageImage>> renderPage(double page, const PdfRenderPageOptions& options) = 0;
       virtual void search(const std::string& query) = 0;
       virtual void searchNext() = 0;
       virtual void searchPrevious() = 0;

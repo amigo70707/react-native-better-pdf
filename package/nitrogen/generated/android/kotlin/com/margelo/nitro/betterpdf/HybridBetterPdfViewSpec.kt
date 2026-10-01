@@ -309,6 +309,10 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   
   @DoNotStrip
   @Keep
+  abstract fun renderPage(page: Double, options: PdfRenderPageOptions): Promise<PdfPageImage>
+  
+  @DoNotStrip
+  @Keep
   abstract fun search(query: String): Unit
   
   @DoNotStrip

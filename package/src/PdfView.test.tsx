@@ -36,6 +36,12 @@ const nativeInstance = {
   searchPrevious: () => nativeCalls.push('searchPrevious()'),
   clearSearch: () => nativeCalls.push('clearSearch()'),
   getPageSizes: () => Promise.resolve([{ width: 595, height: 842 }]),
+  renderPage: (page: number, options: { width: number }) =>
+    Promise.resolve({
+      uri: `file:///page-${page}.png`,
+      width: options.width,
+      height: 2 * options.width,
+    }),
   goToViewport: (viewport: object) =>
     nativeCalls.push(`goToViewport(${JSON.stringify(viewport)})`),
   getOutline: () =>
@@ -452,6 +458,23 @@ describe('PdfView', () => {
     expect(await ref.current!.getPageSizes()).toEqual([
       { width: 595, height: 842 },
     ]);
+  });
+
+  test('renderPage rejects before mount and forwards after', async () => {
+    const ref = createRef<PdfViewRef>();
+    render(<PdfView ref={ref} source={{ uri: 'x' }} />);
+    await expect(ref.current!.renderPage(0, { width: 100 })).rejects.toThrow(
+      'not mounted',
+    );
+    const hybridRef = lastHost().hybridRef as {
+      f: (instance: typeof nativeInstance) => void;
+    };
+    hybridRef.f(nativeInstance);
+    expect(await ref.current!.renderPage(3, { width: 100 })).toEqual({
+      uri: 'file:///page-3.png',
+      width: 100,
+      height: 200,
+    });
   });
 
   test('search methods forward to the native view', () => {

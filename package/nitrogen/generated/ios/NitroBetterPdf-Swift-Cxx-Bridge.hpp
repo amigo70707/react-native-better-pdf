@@ -18,6 +18,8 @@ namespace margelo::nitro::betterpdf { enum class PdfErrorCode; }
 namespace margelo::nitro::betterpdf { struct PdfError; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfImageFormat` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 // Forward declaration of `PdfInitialPosition` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfLinkPressEvent` to properly resolve imports.
@@ -30,6 +32,8 @@ namespace margelo::nitro::betterpdf { struct PdfLoadProgressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageChangeEvent; }
+// Forward declaration of `PdfPageImage` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageImage; }
 // Forward declaration of `PdfPageSize` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 // Forward declaration of `PdfPageTapEvent` to properly resolve imports.
@@ -57,12 +61,14 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfImageFormat.hpp"
 #include "PdfInitialPosition.hpp"
 #include "PdfLinkPressEvent.hpp"
 #include "PdfLoadEvent.hpp"
 #include "PdfLoadProgressEvent.hpp"
 #include "PdfOutlineEntry.hpp"
 #include "PdfPageChangeEvent.hpp"
+#include "PdfPageImage.hpp"
 #include "PdfPageSize.hpp"
 #include "PdfPageTapEvent.hpp"
 #include "PdfScaleChangeEvent.hpp"
@@ -700,6 +706,55 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return Func_void_std__vector_PdfPageSize__Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::shared_ptr<Promise<PdfPageImage>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<PdfPageImage>>`.
+   */
+  using std__shared_ptr_Promise_PdfPageImage__ = std::shared_ptr<Promise<PdfPageImage>>;
+  inline std::shared_ptr<Promise<PdfPageImage>> create_std__shared_ptr_Promise_PdfPageImage__() noexcept {
+    return Promise<PdfPageImage>::create();
+  }
+  inline PromiseHolder<PdfPageImage> wrap_std__shared_ptr_Promise_PdfPageImage__(std::shared_ptr<Promise<PdfPageImage>> promise) noexcept {
+    return PromiseHolder<PdfPageImage>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const PdfPageImage& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const PdfPageImage&)>`.
+   */
+  using Func_void_PdfPageImage = std::function<void(const PdfPageImage& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PdfPageImage& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_PdfPageImage_Wrapper final {
+  public:
+    explicit Func_void_PdfPageImage_Wrapper(std::function<void(const PdfPageImage& /* result */)>&& func): _function(std::make_unique<std::function<void(const PdfPageImage& /* result */)>>(std::move(func))) {}
+    inline void call(PdfPageImage result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PdfPageImage& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PdfPageImage create_Func_void_PdfPageImage(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PdfPageImage_Wrapper wrap_Func_void_PdfPageImage(Func_void_PdfPageImage value) noexcept {
+    return Func_void_PdfPageImage_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<PdfImageFormat>
+  /**
+   * Specialized version of `std::optional<PdfImageFormat>`.
+   */
+  using std__optional_PdfImageFormat_ = std::optional<PdfImageFormat>;
+  inline std::optional<PdfImageFormat> create_std__optional_PdfImageFormat_(const PdfImageFormat& value) noexcept {
+    return std::optional<PdfImageFormat>(value);
+  }
+  inline bool has_value_std__optional_PdfImageFormat_(const std::optional<PdfImageFormat>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PdfImageFormat get_std__optional_PdfImageFormat_(const std::optional<PdfImageFormat>& optional) noexcept {
+    return optional.value();
+  }
+  
   // pragma MARK: std::shared_ptr<HybridBetterPdfViewSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridBetterPdfViewSpec>`.
@@ -746,6 +801,15 @@ namespace margelo::nitro::betterpdf::bridge::swift {
   }
   inline Result_std__shared_ptr_Promise_std__vector_PdfPageSize____ create_Result_std__shared_ptr_Promise_std__vector_PdfPageSize____(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<std::vector<PdfPageSize>>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<PdfPageImage>>>
+  using Result_std__shared_ptr_Promise_PdfPageImage___ = Result<std::shared_ptr<Promise<PdfPageImage>>>;
+  inline Result_std__shared_ptr_Promise_PdfPageImage___ create_Result_std__shared_ptr_Promise_PdfPageImage___(const std::shared_ptr<Promise<PdfPageImage>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<PdfPageImage>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_PdfPageImage___ create_Result_std__shared_ptr_Promise_PdfPageImage___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<PdfPageImage>>>::withError(error);
   }
 
 } // namespace margelo::nitro::betterpdf::bridge::swift

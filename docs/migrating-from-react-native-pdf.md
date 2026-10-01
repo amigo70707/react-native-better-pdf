@@ -241,6 +241,10 @@ react-native-pdf did not open links either; the callback shape changes:
 A `singlePage` view ignores touches, so the `Pressable` gets the tap and a
 surrounding list scrolls from on top of it. Only that page is rendered.
 
+For an image file instead (lists of `<Image>`s, sharing, uploads), render
+the page once: `await ref.current?.renderPage(page, { width })` returns
+`{ uri, width, height }`.
+
 ### Table of contents
 
 react-native-pdf passed the outline to `onLoadComplete` (Android:

@@ -181,6 +181,32 @@ class PdfDocumentSession(
   }
 
   /**
+   * Renders [page] [width] pixels wide, the height following the page's
+   * aspect ratio, on white like the view. Uses a separate renderer that is
+   * closed afterwards, so the render thread, its cache and PDFium's cached
+   * pages are untouched. Blocking: call off the main thread.
+   *
+   * @throws IllegalArgumentException when the image would exceed
+   *   [MAX_IMAGE_PIXELS] (e.g. a very tall page at a large width).
+   */
+  fun renderPageImage(page: Int, width: Int): Bitmap {
+    // The renderer owns (and closes) the duplicate.
+    DocumentRenderer.open(duplicateDescriptor(), password).use { renderer ->
+      renderer.openPage(page).use { pdfPage ->
+        val height = max(1, (width.toDouble() * pdfPage.height / pdfPage.width).roundToInt())
+        require(width.toLong() * height <= MAX_IMAGE_PIXELS) {
+          "A ${width}×$height image exceeds the limit of $MAX_IMAGE_PIXELS pixels; use a smaller width"
+        }
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(Color.WHITE)
+        val matrix = Matrix().apply { setScale(width / pdfPage.width.toFloat(), height / pdfPage.height.toFloat()) }
+        pdfPage.renderForDisplay(bitmap, null, matrix)
+        return bitmap
+      }
+    }
+  }
+
+  /**
    * A duplicate of the open document's descriptor, ours to close. Taken
    * under the lock so the worker cannot close (and the OS reuse) the
    * descriptor number in between.
@@ -491,5 +517,7 @@ class PdfDocumentSession(
      * a 5-minute scroll soak) is verified in docs/performance/results.md.
      */
     const val RECYCLE_AFTER_PAGES = 48
+    /** 4096 × 4096: 64 MB as ARGB, the most `renderPageImage` allocates. */
+    const val MAX_IMAGE_PIXELS = 4096L * 4096L
   }
 }

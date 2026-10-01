@@ -12,8 +12,10 @@ import type { PdfLoadProgressEvent } from '../types/PdfLoadProgressEvent';
 import type { PdfLoadEvent } from '../types/PdfLoadEvent';
 import type { PdfOutlineEntry } from '../types/PdfOutlineEntry';
 import type { PdfPageChangeEvent } from '../types/PdfPageChangeEvent';
+import type { PdfPageImage } from '../types/PdfPageImage';
 import type { PdfPageSize } from '../types/PdfPageSize';
 import type { PdfPageTapEvent } from '../types/PdfPageTapEvent';
+import type { PdfRenderPageOptions } from '../types/PdfRenderPageOptions';
 import type { PdfScaleChangeEvent } from '../types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from '../types/PdfSearchChangeEvent';
 import type { PdfTextSelectionChangeEvent } from '../types/PdfTextSelectionChangeEvent';
@@ -98,6 +100,14 @@ export interface PdfViewMethods extends HybridViewMethods {
    * thread on first call and cached. Rejects before a document has loaded.
    */
   getPageSizes(): Promise<PdfPageSize[]>;
+  /**
+   * Renders zero-based `page` to an image file off the main thread. Rejects
+   * before a document has loaded, and for a page or width out of range.
+   */
+  renderPage(
+    page: number,
+    options: PdfRenderPageOptions,
+  ): Promise<PdfPageImage>;
   /** Starts a case-insensitive text search, replacing any previous one; '' clears it. */
   search(query: string): void;
   /** Moves to the next match (wrapping) and scrolls it into view. */

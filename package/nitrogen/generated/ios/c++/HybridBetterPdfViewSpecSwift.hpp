@@ -48,6 +48,12 @@ namespace margelo::nitro::betterpdf { struct PdfViewStats; }
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageSize` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
+// Forward declaration of `PdfPageImage` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageImage; }
+// Forward declaration of `PdfRenderPageOptions` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
+// Forward declaration of `PdfImageFormat` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -73,6 +79,9 @@ namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 #include <vector>
 #include <NitroModules/Promise.hpp>
 #include "PdfPageSize.hpp"
+#include "PdfPageImage.hpp"
+#include "PdfRenderPageOptions.hpp"
+#include "PdfImageFormat.hpp"
 
 #include "NitroBetterPdf-Swift-Cxx-Umbrella.hpp"
 
@@ -362,6 +371,14 @@ namespace margelo::nitro::betterpdf {
     }
     inline std::shared_ptr<Promise<std::vector<PdfPageSize>>> getPageSizes() override {
       auto __result = _swiftPart.getPageSizes();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::shared_ptr<Promise<PdfPageImage>> renderPage(double page, const PdfRenderPageOptions& options) override {
+      auto __result = _swiftPart.renderPage(std::forward<decltype(page)>(page), std::forward<decltype(options)>(options));
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

@@ -823,6 +823,43 @@ for every page: overlays, thumbnails and layouts for mixed-size documents).
   page's size and corrects pages as they are rendered (see README,
   Limitations); the page-tree sizes could remove that re-anchoring.
 
+## Page images (v0.2)
+
+```ts
+// ref
+renderPage(page: number, options: PdfRenderPageOptions): Promise<PdfPageImage>;
+interface PdfRenderPageOptions { width: number; format?: 'png' | 'jpeg'; quality?: number }
+interface PdfPageImage { uri: string; width: number; height: number } // file://, pixels
+```
+
+Requested in react-native-pdf as thumbnail export (#998, #43, #457, #811).
+
+- **A file, not pixels in JS.** Every use found ends in an `<Image>`, a
+  share sheet or an upload, all of which take a file URI; bytes in JS
+  (base64 or an `ArrayBuffer`) would cost a copy through the JS heap for no
+  use. The caller owns the file (cache directory, unique name per call).
+- **`width` in pixels, height derived.** The image's unit is pixels and the
+  result reports pixels; a caller showing it at `w` points multiplies by
+  `PixelRatio.get()`. The height follows the page's displayed aspect ratio
+  (see "Page sizes"), so rotated and cropped pages come out as on screen.
+  Requirements are validated (page in range, `width` 1–4096, at most
+  4096 × 4096 pixels so a tall page cannot exhaust memory) and reject
+  rather than clamp: a silently smaller image would be a surprise.
+- **Separate renderer, off the main thread.** Android opens a short-lived
+  renderer on a duplicate of the file descriptor (PDFium serialises renders
+  process-wide, so this costs the view at most one page's render), renders
+  on white like the view, and closes it, so nothing stays cached. iOS draws
+  with PDFKit on a separate `PDFDocument` on the read queue (PDFKit objects
+  are not thread-safe). Measured on the simulator / emulator: 3–15 ms
+  for a 300 px PNG of a one-line text page, file write included (scanned
+  or dense pages take longer: their render time).
+- **On the view's ref**, because the view owns the open document (and its
+  password). Rendering without a view is the open question below (a
+  `PdfDocument` Hybrid Object).
+- **Tested:** `viewer-page-image` on both platforms checks pixel sizes for
+  a plain and a rotated page, PNG and JPEG, and the encrypted copy; the
+  screenshots were checked for orientation and content against the viewer.
+
 ## Open questions
 
 - A `PdfDocument` Hybrid Object for metadata/page count without mounting a view.

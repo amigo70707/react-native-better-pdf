@@ -1,0 +1,38 @@
+# ref.renderPage() on the `page-boxes` fixtures, 300 px wide: page 1 is
+# 612 × 792 pt (300 × 388 px); page 7 is 300 × 500 pt rotated by -90°, so
+# 500 × 300 as displayed (300 × 180 px). The encrypted copy renders with
+# the document's password. The example alternates PNG and JPEG. Screenshots show the previews for a visual check
+# of content, rotation and crop.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "page-boxes(, .*)?", centerElement: true }
+- tapOn: "page-boxes(, .*)?"
+- extendedWaitUntil: { visible: "1 / 7", timeout: 15000 }
+- tapOn: "Image"
+- extendedWaitUntil: { visible: "image p1: 300x388 png \\(.*", timeout: 10000 }
+- assertVisible: { id: "page-image" }
+- takeScreenshot: page-image-p1
+- tapOn: { id: "page-image" }
+- assertNotVisible: { id: "page-image" }
+# Android lays out unvisited pages at the first page's size and corrects
+# them as they render; on this fixture (every page a different size) the
+# first jump can stop short (README, Limitations). The second lands exactly.
+- tapOn: "Last"
+- waitForAnimationToEnd
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "7 / 7", timeout: 5000 }
+- tapOn: "Image"
+- extendedWaitUntil: { visible: "image p7: 300x180 jpg \\(.*", timeout: 10000 }
+- takeScreenshot: page-image-p7
+- tapOn: "‹ Back"
+
+- scrollUntilVisible: { element: "page-boxes-encrypted(, .*)?", centerElement: true }
+- tapOn: "page-boxes-encrypted(, .*)?"
+- tapOn: "Try fixture"
+- extendedWaitUntil: { visible: "1 / 7", timeout: 15000 }
+- tapOn: "Image"
+- extendedWaitUntil: { visible: "image p1: 300x388 png \\(.*", timeout: 10000 }
+- tapOn: "‹ Back"

@@ -43,6 +43,12 @@ namespace margelo::nitro::betterpdf { struct PdfViewStats; }
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageSize` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
+// Forward declaration of `PdfPageImage` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageImage; }
+// Forward declaration of `PdfRenderPageOptions` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
+// Forward declaration of `PdfImageFormat` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -98,6 +104,12 @@ namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 #include "JPdfOutlineEntry.hpp"
 #include "PdfPageSize.hpp"
 #include "JPdfPageSize.hpp"
+#include "PdfPageImage.hpp"
+#include "JPdfPageImage.hpp"
+#include "PdfRenderPageOptions.hpp"
+#include "JPdfRenderPageOptions.hpp"
+#include "PdfImageFormat.hpp"
+#include "JPdfImageFormat.hpp"
 
 namespace margelo::nitro::betterpdf {
 
@@ -531,6 +543,22 @@ namespace margelo::nitro::betterpdf {
           }
           return __vector;
         }(__result));
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<PdfPageImage>> JHybridBetterPdfViewSpec::renderPage(double page, const PdfRenderPageOptions& options) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(double /* page */, jni::alias_ref<JPdfRenderPageOptions> /* options */)>("renderPage");
+    auto __result = method(_javaPart, page, JPdfRenderPageOptions::fromCpp(options));
+    return [&]() {
+      auto __promise = Promise<PdfPageImage>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<JPdfPageImage>(__boxedResult);
+        __promise->resolve(__result->toCpp());
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
         jni::JniException __jniError(__throwable);

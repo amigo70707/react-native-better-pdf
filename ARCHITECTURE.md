@@ -76,6 +76,7 @@ per-frame path without a second caller. See the research notes.
 | `goToPage` / `zoomTo` (via `hybridRef`)     | JS thread → `DispatchQueue.main`     | JS thread → main `Handler`                       |
 | `getStats`                                  | JS thread, lock-protected snapshot   | JS thread, `@Volatile` / atomic counters         |
 | `getOutline` (first call; then cached)      | main → `com.betterpdf.read` queue, separate `PDFDocument` | `Promise.parallel` thread, duplicated FD (`outline/` reader) |
+| `renderPage`                                | main → `com.betterpdf.read` queue: separate `PDFDocument`, `UIGraphicsImageRenderer`, file write | `Promise.parallel` thread: separate renderer on a duplicated FD (closed after the page), PNG/JPEG encode, file write |
 | `getPageSizes` (first call; then cached)    | main → `com.betterpdf.read` queue, separate `PDFDocument` | `Promise.parallel` thread, duplicated FD: page tree (`outline/` reader); encrypted: a separate renderer opening each page |
 | Remote download                             | `URLSession` delegate queue          | document worker thread (`HttpURLConnection`)     |
 | Download progress (throttle ≤ 10/s)         | throttled on the delegate queue → main | throttled on the worker → main                  |

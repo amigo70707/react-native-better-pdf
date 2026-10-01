@@ -118,6 +118,14 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const PdfPageImage& /* result */)>
+  Func_void_PdfPageImage create_Func_void_PdfPageImage(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_PdfPageImage::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PdfPageImage& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
   // pragma MARK: std::shared_ptr<HybridBetterPdfViewSpec>
   std::shared_ptr<HybridBetterPdfViewSpec> create_std__shared_ptr_HybridBetterPdfViewSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
     NitroBetterPdf::HybridBetterPdfViewSpec_cxx swiftPart = NitroBetterPdf::HybridBetterPdfViewSpec_cxx::fromUnsafe(swiftUnsafePointer);

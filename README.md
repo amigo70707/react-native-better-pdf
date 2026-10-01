@@ -101,6 +101,7 @@ pdf.current?.zoomTo(2);                        // relative to the fitted page
 pdf.current?.zoomTo(1);                        // reset
 const toc = await pdf.current?.getOutline();   // [{ title, page?, children }]
 const sizes = await pdf.current?.getPageSizes(); // [{ width, height }] per page, PDF points
+const image = await pdf.current?.renderPage(0, { width: 600 }); // { uri, width, height }, a PNG file
 pdf.current?.search('invoice');                // highlights matches, see onSearchChange
 pdf.current?.searchNext();                     // wraps around; searchPrevious() too
 pdf.current?.clearSearch();                    // or search('')
@@ -190,6 +191,8 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
 - Every page's size (`getPageSizes`), cheap even for long documents
+- Page images (`renderPage`): PNG or JPEG files for thumbnails, previews and
+  covers, rendered off the main thread
 - Reading position: settled viewport events, restore on open or on demand,
   end-of-document detection
 - Page-change, load and typed error events
@@ -235,6 +238,30 @@ const saved = storage.get(documentId); // a PdfViewport, or undefined
   e.g. for "back to where I was" after following a table-of-contents entry.
 - Paged layouts (`enablePaging`, `singlePage`) restore the page and zoom;
   on iOS the position within a zoomed page is not restored.
+
+## Page images
+
+```tsx
+const image = await pdf.current?.renderPage(page, {
+  width: 160 * PixelRatio.get(), // pixels; the height follows the page
+  format: 'jpeg',                // default 'png'
+  quality: 0.8,                  // JPEG only, default 0.9
+});
+<Image source={{ uri: image.uri }} style={{ width: 160, aspectRatio: image.width / image.height }} />;
+```
+
+- The page as displayed (crop box, rotation), on white, with the
+  annotations the viewer draws. `width` is 1–4096 pixels, and an image is
+  at most 4096 × 4096 pixels' worth (a very tall page needs a smaller
+  width).
+- Rendered off the main thread on a separate renderer, so the view keeps
+  scrolling and its caches are untouched.
+- The file is written to the app's cache directory (`BetterPdf/renders`)
+  and is yours: move it to keep it, delete it when done. The OS may clear
+  cache files when storage is low.
+- For thumbnails that stay on screen, a `singlePage` `PdfView` (see the
+  example's thumbnail strip) needs no files; `renderPage` is for images
+  you pass elsewhere — `<Image>` lists, sharing, uploads.
 
 ## Search
 

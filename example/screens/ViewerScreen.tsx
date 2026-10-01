@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,7 @@ import {
   type PdfError,
   type PdfLoadProgressEvent,
   type PdfOutlineItem,
+  type PdfPageImage,
   type PdfSearchChangeEvent,
   type PdfSource,
   type PdfViewport,
@@ -82,6 +84,10 @@ export function ViewerScreen() {
   /** Opened with "Resume": the saved position, applied on load. */
   const [resumeViewport, setResumeViewport] = useState<PdfViewport>();
   const [viewport, setViewport] = useState<PdfViewportChangeEvent | null>(null);
+  /** Last ref.renderPage result, previewed over the document. */
+  const [pageImage, setPageImage] = useState<PdfPageImage | null>(null);
+  /** "Image" alternates PNG and JPEG, starting with PNG per document. */
+  const renders = useRef(0);
   /** Set by "Mark", restored by "Return" (ref.goToViewport). */
   const mark = useRef<PdfViewport | null>(null);
   const [doubleTapZoom, setDoubleTapZoom] = useState(true);
@@ -99,6 +105,8 @@ export function ViewerScreen() {
       setEntry(next);
       setResumeViewport(resume);
       setViewport(null);
+      setPageImage(null);
+      renders.current = 0;
       mark.current = null;
       setPassword(undefined);
       setPasswordDraft('');
@@ -249,6 +257,26 @@ export function ViewerScreen() {
           }}
         />
         <Button
+          title="Image"
+          onPress={() => {
+            const started = performance.now();
+            const format = renders.current++ % 2 === 0 ? 'png' : 'jpeg';
+            ref.current
+              ?.renderPage(page, { width: 300, format })
+              .then((image) => {
+                const ms = Math.round(performance.now() - started);
+                const file = image.uri.split('.').pop();
+                setLastEvent(
+                  `image p${page + 1}: ${image.width}x${image.height} ${file} (${ms} ms)`,
+                );
+                setPageImage(image);
+              })
+              .catch((error: unknown) =>
+                setLastEvent(`image: ${String(error)}`),
+              );
+          }}
+        />
+        <Button
           title="Mark"
           onPress={() => {
             mark.current = viewport?.viewport ?? null;
@@ -352,6 +380,21 @@ export function ViewerScreen() {
               setState({ kind: 'failed', source, error: pdfError })
             }
           />
+        )}
+        {pageImage != null && (
+          <Pressable
+            testID="page-image"
+            style={styles.pageImage}
+            onPress={() => setPageImage(null)}
+          >
+            <Image
+              source={{ uri: pageImage.uri }}
+              style={{
+                width: 120,
+                height: (120 * pageImage.height) / pageImage.width,
+              }}
+            />
+          </Pressable>
         )}
         {(state.kind === 'resolving' || state.kind === 'loading') && (
           <View style={styles.overlay} pointerEvents="none">
@@ -532,6 +575,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     fontVariant: ['tabular-nums'],
+  },
+  pageImage: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.muted,
+    backgroundColor: colors.card,
   },
   overlay: {
     ...StyleSheet.absoluteFill,

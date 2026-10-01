@@ -18,6 +18,8 @@ namespace margelo::nitro::betterpdf { enum class PdfErrorCode; }
 namespace margelo::nitro::betterpdf { struct PdfError; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfImageFormat` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 // Forward declaration of `PdfInitialPosition` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfLinkPressEvent` to properly resolve imports.
@@ -30,10 +32,14 @@ namespace margelo::nitro::betterpdf { struct PdfLoadProgressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageChangeEvent; }
+// Forward declaration of `PdfPageImage` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPageImage; }
 // Forward declaration of `PdfPageSize` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 // Forward declaration of `PdfPageTapEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
+// Forward declaration of `PdfRenderPageOptions` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
@@ -53,14 +59,17 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfImageFormat.hpp"
 #include "PdfInitialPosition.hpp"
 #include "PdfLinkPressEvent.hpp"
 #include "PdfLoadEvent.hpp"
 #include "PdfLoadProgressEvent.hpp"
 #include "PdfOutlineEntry.hpp"
 #include "PdfPageChangeEvent.hpp"
+#include "PdfPageImage.hpp"
 #include "PdfPageSize.hpp"
 #include "PdfPageTapEvent.hpp"
+#include "PdfRenderPageOptions.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
