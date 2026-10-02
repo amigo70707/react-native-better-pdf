@@ -37,6 +37,30 @@ describe('normalizeSource', () => {
     });
   });
 
+  test('passes cache options through and leaves absent ones absent', () => {
+    expect(
+      normalizeSource(
+        {
+          uri: 'https://x.test/a.pdf',
+          cache: 'persistent',
+          maxAgeMs: 0,
+          cacheKey: 'doc',
+        },
+        resolveAsset,
+      ),
+    ).toEqual({
+      uri: 'https://x.test/a.pdf',
+      cache: 'persistent',
+      maxAgeMs: 0,
+      cacheKey: 'doc',
+    });
+    expect(
+      Object.keys(
+        normalizeSource({ uri: 'https://x.test/a.pdf' }, resolveAsset),
+      ),
+    ).toEqual(['uri']);
+  });
+
   test('unresolvable assets become an empty uri, which native reports as invalid-source', () => {
     expect(normalizeSource(99, resolveAsset)).toEqual({ uri: '' });
   });
@@ -58,6 +82,18 @@ describe('sourceKey', () => {
     expect(sourceKey({ uri: 'b', headers: { A: '1' } })).not.toBe(base);
     expect(sourceKey({ uri: 'a', headers: { A: '2' } })).not.toBe(base);
     expect(sourceKey({ uri: 'a' })).not.toBe(base);
+  });
+
+  test('differs when a cache option differs, so native always gets the latest source', () => {
+    const base = sourceKey({ uri: 'a', cacheKey: 'doc' });
+    expect(sourceKey({ uri: 'a', cacheKey: 'other' })).not.toBe(base);
+    expect(sourceKey({ uri: 'a', cacheKey: 'doc', maxAgeMs: 0 })).not.toBe(
+      base,
+    );
+    expect(
+      sourceKey({ uri: 'a', cacheKey: 'doc', cache: 'persistent' }),
+    ).not.toBe(base);
+    expect(sourceKey({ uri: 'b', cacheKey: 'doc' })).not.toBe(base);
   });
 
   test('cannot be spoofed by a uri containing the separator', () => {

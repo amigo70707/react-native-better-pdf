@@ -1,7 +1,8 @@
 # Architecture
 
 `react-native-better-pdf` is one Nitro Hybrid View (`BetterPdfView`) with a
-thin React wrapper (`PdfView`). Everything that happens per frame (scrolling,
+thin React wrapper (`PdfView`), plus a Hybrid Object for the download cache
+(`BetterPdfCache`, wrapped by `PdfCache`). Everything that happens per frame (scrolling,
 zooming, rendering, caching, prefetching) happens natively. JS sends
 configuration and commands and receives three kinds of events.
 
@@ -35,16 +36,22 @@ Public API rationale: [`docs/api-design.md`](docs/api-design.md).
 package/
   src/
     specs/BetterPdfView.nitro.ts   Nitro spec: props, methods, event/error types
+    specs/BetterPdfCache.nitro.ts  Nitro spec of the download cache (internal)
     PdfView.tsx                    public component (wrapper over the host component)
-    source.ts                      PdfSource union → native { uri, headers }
+    PdfCache.ts                    public cache API: AbortSignal, PdfDownloadError
+    source.ts                      PdfSource union → native { uri, headers, cache options }
   nitrogen/generated/              Nitrogen output (committed; regenerate with `bun run specs`)
   ios/
     HybridBetterPdfView.swift      PDFView host, scale mapping, events, lifecycle
     PdfContainerView.swift         taps, links, text selection settle / disable
     PdfSearchController.swift      PDFKit async find, highlights, next/previous
     SettleDebouncer.swift          "viewport stopped moving" for scale and viewport events
-    PdfDocumentLoader.swift        source resolution, URLSession download, PDFDocument open
+    PdfDocumentLoader.swift        source resolution, cache fetch + pin, PDFDocument open
     PdfLoadFailure.swift           Swift error → PdfError
+    DocumentCache.swift            fresh copy or shared download/revalidation, stale fallback
+    DocumentCacheStore.swift       copies on disk: session/persistent dirs, metadata, pins
+    SharedDownload.swift           one URLSession request per copy, conditional with a copy
+    HybridBetterPdfCache.swift     BetterPdfCache: PdfCache's native side
   android/src/main/java/com/margelo/nitro/betterpdf/
     HybridBetterPdfView.kt         props/methods/events, session lifecycle
     PdfDocumentSession.kt          PdfRenderer + FD owner, render thread, renderer recycling
@@ -61,6 +68,10 @@ package/
     LruByteCache.kt                pure: byte-budgeted LRU
     BitmapPool.kt                  bitmap reuse + eager recycling
     PdfSourceResolver.kt           source → seekable ParcelFileDescriptor
+    DocumentCache.kt               fresh copy or shared download/revalidation, stale fallback
+    DocumentCacheStore.kt          copies on disk: session/persistent dirs, metadata
+    SharedDownload.kt              one HttpURLConnection request per copy, conditional with a copy
+    HybridBetterPdfCache.kt        BetterPdfCache: PdfCache's native side
 ```
 
 No hand-written C++: the only consumer of shared logic would be Android
@@ -78,8 +89,9 @@ per-frame path without a second caller. See the research notes.
 | `getOutline` (first call; then cached)      | main → `com.betterpdf.read` queue, separate `PDFDocument` | `Promise.parallel` thread, duplicated FD (`outline/` reader) |
 | `renderPage`                                | main → `com.betterpdf.read` queue: separate `PDFDocument`, `UIGraphicsImageRenderer`, file write | `Promise.parallel` thread: separate renderer on a duplicated FD (closed after the page), PNG/JPEG encode, file write |
 | `getPageSizes` (first call; then cached)    | main → `com.betterpdf.read` queue, separate `PDFDocument` | `Promise.parallel` thread, duplicated FD: page tree (`outline/` reader); encrypted: a separate renderer opening each page |
-| Remote download                             | `URLSession` delegate queue          | document worker thread (`HttpURLConnection`)     |
-| Download progress (throttle ≤ 10/s)         | throttled on the delegate queue → main | throttled on the worker → main                  |
+| Remote download (`DocumentCache`)           | lookup on `com.betterpdf.cache`; transfer and store on the `URLSession` delegate queue | lookup and transfer on `BetterPdf-download` threads (`HttpURLConnection`); the document worker waits |
+| Download progress (throttle ≤ 10/s)         | throttled on the delegate queue → main | throttled on the download thread → main         |
+| `PdfCache` (`getEntry`, `remove`, `clear`, `getByteSize`) | `com.betterpdf.cache.api` queue, disk only | `Promise.parallel` thread, disk only |
 | Open + parse document                       | concurrent background queue          | document worker thread                           |
 | Page size measurement                       | PDFKit (lazy, internal)              | lazily, render thread, when a page is first opened |
 | Scroll, fling, pinch, double-tap            | main (UIScrollView inside PDFView)   | main (`OverScroller`, gesture detectors)         |
@@ -287,7 +299,8 @@ effective with the page view controller only) provides scrolling, zooming,
 double-tap, page virtualization and background tile rendering. The wrapper:
 
 - loads on a background queue (`PDFDocument(url:)` parses synchronously),
-  downloads with `URLSession` into `Caches/BetterPdf`, cancels on source change;
+  gets remote documents from `DocumentCache` (see "Download cache") and
+  opens them through a pin, cancels on source change;
 - maps `minScale`/`maxScale` (relative to the fitted page; one scale for the
   whole document, see `fitPolicy`) to PDFKit's absolute
   `minScaleFactor`/`maxScaleFactor`, re-deriving on layout changes and keeping
@@ -307,6 +320,39 @@ double-tap, page virtualization and background tile rendering. The wrapper:
 
 PDFKit does not expose cache metrics; `getStats()` returns `-1` for those
 fields on iOS.
+
+## Download cache
+
+Remote documents go through one `DocumentCache` per process (same design on
+both platforms), used by every view and by `PdfCache`:
+
+```text
+fetch(source) ──► stored copy fresh for source.maxAgeMs? ──yes──► deliver
+                      │ no / none
+                      ▼
+          SharedDownload for the key in flight? ──yes──► join it
+                      │ no
+                      ▼
+          GET (conditional with the copy's ETag / Last-Modified)
+             304 → mark validated · 200 + %PDF- → rename into place
+             unreachable / 5xx → view: stored copy as stale · PdfCache: error
+```
+
+- **Key:** SHA-256 of `cacheKey`, else of `uri` + sorted headers. Files:
+  `<key>.pdf` + metadata (`validatedAtMs`, `etag`, `lastModified`).
+- **Where:** session copies in the cache directory (`BetterPdf/session`),
+  deleted with unfinished downloads on the first use in a process;
+  persistent copies in iOS Application Support / Android `noBackupFilesDir`
+  (`BetterPdf/documents`), excluded from backups. A persistent copy wins; a
+  session copy is promoted with a hard link.
+- **Writes** never modify a file in place: new copies are renamed over the
+  old ones and removal unlinks, so a displayed document keeps reading its
+  file. iOS views open a pin (hard link in `BetterPdf/open`) because they
+  re-open the displayed file by path for outline, page sizes and images.
+- **Waiting:** one subscriber per view load or `PdfCache.download()`.
+  Cancelling removes the subscriber; the request stops when none remain.
+- **Tests:** `DocumentCacheTest` (JVM, local HTTP server) and the
+  `viewer-offline` e2e flow on both platforms.
 
 ## Known platform constraints
 

@@ -18,14 +18,14 @@ public extension PdfLoadEvent {
   /**
    * Create a new instance of `PdfLoadEvent`.
    */
-  init(pageCount: Double, firstPageWidth: Double, firstPageHeight: Double, filePath: String?) {
+  init(pageCount: Double, firstPageWidth: Double, firstPageHeight: Double, filePath: String?, isStale: Bool) {
     self.init(pageCount, firstPageWidth, firstPageHeight, { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = filePath {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }())
+    }(), isStale)
   }
 
   @inline(__always)
@@ -53,5 +53,10 @@ public extension PdfLoadEvent {
         return nil
       }
     }()
+  }
+  
+  @inline(__always)
+  var isStale: Bool {
+    return self.__isStale
   }
 }

@@ -23,4 +23,16 @@ public final class NitroBetterPdfAutolinking {
   public static func isBetterPdfViewRecyclable() -> Bool {
     return HybridBetterPdfView.self is any RecyclableView.Type
   }
+  
+  public static func createBetterPdfCache() -> bridge.std__shared_ptr_HybridBetterPdfCacheSpec_ {
+    let hybridObject = HybridBetterPdfCache()
+    return { () -> bridge.std__shared_ptr_HybridBetterPdfCacheSpec_ in
+      let __cxxWrapped = hybridObject.getCxxWrapper()
+      return __cxxWrapped.getCxxPart()
+    }()
+  }
+  
+  public static func isBetterPdfCacheRecyclable() -> Bool {
+    return HybridBetterPdfCache.self is any RecyclableView.Type
+  }
 }

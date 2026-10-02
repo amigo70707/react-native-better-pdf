@@ -29,7 +29,10 @@ data class PdfLoadEvent(
   val firstPageHeight: Double,
   @DoNotStrip
   @Keep
-  val filePath: String?
+  val filePath: String?,
+  @DoNotStrip
+  @Keep
+  val isStale: Boolean
 ) {
   /* primary constructor */
 
@@ -40,6 +43,7 @@ data class PdfLoadEvent(
       && Objects.deepEquals(this.firstPageWidth, other.firstPageWidth)
       && Objects.deepEquals(this.firstPageHeight, other.firstPageHeight)
       && Objects.deepEquals(this.filePath, other.filePath)
+      && Objects.deepEquals(this.isStale, other.isStale)
   }
 
   override fun hashCode(): Int {
@@ -47,7 +51,8 @@ data class PdfLoadEvent(
       pageCount,
       firstPageWidth,
       firstPageHeight,
-      filePath
+      filePath,
+      isStale
     ).contentDeepHashCode()
   }
 
@@ -59,8 +64,8 @@ data class PdfLoadEvent(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(pageCount: Double, firstPageWidth: Double, firstPageHeight: Double, filePath: String?): PdfLoadEvent {
-      return PdfLoadEvent(pageCount, firstPageWidth, firstPageHeight, filePath)
+    private fun fromCpp(pageCount: Double, firstPageWidth: Double, firstPageHeight: Double, filePath: String?, isStale: Boolean): PdfLoadEvent {
+      return PdfLoadEvent(pageCount, firstPageWidth, firstPageHeight, filePath, isStale)
     }
   }
 }

@@ -15,9 +15,10 @@
 #include <fbjni/fbjni.h>
 #include <NitroModules/HybridObjectRegistry.hpp>
 
+#include "JHybridBetterPdfCacheSpec.hpp"
+#include "JFunc_void_PdfLoadProgressEvent.hpp"
 #include "JHybridBetterPdfViewSpec.hpp"
 #include "JFunc_void_PdfLoadEvent.hpp"
-#include "JFunc_void_PdfLoadProgressEvent.hpp"
 #include "JFunc_void_PdfError.hpp"
 #include "JFunc_void_PdfPageChangeEvent.hpp"
 #include "JFunc_void_PdfLinkPressEvent.hpp"
@@ -45,15 +46,24 @@ struct JHybridBetterPdfViewSpecImpl: public jni::JavaClass<JHybridBetterPdfViewS
     return javaPart->getJHybridBetterPdfViewSpec();
   }
 };
+struct JHybridBetterPdfCacheSpecImpl: public jni::JavaClass<JHybridBetterPdfCacheSpecImpl, JHybridBetterPdfCacheSpec::JavaPart> {
+  static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/betterpdf/HybridBetterPdfCache;";
+  static std::shared_ptr<JHybridBetterPdfCacheSpec> create() {
+    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridBetterPdfCacheSpecImpl::javaobject()>();
+    jni::local_ref<JHybridBetterPdfCacheSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
+    return javaPart->getJHybridBetterPdfCacheSpec();
+  }
+};
 
 void registerAllNatives() {
   using namespace margelo::nitro;
   using namespace margelo::nitro::betterpdf;
 
   // Register native JNI methods
+  margelo::nitro::betterpdf::JHybridBetterPdfCacheSpec::CxxPart::registerNatives();
+  margelo::nitro::betterpdf::JFunc_void_PdfLoadProgressEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JHybridBetterPdfViewSpec::CxxPart::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfLoadEvent_cxx::registerNatives();
-  margelo::nitro::betterpdf::JFunc_void_PdfLoadProgressEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfError_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfPageChangeEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfLinkPressEvent_cxx::registerNatives();
@@ -69,6 +79,12 @@ void registerAllNatives() {
     "BetterPdfView",
     []() -> std::shared_ptr<HybridObject> {
       return JHybridBetterPdfViewSpecImpl::create();
+    }
+  );
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "BetterPdfCache",
+    []() -> std::shared_ptr<HybridObject> {
+      return JHybridBetterPdfCacheSpecImpl::create();
     }
   );
 }

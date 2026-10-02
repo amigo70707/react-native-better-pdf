@@ -53,8 +53,12 @@ class PdfDocumentSession(
      * [pageSizes] holds the real size of page 0 and an estimate (page 0's
      * size) for every other page; see [onPageMeasured].
      */
-    /** [filePath]: the local file being displayed, when there is one. */
-    fun onOpened(pageSizes: List<PdfDocumentLayout.PageSize>, filePath: String?)
+    /**
+     * [filePath]: the local file being displayed, when there is one.
+     * [isStale]: a remote document's outdated copy, shown because the server
+     * could not be reached.
+     */
+    fun onOpened(pageSizes: List<PdfDocumentLayout.PageSize>, filePath: String?, isStale: Boolean)
 
     /** A page was opened for the first time and its size differs from the estimate. */
     fun onPageMeasured(page: Int, size: PdfDocumentLayout.PageSize)
@@ -252,6 +256,7 @@ class PdfDocumentSession(
   private var renderer: DocumentRenderer? = null
   private var pagesOpenedByRenderer = 0
   private var filePath: String? = null
+  private var isStale = false
   private lateinit var knownSizes: Array<PdfDocumentLayout.PageSize>
   private lateinit var measured: BooleanArray
   private lateinit var linksRead: BooleanArray
@@ -267,7 +272,8 @@ class PdfDocumentSession(
       if (closed) return
       val sizes = List(knownSizes.size) { firstPage }
       val path = filePath
-      post { listener.onOpened(sizes, path) }
+      val stale = isStale
+      post { listener.onOpened(sizes, path, stale) }
       renderLoop()
     } catch (_: InterruptedException) {
       // Closed while resolving the source.
@@ -298,6 +304,7 @@ class PdfDocumentSession(
     }
     val descriptor = resolved.descriptor
     filePath = resolved.file?.path
+    isStale = resolved.isStale
     synchronized(descriptorLock) { master = descriptor }
     if (closed) throw InterruptedException()
     val renderer = createRenderer(descriptor.dup())

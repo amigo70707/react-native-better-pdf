@@ -4,22 +4,24 @@ import Foundation
 final class PdfLoadTask {
   private let lock = NSLock()
   private var cancelled = false
-  private var download: URLSessionDownloadTask?
+  private var subscription: DocumentCache.Subscription?
 
   var isCancelled: Bool { lock.withLock { cancelled } }
 
   func cancel() {
-    let download = lock.withLock { () -> URLSessionDownloadTask? in
+    let subscription = lock.withLock { () -> DocumentCache.Subscription? in
       cancelled = true
-      return self.download
+      return self.subscription
     }
-    download?.cancel()
+    subscription?.cancel()
   }
 
-  func attach(_ task: URLSessionDownloadTask) -> Bool {
+  /// Ties a cache request to this task; false (and nothing attached) once
+  /// cancelled.
+  func attach(_ subscription: DocumentCache.Subscription) -> Bool {
     return lock.withLock {
       if cancelled { return false }
-      download = task
+      self.subscription = subscription
       return true
     }
   }

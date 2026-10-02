@@ -52,15 +52,16 @@ ref.current?.zoomTo(1);               // "reset zoom"
 
 ```ts
 type PdfSource =
-  | { uri: string; headers?: Record<string, string> } // http(s)://, file://, content://
-  | { filePath: string }                              // absolute path
-  | number;                                           // require('./doc.pdf')
+  | PdfUriSource      // { uri, headers?, cache?, maxAgeMs?, cacheKey? }: http(s)://, file://, content://
+  | { filePath: string } // absolute path
+  | number;              // require('./doc.pdf')
 ```
 
-- Normalized in JS into one native shape `{ uri, headers? }` so native code
-  handles a single representation.
+- Normalized in JS into one native shape `{ uri, headers?, cache?,
+  maxAgeMs?, cacheKey? }` so native code handles a single representation.
 - Remote files are downloaded **natively** (URLSession / HttpURLConnection)
-  into the app cache, keyed by a hash of the URL. No blob-util, no JS base64.
+  into a shared cache, keyed by a hash of `cacheKey` or of the URL and
+  headers. No blob-util, no JS base64. See "Caching and offline".
 - The normalized source is memoized **by value** so re-rendering the parent
   with an inline object literal does not reload the document (Nitro diffs
   props by identity — see research notes).
@@ -162,7 +163,8 @@ type PdfErrorCode =
 | `onPageSingleTap`                        | → `onPageTap`           | Zero-based page and PDF-point coordinates (react-native-pdf: 1-based page, view coordinates that differ per platform and ignore zoom). |
 | `onPressLink`                            | → `onLinkPress`         | Same meaning; internal links are followed natively, URLs never opened by the viewer. |
 | `trustAllCerts`                          | Omitted                 | Security foot-gun.                                                         |
-| `source.cache`, `cacheFileName`, `expiration`, `method`, `body` | Omitted | Native cache is keyed by URL; `GET` only for now. (`body`, a request body, is read by react-native-pdf's JS but missing from its types.) |
+| `source.cache`, `cacheFileName`, `expiration` | → `cache`, `cacheKey`, `maxAgeMs` | See "Caching and offline": `'persistent'` instead of `true`, a key instead of a file name, revalidation instead of deletion. |
+| `source.method`, `source.body`           | Omitted                 | `GET` only for now. (`body`, a request body, is read by react-native-pdf's JS but missing from its types.) |
 | `renderActivityIndicator`, `progressContainerStyle` | Omitted      | App-owned UI; see "Loading state".                                        |
 | base64 `data:` sources                   | Omitted                 | Forces the file through the JS heap.                                       |
 
@@ -233,8 +235,8 @@ onLoadProgress?: (event: { loadedBytes: number; totalBytes?: number }) => void;
   at ~10 events per second for any file size or network speed (unit tested:
   400 MB in 2 s → 21 events).
 - **Remote downloads only.** Local files open without a download phase;
-  documents already downloaded in this app session are reused without
-  progress events.
+  stored copies that are used, or confirmed unchanged by the server, open
+  without progress events (see "Caching and offline").
 - The throttle runs natively on the download thread
   (`ProgressThrottle` in Kotlin and Swift); JS never sees dropped updates.
 
@@ -367,7 +369,7 @@ deliver (SDK extension 13).
   x ≈ 297 pt, the middle of an A4 page).
 - **`onLoad`'s `filePath`** replaces `onLoadComplete`'s `path`: the absolute
   path of the file actually displayed — the source itself for local files,
-  the app-cache copy for downloads (valid for the app session), the
+  the stored copy for downloads (valid until it is removed), the
   extracted copy for bundled assets. `undefined` when no file exists on disk
   (Android `content://`). No `file://` prefix, matching `{ filePath }`
   sources.
@@ -859,6 +861,90 @@ Requested in react-native-pdf as thumbnail export (#998, #43, #457, #811).
 - **Tested:** `viewer-page-image` on both platforms checks pixel sizes for
   a plain and a rotated page, PNG and JPEG, and the encrypted copy; the
   screenshots were checked for orientation and content against the viewer.
+
+## Caching and offline (v0.2)
+
+```ts
+type PdfUriSource = {
+  uri: string; headers?: Record<string, string>;
+  cache?: 'session' | 'persistent'; // default 'session'
+  maxAgeMs?: number;                // default: never revalidated
+  cacheKey?: string;                // default: uri + headers
+};
+PdfCache.download(source, { onProgress?, signal? }): Promise<PdfCacheEntry>;
+PdfCache.getEntry(source): Promise<PdfCacheEntry | undefined>;
+PdfCache.remove(source): Promise<boolean>;
+PdfCache.clear(): Promise<void>;
+PdfCache.getByteSize(): Promise<number>;
+interface PdfCacheEntry { filePath: string; byteSize: number; cache: PdfCacheMode; validatedAtMs: number }
+// PdfLoadEvent gains `isStale: boolean`.
+```
+
+Requested in react-native-pdf as cache control, purge, per-URL
+invalidation, prefetch and offline reading (#952, #964, #572, #566, #689,
+#696, #246); audit M5.
+
+- **Options on the source, not a separate config.** `PdfView` and
+  `PdfCache` take the same object, so "download for offline" and "open"
+  cannot disagree about which copy they mean. react-native-pdf's
+  `cache: true` becomes `cache: 'persistent'` (a type error points there).
+- **Two lifetimes.** `'session'` (the 0.1 behaviour) keeps a download until
+  the app exits; the previous launch's session copies are deleted on first
+  use, so they no longer linger in `Caches` until the OS purges them.
+  `'persistent'` lives where the OS does not purge it (iOS Application
+  Support, Android `noBackupFilesDir`) and is excluded from backups (Apple
+  rejects apps that back up re-downloadable content). An offline copy that
+  can vanish under storage pressure would not be an offline copy. A
+  persistent copy also serves session requests; a session copy becomes
+  persistent through a hard link, so paths already handed out stay valid.
+- **`maxAgeMs` revalidates, it does not delete.** react-native-pdf's
+  `expiration` deleted the copy and downloaded again. Here an older copy is
+  checked with a conditional request (`ETag` / `Last-Modified`, stored next
+  to the copy): `304` costs one round trip, `200` replaces the copy. `0`
+  checks on every open. Server `Cache-Control` is not interpreted: the app
+  knows how fresh its documents must be, and the copy must survive offline
+  whatever the server said. Milliseconds, as everywhere in JS; the unit is
+  in the name.
+- **Offline: stale copy in the view, error in `download()`.** When
+  revalidation fails because the server cannot be reached (connection
+  error, a timeout — 10 s instead of 30–60 s, so a dead network shows the
+  copy soon — or 5xx), `PdfView` shows the stored copy and reports
+  `isStale`; a reader would rather see yesterday's document than an error.
+  `PdfCache.download()` is an explicit "make sure it is current", so it
+  rejects and leaves the copy. 4xx is an error in both: the server answered.
+- **`cacheKey`** replaces `uri` + `headers` as the key. With S3-style
+  signed URLs or rotating bearer tokens the default key changes on every
+  open, so a persistent copy would never be found again (and each one would
+  be orphaned). It is also the document's identity: a new URL or token with
+  the same key updates the source without reloading the view.
+- **Only PDFs are stored.** A `200` that does not start with `%PDF-` within
+  1024 bytes (login page, captive portal) fails with `invalid-pdf` instead
+  of being kept — persistently — as the document.
+- **One download per copy.** A list prefetching a document and a viewer
+  opening it share one request (`SharedDownload`); cancelling one waiter
+  leaves the others, and the request stops when nobody waits.
+- **Copies replaced or removed while displayed.** Files are replaced with
+  `rename(2)` and removed with `unlink`, so open descriptors keep the old
+  data: Android's renderer holds one; PDFKit keeps its file open (verified:
+  after both, an open `PDFDocument` still reads the old pages). iOS also
+  re-opens the displayed file by path for outline, page sizes and page
+  images, so it opens a *pin* — a hard link in `Caches/BetterPdf/open`,
+  released with the document — instead of the copy itself.
+- **`PdfCache` is a JS object over an internal Hybrid Object**
+  (`BetterPdfCache`), against the usual rule of exporting Nitro objects 1:1:
+  Nitro rejections carry only a message, so failures cross as a result
+  struct and become `PdfDownloadError`s with `code` / `httpStatus`, and
+  `AbortSignal` cancellation needs JS (`cancelDownload(requestId)` natively).
+- **Not included:** listing stored copies (it would mean storing URLs and
+  headers, possibly with tokens, on disk), a size limit or LRU eviction
+  (copies are the app's offline content, not a transparent cache),
+  background transfers, `POST`.
+- **Tested:** JVM tests run the Android cache against a local HTTP server
+  (reuse, 304, changed document, stale fallback, 5xx vs 4xx, non-PDF
+  responses, shared and cancelled downloads, `cacheKey`, promotion,
+  restart, cleanup). `viewer-offline` runs the same story on both
+  platforms with the fixture server's simulated outage
+  (`/__control/offline`), including an app restart.
 
 ## Open questions
 

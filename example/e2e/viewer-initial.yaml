@@ -20,10 +20,10 @@ appId: software.gmi.betterpdf.example
 - extendedWaitUntil: { visible: "tap: page 5 at (39[5-9]|40[0-9]), .*", timeout: 5000 }
 - tapOn: "‹ Back"
 
-# filePath for a downloaded document (app cache) and a bundled asset.
+# filePath for a downloaded document (session copy) and a bundled asset.
 - scrollUntilVisible: { element: "Remote \\(HTTP\\).*", centerElement: true }
 - tapOn: "Remote \\(HTTP\\).*"
-- extendedWaitUntil: { visible: "file: BetterPdf/[0-9a-f]+\\.pdf", timeout: 60000 }
+- extendedWaitUntil: { visible: "file: session/[0-9a-f]+\\.pdf", timeout: 60000 }
 - tapOn: "‹ Back"
 - scrollUntilVisible: { element: "Bundled sample.*", direction: UP, centerElement: true }
 - tapOn: "Bundled sample.*"

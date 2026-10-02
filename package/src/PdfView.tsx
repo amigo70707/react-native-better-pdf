@@ -246,7 +246,8 @@ export interface PdfViewProps extends ViewProps {
   /**
    * Download progress of a remote document, at most every 100 ms plus once on
    * completion (before {@linkcode PdfViewProps.onLoad}). Not called for local
-   * files or documents already downloaded in this app session.
+   * files, or when a downloaded copy is used or confirmed unchanged by the
+   * server (see `PdfUriSource.cache` and `maxAgeMs`).
    */
   onLoadProgress?: (event: PdfLoadProgressEvent) => void;
   onError?: (error: PdfError) => void;

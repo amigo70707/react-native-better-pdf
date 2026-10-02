@@ -98,6 +98,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private var needsLayoutModeUpdate = false
   private var pageChangeObserver: NSObjectProtocol?
   private var loadTask: PdfLoadTask?
+  /// The pin of the displayed downloaded copy, released with the document.
+  private var displayedPin: URL?
   private var pendingInitialPage: Int?
   /// With `pendingInitialPage`: the page point to put at the top-left corner.
   private var pendingInitialPoint: CGPoint?
@@ -187,6 +189,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     // Release PDFKit's page views, tiles and the document now rather than
     // whenever JS garbage-collects its reference to this hybrid object.
     container.releasePdfView()
+    releaseDisplayedPin()
     scrollView = nil
     setStatsPageCount(0)
   }
@@ -380,6 +383,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     loadTask?.cancel()
     loadTask = nil
     pdfView?.document = nil
+    releaseDisplayedPin()
     container.resetSelection()
     fitScale = 0
     lastReportedPage = -1
@@ -399,15 +403,22 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       guard let self else { return }
       self.loadTask = nil
       switch result {
-      case .success(let document):
-        self.present(document)
+      case .success(let loaded):
+        self.present(loaded)
       case .failure(let failure):
         self.onError?(failure.toPdfError())
       }
     }
   }
 
-  private func present(_ document: PDFDocument) {
+  private func releaseDisplayedPin() {
+    if let displayedPin { DocumentCache.shared.store.unpin(displayedPin) }
+    displayedPin = nil
+  }
+
+  private func present(_ loaded: LoadedDocument) {
+    let document = loaded.document
+    displayedPin = loaded.pin
     searchController.clear()
     lastReportedScale = nil
     lastReportedViewport = nil
@@ -435,7 +446,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       pageCount: Double(pageCount),
       firstPageWidth: Double(firstPage.width),
       firstPageHeight: Double(firstPage.height),
-      filePath: document.documentURL?.path
+      filePath: loaded.filePath,
+      isStale: loaded.isStale
     ))
     layoutDidChange()
   }

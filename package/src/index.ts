@@ -1,6 +1,11 @@
 export { PdfView } from './PdfView';
 export type { NavigationOptions, PdfViewProps, PdfViewRef } from './PdfView';
-export type { PdfSource } from './source';
+export { PdfCache } from './PdfCache';
+export { PdfDownloadError } from './PdfDownloadError';
+export type { PdfDownloadOptions } from './types/PdfDownloadOptions';
+export type { PdfSource, PdfUriSource } from './source';
+export type { PdfCacheEntry } from './types/PdfCacheEntry';
+export type { PdfCacheMode } from './types/PdfCacheMode';
 export type { PdfError } from './types/PdfError';
 export type { PdfErrorCode } from './types/PdfErrorCode';
 export type { PdfFitPolicy } from './types/PdfFitPolicy';

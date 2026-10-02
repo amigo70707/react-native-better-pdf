@@ -11,10 +11,17 @@ export interface PdfLoadEvent {
   firstPageHeight: number;
   /**
    * Absolute path of the local file being displayed: the file itself for
-   * `file://` sources, the downloaded copy for remote ones (app cache, valid
-   * for this app session; the OS may purge it later), or the extracted copy
-   * of a bundled asset. `undefined` when there is no file on disk, e.g. for
+   * `file://` sources, the downloaded copy for remote ones (valid until the
+   * copy is removed; see `PdfUriSource.cache`), or the extracted copy of a
+   * bundled asset. `undefined` when there is no file on disk, e.g. for
    * Android `content://` sources. Useful for sharing or printing.
    */
   filePath?: string;
+  /**
+   * `true` when a remote document is shown from a downloaded copy older than
+   * its `maxAgeMs` because the server could not be asked for a newer version
+   * (no connection, a timeout, or a 5xx response) — e.g. to show "Offline
+   * copy, may be outdated". `false` otherwise, and always for local files.
+   */
+  isStale: boolean;
 }

@@ -23,7 +23,16 @@ data class NativePdfSource(
   val uri: String,
   @DoNotStrip
   @Keep
-  val headers: Map<String, String>?
+  val headers: Map<String, String>?,
+  @DoNotStrip
+  @Keep
+  val cache: PdfCacheMode?,
+  @DoNotStrip
+  @Keep
+  val maxAgeMs: Double?,
+  @DoNotStrip
+  @Keep
+  val cacheKey: String?
 ) {
   /* primary constructor */
 
@@ -32,12 +41,18 @@ data class NativePdfSource(
     if (other !is NativePdfSource) return false
     return Objects.deepEquals(this.uri, other.uri)
       && Objects.deepEquals(this.headers, other.headers)
+      && Objects.deepEquals(this.cache, other.cache)
+      && Objects.deepEquals(this.maxAgeMs, other.maxAgeMs)
+      && Objects.deepEquals(this.cacheKey, other.cacheKey)
   }
 
   override fun hashCode(): Int {
     return arrayOf<Any?>(
       uri,
-      headers
+      headers,
+      cache,
+      maxAgeMs,
+      cacheKey
     ).contentDeepHashCode()
   }
 
@@ -49,8 +64,8 @@ data class NativePdfSource(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(uri: String, headers: Map<String, String>?): NativePdfSource {
-      return NativePdfSource(uri, headers)
+    private fun fromCpp(uri: String, headers: Map<String, String>?, cache: PdfCacheMode?, maxAgeMs: Double?, cacheKey: String?): NativePdfSource {
+      return NativePdfSource(uri, headers, cache, maxAgeMs, cacheKey)
     }
   }
 }

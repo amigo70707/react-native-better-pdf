@@ -18,7 +18,7 @@ public extension NativePdfSource {
   /**
    * Create a new instance of `NativePdfSource`.
    */
-  init(uri: String, headers: Dictionary<String, String>?) {
+  init(uri: String, headers: Dictionary<String, String>?, cache: PdfCacheMode?, maxAgeMs: Double?, cacheKey: String?) {
     self.init(std.string(uri), { () -> bridge.std__optional_std__unordered_map_std__string__std__string__ in
       if let __unwrappedValue = headers {
         return bridge.create_std__optional_std__unordered_map_std__string__std__string__({ () -> bridge.std__unordered_map_std__string__std__string_ in
@@ -28,6 +28,24 @@ public extension NativePdfSource {
           }
           return __map
         }())
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_PdfCacheMode_ in
+      if let __unwrappedValue = cache {
+        return bridge.create_std__optional_PdfCacheMode_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_double_ in
+      if let __unwrappedValue = maxAgeMs {
+        return bridge.create_std__optional_double_(__unwrappedValue)
+      } else {
+        return .init()
+      }
+    }(), { () -> bridge.std__optional_std__string_ in
+      if let __unwrappedValue = cacheKey {
+        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
@@ -53,6 +71,35 @@ public extension NativePdfSource {
           }
           return __dictionary
         }()
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var cache: PdfCacheMode? {
+    return self.__cache.value
+  }
+  
+  @inline(__always)
+  var maxAgeMs: Double? {
+    return { () -> Double? in
+      if bridge.has_value_std__optional_double_(self.__maxAgeMs) {
+        let __unwrapped = bridge.get_std__optional_double_(self.__maxAgeMs)
+        return __unwrapped
+      } else {
+        return nil
+      }
+    }()
+  }
+  
+  @inline(__always)
+  var cacheKey: String? {
+    return { () -> String? in
+      if bridge.has_value_std__optional_std__string_(self.__cacheKey) {
+        let __unwrapped = bridge.get_std__optional_std__string_(self.__cacheKey)
+        return String(__unwrapped)
       } else {
         return nil
       }

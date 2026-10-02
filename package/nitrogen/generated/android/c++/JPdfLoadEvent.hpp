@@ -40,11 +40,14 @@ namespace margelo::nitro::betterpdf {
       double firstPageHeight = this->getFieldValue(fieldFirstPageHeight);
       static const auto fieldFilePath = clazz->getField<jni::JString>("filePath");
       jni::local_ref<jni::JString> filePath = this->getFieldValue(fieldFilePath);
+      static const auto fieldIsStale = clazz->getField<jboolean>("isStale");
+      jboolean isStale = this->getFieldValue(fieldIsStale);
       return PdfLoadEvent(
         pageCount,
         firstPageWidth,
         firstPageHeight,
-        filePath != nullptr ? std::make_optional(filePath->toStdString()) : std::nullopt
+        filePath != nullptr ? std::make_optional(filePath->toStdString()) : std::nullopt,
+        static_cast<bool>(isStale)
       );
     }
 
@@ -54,7 +57,7 @@ namespace margelo::nitro::betterpdf {
      */
     [[maybe_unused]]
     static jni::local_ref<JPdfLoadEvent::javaobject> fromCpp(const PdfLoadEvent& value) {
-      using JSignature = JPdfLoadEvent(double, double, double, jni::alias_ref<jni::JString>);
+      using JSignature = JPdfLoadEvent(double, double, double, jni::alias_ref<jni::JString>, jboolean);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -62,7 +65,8 @@ namespace margelo::nitro::betterpdf {
         value.pageCount,
         value.firstPageWidth,
         value.firstPageHeight,
-        value.filePath.has_value() ? jni::make_jstring(value.filePath.value()) : nullptr
+        value.filePath.has_value() ? jni::make_jstring(value.filePath.value()) : nullptr,
+        value.isStale
       );
     }
   };

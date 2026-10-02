@@ -59,7 +59,7 @@ users see.
 | **Max zoom** | `maxScale` default `3` | `4` | Pass `maxScale={3}` to keep the old limit. |
 | **Page gap** | `spacing` default `10` | `pageSpacing` default `8` | Pass `pageSpacing={10}`. |
 | **Current page** | Platform-specific (iOS: PDFKit's current page) | Page under the viewport centre; the last page once scrolled to the end — identical on both platforms | Usually nothing; UI showing "page X" becomes consistent. |
-| **Remote file cache** | Opt-in (`source.cache`), persistent, keyed by SHA-1 of the URL computed in JS | Always, for the app session only, keyed by URL + headers | See [Caching](#caching). |
+| **Remote file cache** | Opt-in (`source.cache`), persistent, keyed by SHA-1 of the URL computed in JS | Always: for the app session by default, across launches with `cache: 'persistent'`; keyed by URL + headers, or `cacheKey` | `cache: true` → `cache: 'persistent'`; see [Caching](#caching). |
 | **Errors** | `Error` objects; the message is the only information | `PdfError` struct with a stable `code` | Match on `error.code`; see [Errors](#errors). |
 
 ## Props
@@ -69,7 +69,9 @@ users see.
 | `source={{ uri }}` | `source={{ uri }}` | `http(s)://`, `file://`, `content://` (Android). |
 | `source={require('./x.pdf')}` | `source={require('./x.pdf')}` | Add `pdf` to Metro's `assetExts`. |
 | `source.headers` | `source.headers` | Same. |
-| `source.cache`, `cacheFileName`, `expiration` | — | See [Caching](#caching). |
+| `source.cache: true` | `source.cache: 'persistent'` | Kept across launches, never purged by the OS. See [Caching](#caching). |
+| `source.cacheFileName` | `source.cacheKey` | Identifies the copy instead of the URL and headers. |
+| `source.expiration` (seconds) | `source.maxAgeMs` (milliseconds) | An older copy is revalidated with the server (304 keeps it) instead of deleted, and still shown offline. |
 | `source.method`, `source.body` | — | Only `GET` (`body` is read by react-native-pdf but missing from its types). |
 | `source={{ uri: 'data:application/pdf;base64,…' }}` | — | See [Base64 documents](#base64-documents). |
 | `source={{ uri: 'bundle-assets://…' }}` | `require()` | Bundle the file as an asset instead. |
@@ -300,21 +302,40 @@ Taps on the gaps between pages are not reported.
 ## Caching
 
 react-native-pdf re-downloaded on every mount unless `source.cache` was set,
-and then kept the file until `expiration`. `react-native-better-pdf` downloads
-natively into the app's cache directory and reuses the file for the rest of
-the app session; the OS may purge it later. There is no expiration or
-file-name option.
+and then kept the file until `expiration`. `react-native-better-pdf` always
+keeps the download for the app session; the source's options cover the rest:
 
-If you relied on a persistent cache (offline reading), download the file
-yourself and pass a `file://` URI:
+```diff
+  <PdfView
+    source={{
+      uri,
+-     cache: true,
+-     cacheFileName: documentId,
+-     expiration: 24 * 60 * 60,
++     cache: 'persistent',
++     cacheKey: documentId,
++     maxAgeMs: 24 * 60 * 60 * 1000,
+    }}
++   onLoad={({ isStale }) => setOfflineBanner(isStale)}
+  />
+```
+
+- After `maxAgeMs` the copy is not deleted: the server is asked whether it
+  changed (`ETag` / `Last-Modified`). When the server cannot be reached, the
+  view shows the stored copy and `onLoad` reports `isStale: true`.
+- Persistent copies are not purged by the OS and not backed up. Remove them
+  with `PdfCache.remove(source)` / `PdfCache.clear()`.
+- Downloading ahead of time ("available offline"), checking for a copy and
+  deleting it need no view and no file-system library:
 
 ```ts
-import { File, Paths } from 'expo-file-system';
+import { PdfCache } from 'react-native-better-pdf';
 
-const file = new File(Paths.document, 'contract.pdf');
-if (!file.exists) await File.downloadFileAsync(url, file);
-<PdfView source={{ uri: file.uri }} />;
+await PdfCache.download(source, { onProgress, signal });
+const entry = await PdfCache.getEntry(source); // undefined when not stored
 ```
+
+See the README's "Offline reading and caching" section.
 
 ## Base64 documents
 

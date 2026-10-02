@@ -18,7 +18,7 @@ Source: `gh api` on wonday/react-native-pdf (1,814 stars; 821 issues, 383 open; 
 8. Tap coordinates in PDF space; React overlays on page — #523 (6r), #616, #722, PR #618; overlays #350, #254, #449, #484. taps covered, overlays missing.
 9. Two-page spread — 4 issues, 7 r / 12 c: #415, #921, #666, #200. missing.
 10. Text selection + copy — 5 issues, 3 r / 13 c: #459, #419, #925, #690 (+ half of #555). NOW COVERED (this change).
-11. Cache control: purge, per-URL invalidation, prefetch, offline — 11 issues, 2 r / 21 c: #952, #964, #572, #566, #689, #696, #246. missing.
+11. Cache control: purge, per-URL invalidation, prefetch, offline — 11 issues, 2 r / 21 c: #952, #964, #572, #566, #689, #696, #246. COVERED (cache options on the source, `PdfCache`; see api-design "Caching and offline").
 12. Per-page dimensions — 4 issues, 2 r / 24 c: #302, #346, #898. partly (first page only).
 13. Password detection / prompt — 7 issues: #26, #895, #860, #992, #223. partly (stable codes exist; Android 15+).
 14. Accessibility (screen readers) — #503 (6r), #483, #937, #939. unknown.

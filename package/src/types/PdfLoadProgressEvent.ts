@@ -3,8 +3,9 @@
  * downloaded.
  *
  * Emitted at most every 100 ms, plus once when the download completes (before
- * `onLoad`). Local files and documents already downloaded in this app session
- * load without progress events.
+ * `onLoad`). Local files, and downloaded copies that are used or confirmed
+ * unchanged by the server, load without progress events. Also delivered to
+ * `PdfCache.download()`'s `onProgress`.
  *
  * @example
  * ```tsx

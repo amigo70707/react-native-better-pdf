@@ -6,10 +6,11 @@ import type { Library } from './bench/BenchViewer';
 import { BENCHMARK_FIXTURES, type FixtureName } from './documents';
 import { BenchmarkScreen, type BenchRequest } from './screens/BenchmarkScreen';
 import { EmbeddedScreen } from './screens/EmbeddedScreen';
+import { OfflineScreen } from './screens/OfflineScreen';
 import { ViewerScreen } from './screens/ViewerScreen';
 import { Button, colors } from './ui';
 
-type Tab = 'viewer' | 'embedded' | 'benchmark';
+type Tab = 'viewer' | 'embedded' | 'offline' | 'benchmark';
 
 /**
  * `betterpdfexample://bench?library=better&fixture=large&run=3[&scrollSeconds=300][&source=remote]`
@@ -75,6 +76,11 @@ export default function App() {
             onPress={() => setTab('embedded')}
           />
           <Button
+            title="Offline"
+            selected={tab === 'offline'}
+            onPress={() => setTab('offline')}
+          />
+          <Button
             title="Benchmark"
             selected={tab === 'benchmark'}
             onPress={() => setTab('benchmark')}
@@ -82,6 +88,7 @@ export default function App() {
         </View>
         {tab === 'viewer' && <ViewerScreen />}
         {tab === 'embedded' && <EmbeddedScreen />}
+        {tab === 'offline' && <OfflineScreen />}
         {tab === 'benchmark' && <BenchmarkScreen autoRun={autoRun} />}
       </SafeAreaView>
     </SafeAreaProvider>

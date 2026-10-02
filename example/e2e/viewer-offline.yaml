@@ -1,0 +1,85 @@
+# Offline reading with PdfCache and cache options on the source: download for
+# offline reading, persistent copies surviving a restart (session copies do
+# not), revalidation without a second download (304), opening the stored copy
+# while the server is unreachable (stale), removal, cancellation and clearing.
+# The fixture server simulates losing the network (/__control/offline).
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Offline"
+- tapOn:
+    text: "Go online"
+    optional: true
+- tapOn: "Clear all"
+- extendedWaitUntil: { visible: "Storage: 0.0 MB", timeout: 5000 }
+- assertVisible: { id: "report-status", text: "Not downloaded" }
+
+# Download for offline reading.
+- tapOn: "Download Report"
+- extendedWaitUntil:
+    visible: { id: "report-status", text: "Saved \\(persistent\\).*" }
+    timeout: 15000
+# A session copy, made by opening the document.
+- tapOn: "Open Brochure \\(session\\)"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 15000 }
+- assertVisible: "Downloaded"
+- tapOn: "‹ Back"
+- extendedWaitUntil:
+    visible: { id: "brochure-status", text: "Saved \\(session\\).*" }
+    timeout: 5000
+
+# Restart: the persistent copy is kept, the session copy is not.
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Offline"
+- extendedWaitUntil:
+    visible: { id: "report-status", text: "Saved \\(persistent\\).*" }
+    timeout: 10000
+- assertVisible: { id: "brochure-status", text: "Not downloaded" }
+
+# Online: the stored copy is confirmed unchanged (304), not downloaded again.
+- tapOn: "Open Report"
+- extendedWaitUntil: { visible: "1 / 10", timeout: 15000 }
+- assertVisible: "Opened from the stored copy"
+- assertNotVisible: { id: "offline-stale" }
+- tapOn: "‹ Back"
+
+# Offline: the stored copy opens, marked stale.
+- tapOn: "Go offline"
+- extendedWaitUntil: { visible: "Server offline", timeout: 5000 }
+- tapOn: "Open Report"
+- extendedWaitUntil: { visible: "1 / 10", timeout: 20000 }
+- assertVisible: { id: "offline-stale" }
+- tapOn: "‹ Back"
+# PdfCache.download never falls back to the stored copy.
+- tapOn: "Download Report"
+- extendedWaitUntil:
+    visible: { id: "report-status", text: "Failed: network-error" }
+    timeout: 20000
+# Without a stored copy, offline is an error.
+- tapOn: "Remove Report"
+- extendedWaitUntil: { visible: { id: "report-status", text: "Not downloaded" }, timeout: 5000 }
+- tapOn: "Open Report"
+- extendedWaitUntil: { visible: "network-error", timeout: 20000 }
+- tapOn: "‹ Back"
+- tapOn: "Go online"
+- extendedWaitUntil: { visible: "Server online", timeout: 5000 }
+
+# Cancelling a download stores nothing.
+- tapOn: "Download Manual \\(slow\\)"
+- extendedWaitUntil:
+    visible: { id: "manual-status", text: "Downloading [0-9]+%" }
+    timeout: 10000
+- tapOn: "Cancel Manual \\(slow\\)"
+- extendedWaitUntil: { visible: { id: "manual-status", text: "Failed: cancelled" }, timeout: 5000 }
+- tapOn: "Remove Manual \\(slow\\)"
+- extendedWaitUntil: { visible: { id: "manual-status", text: "Not downloaded" }, timeout: 5000 }
+
+# Clearing removes every copy.
+- tapOn: "Download Report"
+- extendedWaitUntil:
+    visible: { id: "report-status", text: "Saved \\(persistent\\).*" }
+    timeout: 15000
+- tapOn: "Clear all"
+- extendedWaitUntil: { visible: "Storage: 0.0 MB", timeout: 5000 }
+- assertVisible: { id: "report-status", text: "Not downloaded" }

@@ -10,6 +10,8 @@
 #include <fbjni/fbjni.h>
 #include "NativePdfSource.hpp"
 
+#include "JPdfCacheMode.hpp"
+#include "PdfCacheMode.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -37,6 +39,12 @@ namespace margelo::nitro::betterpdf {
       jni::local_ref<jni::JString> uri = this->getFieldValue(fieldUri);
       static const auto fieldHeaders = clazz->getField<jni::JMap<jni::JString, jni::JString>>("headers");
       jni::local_ref<jni::JMap<jni::JString, jni::JString>> headers = this->getFieldValue(fieldHeaders);
+      static const auto fieldCache = clazz->getField<JPdfCacheMode>("cache");
+      jni::local_ref<JPdfCacheMode> cache = this->getFieldValue(fieldCache);
+      static const auto fieldMaxAgeMs = clazz->getField<jni::JDouble>("maxAgeMs");
+      jni::local_ref<jni::JDouble> maxAgeMs = this->getFieldValue(fieldMaxAgeMs);
+      static const auto fieldCacheKey = clazz->getField<jni::JString>("cacheKey");
+      jni::local_ref<jni::JString> cacheKey = this->getFieldValue(fieldCacheKey);
       return NativePdfSource(
         uri->toStdString(),
         headers != nullptr ? std::make_optional([&]() {
@@ -46,7 +54,10 @@ namespace margelo::nitro::betterpdf {
             __map.emplace(__entry.first->toStdString(), __entry.second->toStdString());
           }
           return __map;
-        }()) : std::nullopt
+        }()) : std::nullopt,
+        cache != nullptr ? std::make_optional(cache->toCpp()) : std::nullopt,
+        maxAgeMs != nullptr ? std::make_optional(maxAgeMs->value()) : std::nullopt,
+        cacheKey != nullptr ? std::make_optional(cacheKey->toStdString()) : std::nullopt
       );
     }
 
@@ -56,7 +67,7 @@ namespace margelo::nitro::betterpdf {
      */
     [[maybe_unused]]
     static jni::local_ref<JNativePdfSource::javaobject> fromCpp(const NativePdfSource& value) {
-      using JSignature = JNativePdfSource(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>);
+      using JSignature = JNativePdfSource(jni::alias_ref<jni::JString>, jni::alias_ref<jni::JMap<jni::JString, jni::JString>>, jni::alias_ref<JPdfCacheMode>, jni::alias_ref<jni::JDouble>, jni::alias_ref<jni::JString>);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -68,7 +79,10 @@ namespace margelo::nitro::betterpdf {
             __map->put(jni::make_jstring(__entry.first), jni::make_jstring(__entry.second));
           }
           return __map;
-        }() : nullptr
+        }() : nullptr,
+        value.cache.has_value() ? JPdfCacheMode::fromCpp(value.cache.value()) : nullptr,
+        value.maxAgeMs.has_value() ? jni::JDouble::valueOf(value.maxAgeMs.value()) : nullptr,
+        value.cacheKey.has_value() ? jni::make_jstring(value.cacheKey.value()) : nullptr
       );
     }
   };

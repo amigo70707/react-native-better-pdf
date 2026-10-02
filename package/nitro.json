@@ -18,6 +18,16 @@
         "language": "kotlin",
         "implementationClassName": "HybridBetterPdfView"
       }
+    },
+    "BetterPdfCache": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridBetterPdfCache"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridBetterPdfCache"
+      }
     }
   },
   "ignorePaths": ["**/node_modules"],

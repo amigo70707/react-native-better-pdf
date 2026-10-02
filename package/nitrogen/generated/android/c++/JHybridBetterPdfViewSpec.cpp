@@ -9,6 +9,8 @@
 
 // Forward declaration of `NativePdfSource` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfSource; }
+// Forward declaration of `PdfCacheMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
 // Forward declaration of `PdfInitialPosition` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
@@ -55,6 +57,8 @@ namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 #include "JNativePdfSource.hpp"
 #include <string>
 #include <unordered_map>
+#include "PdfCacheMode.hpp"
+#include "JPdfCacheMode.hpp"
 #include "PdfInitialPosition.hpp"
 #include "JPdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"

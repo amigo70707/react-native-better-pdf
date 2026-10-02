@@ -297,7 +297,7 @@ class HybridBetterPdfView(
 
   // region PdfDocumentSession.Listener (UI thread)
 
-  override fun onOpened(pageSizes: List<PdfDocumentLayout.PageSize>, filePath: String?) {
+  override fun onOpened(pageSizes: List<PdfDocumentLayout.PageSize>, filePath: String?, isStale: Boolean) {
     val session = session ?: return
     val position = initialPosition
     val initial = position?.page?.takeIf { it.isFinite() }?.toInt() ?: 0
@@ -312,6 +312,7 @@ class HybridBetterPdfView(
         firstPageWidth = first.widthPoints.toDouble(),
         firstPageHeight = first.heightPoints.toDouble(),
         filePath = filePath,
+        isStale = isStale,
       ),
     )
   }

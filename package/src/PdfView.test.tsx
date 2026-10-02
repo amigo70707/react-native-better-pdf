@@ -69,9 +69,16 @@ mock.module('react-native', () => ({
         ? { semantic: ['label'] }
         : null,
 }));
+// Module mocks are shared by all test files: export everything the package
+// imports from Nitro (PdfCache.test.ts needs NitroModules).
 mock.module('react-native-nitro-modules', () => ({
   callback: <T,>(f: T) => ({ f }),
   getHostComponent: () => FakeHost,
+  NitroModules: {
+    createHybridObject: () => {
+      throw new Error('Not available in PdfView tests');
+    },
+  },
 }));
 mock.module(
   '../nitrogen/generated/shared/json/BetterPdfViewConfig.json',

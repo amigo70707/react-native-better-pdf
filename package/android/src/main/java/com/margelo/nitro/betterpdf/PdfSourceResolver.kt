@@ -6,10 +6,7 @@ import android.os.ParcelFileDescriptor
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
-import java.security.MessageDigest
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 
 /**
  * Turns a [NativePdfSource] into a seekable [ParcelFileDescriptor] (plus its
@@ -17,25 +14,26 @@ import java.util.concurrent.ConcurrentHashMap
  * what [android.graphics.pdf.PdfRenderer] requires. Runs on the document's
  * worker thread; every method here may block.
  *
- * Remote documents are downloaded into `cacheDir/BetterPdf/<sha256>.pdf` and
- * reused for the rest of the process lifetime.
+ * Remote documents come from the process-wide [DocumentCache].
  */
 class PdfSourceResolver(private val context: Context) {
   @Volatile
-  private var connection: HttpURLConnection? = null
+  private var subscription: DocumentCache.Subscription? = null
 
   @Volatile
   private var cancelled = false
+  private val remoteDone = CountDownLatch(1)
 
-  /** Aborts an in-flight download. Safe from any thread. */
+  /** Aborts an in-flight download; [open] then throws [InterruptedException]. Safe from any thread. */
   fun cancel() {
     cancelled = true
-    connection?.disconnect()
+    subscription?.cancel()
+    remoteDone.countDown()
   }
 
   /**
    * Opens [source]. For remote sources that are downloaded (not cached),
-   * [onProgress] receives every chunk on the calling thread; callers throttle.
+   * [onProgress] receives every chunk on a download thread; callers throttle.
    */
   fun open(
     source: NativePdfSource,
@@ -48,7 +46,7 @@ class PdfSourceResolver(private val context: Context) {
     val parsed = Uri.parse(uri)
     return when (parsed.scheme?.lowercase()) {
       "file" -> openFile(File(parsed.path ?: throw invalidSource(uri)))
-      "http", "https" -> openFile(download(uri, source.headers.orEmpty(), onProgress))
+      "http", "https" -> openRemote(source, onProgress)
       "content" -> ResolvedSource(openContent(parsed), file = null)
       // Release builds resolve `require('./x.pdf')` to a bare resource name.
       null -> openRawResource(uri)
@@ -96,71 +94,44 @@ class PdfSourceResolver(private val context: Context) {
     return openFile(target)
   }
 
-  private fun download(
-    url: String,
-    headers: Map<String, String>,
+  /**
+   * The copy of a remote [source], downloaded or revalidated when needed, or
+   * an existing copy (marked stale) when the server cannot be reached.
+   */
+  private fun openRemote(
+    source: NativePdfSource,
     onProgress: (loadedBytes: Long, totalBytes: Long?, isComplete: Boolean) -> Unit,
-  ): File {
-    val key = sha256(url + headers.toSortedMap().entries.joinToString("") { "\n${it.key}:${it.value}" })
-    downloaded[key]?.let { if (it.isFile) return it }
+  ): ResolvedSource {
+    // Written on a download thread before the latch opens; read after.
+    var delivered: CachedCopy? = null
+    var deliveredStale = false
+    var deliveredFailure: PdfFailure? = null
+    subscription = DocumentCache.shared(context).fetch(
+      source,
+      allowStale = true,
+      object : DocumentCache.Listener {
+        override fun onProgress(loadedBytes: Long, totalBytes: Long?, isComplete: Boolean) =
+          onProgress(loadedBytes, totalBytes, isComplete)
 
-    val target = File(cacheDirectory(), "$key.pdf")
-    val partial = File(cacheDirectory(), "$key.${System.nanoTime()}.part")
-    try {
-      val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-        connectTimeout = 30_000
-        readTimeout = 30_000
-        instanceFollowRedirects = true
-        headers.forEach { (name, value) -> setRequestProperty(name, value) }
-      }
-      this.connection = connection
-      if (cancelled) throw InterruptedException()
-      try {
-        val status = connection.responseCode
-        if (status !in 200..299) {
-          throw PdfFailure(
-            PdfErrorCode.HTTP_ERROR,
-            "Downloading $url failed with HTTP $status",
-            httpStatus = status,
-          )
+        override fun onReady(copy: CachedCopy, isStale: Boolean) {
+          delivered = copy
+          deliveredStale = isStale
+          remoteDone.countDown()
         }
-        // -1 when unknown; also cleared when the response is transparently
-        // decompressed, so the byte count never exceeds a reported total.
-        val totalBytes = connection.contentLengthLong.takeIf { it >= 0 }
-        connection.inputStream.use { input ->
-          partial.outputStream().use { output ->
-            val buffer = ByteArray(DOWNLOAD_BUFFER_BYTES)
-            var loadedBytes = 0L
-            while (true) {
-              if (cancelled) throw InterruptedException()
-              val read = input.read(buffer)
-              if (read < 0) break
-              output.write(buffer, 0, read)
-              loadedBytes += read
-              onProgress(loadedBytes, totalBytes?.takeIf { it >= loadedBytes }, false)
-            }
-            onProgress(loadedBytes, totalBytes?.takeIf { it >= loadedBytes }, true)
-          }
+
+        override fun onFailed(failure: PdfFailure) {
+          deliveredFailure = failure
+          remoteDone.countDown()
         }
-      } finally {
-        connection.disconnect()
-        this.connection = null
-      }
-      if (!partial.renameTo(target)) throw IOException("Cannot move ${partial.path}")
-      downloaded[key] = target
-      return target
-    } catch (e: PdfFailure) {
-      partial.delete()
-      throw e
-    } catch (e: InterruptedException) {
-      // Cancelled mid-download: never leave a partial file in the cache.
-      partial.delete()
-      throw e
-    } catch (e: IOException) {
-      partial.delete()
-      if (cancelled) throw InterruptedException()
-      throw PdfFailure(PdfErrorCode.NETWORK_ERROR, "Downloading $url failed", cause = e)
-    }
+      },
+    )
+    // cancel() may have run before the subscription existed.
+    if (cancelled) subscription?.cancel()
+    remoteDone.await()
+    if (cancelled) throw InterruptedException()
+    deliveredFailure?.let { throw it }
+    val copy = delivered ?: throw IllegalStateException("The cache delivered no copy")
+    return openFile(copy.file).copy(isStale = deliveredStale)
   }
 
   private fun cacheDirectory(): File =
@@ -172,16 +143,4 @@ class PdfSourceResolver(private val context: Context) {
 
   private fun invalidSource(uri: String) =
     PdfFailure(PdfErrorCode.INVALID_SOURCE, "Unsupported PDF source: \"$uri\"")
-
-  companion object {
-    private const val DOWNLOAD_BUFFER_BYTES = 64 * 1024
-
-    /** Downloads completed in this process, by cache key. */
-    private val downloaded = ConcurrentHashMap<String, File>()
-
-    private fun sha256(value: String): String =
-      MessageDigest.getInstance("SHA-256")
-        .digest(value.toByteArray())
-        .joinToString("") { "%02x".format(it) }
-  }
 }

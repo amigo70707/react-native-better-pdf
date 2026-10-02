@@ -6,6 +6,13 @@
 //
 // `?bytesPerSecond=N` streams the file at roughly N bytes per second, to make
 // download progress observable on a local network.
+//
+// Files carry `ETag` / `Last-Modified`; a matching `If-None-Match` (or a
+// not-older `If-Modified-Since`) is answered with 304, like a CDN.
+//
+// `GET /__control/offline` makes the server drop every other connection
+// without answering (a device without network, as far as the app can tell)
+// until `GET /__control/online`.
 
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -33,19 +40,56 @@ function throttle(bytesPerSecond) {
   });
 }
 
+let offline = false;
+
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://x');
+  if (url.pathname.startsWith('/__control/')) {
+    offline = url.pathname === '/__control/offline';
+    console.log(
+      `${request.method} ${url.pathname} → ${offline ? 'offline' : 'online'}`,
+    );
+    response
+      .writeHead(200, { 'Content-Type': 'text/plain' })
+      .end(offline ? 'offline' : 'online');
+    return;
+  }
+  if (offline) {
+    console.log(
+      `${request.method} ${url.pathname}${url.search} → dropped (offline)`,
+    );
+    request.socket.destroy();
+    return;
+  }
   const name = basename(decodeURIComponent(url.pathname));
   const file = join(root, name);
   try {
-    const { size } = statSync(file);
+    const { size, mtime } = statSync(file);
+    const etag = `"${size.toString(16)}-${mtime.getTime().toString(16)}"`;
+    const lastModified = mtime.toUTCString();
+    const since = Date.parse(request.headers['if-modified-since'] ?? '');
+    const notModified =
+      request.headers['if-none-match'] !== undefined
+        ? request.headers['if-none-match'] === etag
+        : !Number.isNaN(since) &&
+          Math.floor(mtime.getTime() / 1000) * 1000 <= since;
+    if (notModified) {
+      response
+        .writeHead(304, { ETag: etag, 'Last-Modified': lastModified })
+        .end();
+      console.log(`${request.method} ${url.pathname}${url.search} → 304`);
+      return;
+    }
     response.writeHead(200, {
       'Content-Type': 'application/pdf',
       'Content-Length': size,
+      ETag: etag,
+      'Last-Modified': lastModified,
     });
     const bytesPerSecond = Number(url.searchParams.get('bytesPerSecond'));
     const stream = createReadStream(file);
-    if (bytesPerSecond > 0) stream.pipe(throttle(bytesPerSecond)).pipe(response);
+    if (bytesPerSecond > 0)
+      stream.pipe(throttle(bytesPerSecond)).pipe(response);
     else stream.pipe(response);
   } catch {
     response.writeHead(404).end();

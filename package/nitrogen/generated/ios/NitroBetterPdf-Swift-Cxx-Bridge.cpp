@@ -8,17 +8,26 @@
 #include "NitroBetterPdf-Swift-Cxx-Bridge.hpp"
 
 // Include C++ implementation defined types
+#include "HybridBetterPdfCacheSpecSwift.hpp"
 #include "HybridBetterPdfViewSpecSwift.hpp"
 #include "NitroBetterPdf-Swift-Cxx-Umbrella.hpp"
 #include <NitroModules/NitroDefines.hpp>
 
 namespace margelo::nitro::betterpdf::bridge::swift {
 
-  // pragma MARK: std::function<void(const PdfLoadEvent& /* event */)>
-  Func_void_PdfLoadEvent create_Func_void_PdfLoadEvent(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = NitroBetterPdf::Func_void_PdfLoadEvent::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const PdfLoadEvent& event) mutable -> void {
-      swiftClosure.call(event);
+  // pragma MARK: std::function<void(const PdfDownloadResult& /* result */)>
+  Func_void_PdfDownloadResult create_Func_void_PdfDownloadResult(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_PdfDownloadResult::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PdfDownloadResult& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
+  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
+      swiftClosure.call(error);
     };
   }
   
@@ -26,6 +35,62 @@ namespace margelo::nitro::betterpdf::bridge::swift {
   Func_void_PdfLoadProgressEvent create_Func_void_PdfLoadProgressEvent(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = NitroBetterPdf::Func_void_PdfLoadProgressEvent::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const PdfLoadProgressEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::optional<PdfCacheEntry>& /* result */)>
+  Func_void_std__optional_PdfCacheEntry_ create_Func_void_std__optional_PdfCacheEntry_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_std__optional_PdfCacheEntry_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::optional<PdfCacheEntry>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(bool /* result */)>
+  Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_bool::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](bool result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void()>
+  Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)]() mutable -> void {
+      swiftClosure.call();
+    };
+  }
+  
+  // pragma MARK: std::function<void(double /* result */)>
+  Func_void_double create_Func_void_double(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_double::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](double result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::shared_ptr<HybridBetterPdfCacheSpec>
+  std::shared_ptr<HybridBetterPdfCacheSpec> create_std__shared_ptr_HybridBetterPdfCacheSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
+    NitroBetterPdf::HybridBetterPdfCacheSpec_cxx swiftPart = NitroBetterPdf::HybridBetterPdfCacheSpec_cxx::fromUnsafe(swiftUnsafePointer);
+    return std::make_shared<margelo::nitro::betterpdf::HybridBetterPdfCacheSpecSwift>(swiftPart);
+  }
+  void* NON_NULL get_std__shared_ptr_HybridBetterPdfCacheSpec_(std__shared_ptr_HybridBetterPdfCacheSpec_ cppType) {
+    std::shared_ptr<margelo::nitro::betterpdf::HybridBetterPdfCacheSpecSwift> swiftWrapper = std::dynamic_pointer_cast<margelo::nitro::betterpdf::HybridBetterPdfCacheSpecSwift>(cppType);
+    #ifdef NITRO_DEBUG
+    if (swiftWrapper == nullptr) [[unlikely]] {
+      throw std::runtime_error("Class \"HybridBetterPdfCacheSpec\" is not implemented in Swift!");
+    }
+    #endif
+    NitroBetterPdf::HybridBetterPdfCacheSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
+    return swiftPart.toUnsafe();
+  }
+  
+  // pragma MARK: std::function<void(const PdfLoadEvent& /* event */)>
+  Func_void_PdfLoadEvent create_Func_void_PdfLoadEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_PdfLoadEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PdfLoadEvent& event) mutable -> void {
       swiftClosure.call(event);
     };
   }
@@ -99,14 +164,6 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     auto swiftClosure = NitroBetterPdf::Func_void_std__vector_PdfOutlineEntry_::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const std::vector<PdfOutlineEntry>& result) mutable -> void {
       swiftClosure.call(result);
-    };
-  }
-  
-  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
-  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = NitroBetterPdf::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
-      swiftClosure.call(error);
     };
   }
   

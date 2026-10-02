@@ -8,10 +8,18 @@
 #pragma once
 
 // Forward declarations of C++ defined types
+// Forward declaration of `HybridBetterPdfCacheSpec` to properly resolve imports.
+namespace margelo::nitro::betterpdf { class HybridBetterPdfCacheSpec; }
 // Forward declaration of `HybridBetterPdfViewSpec` to properly resolve imports.
 namespace margelo::nitro::betterpdf { class HybridBetterPdfViewSpec; }
 // Forward declaration of `NativePdfSource` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfSource; }
+// Forward declaration of `PdfCacheEntry` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfCacheEntry; }
+// Forward declaration of `PdfCacheMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
+// Forward declaration of `PdfDownloadResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfDownloadResult; }
 // Forward declaration of `PdfErrorCode` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfErrorCode; }
 // Forward declaration of `PdfError` to properly resolve imports.
@@ -54,8 +62,12 @@ namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfViewport; }
 
 // Include C++ defined types
+#include "HybridBetterPdfCacheSpec.hpp"
 #include "HybridBetterPdfViewSpec.hpp"
 #include "NativePdfSource.hpp"
+#include "PdfCacheEntry.hpp"
+#include "PdfCacheMode.hpp"
+#include "PdfDownloadResult.hpp"
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
 #include "PdfFitPolicy.hpp"
@@ -96,6 +108,8 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include <NitroModules/DateToChronoDate.hpp>
 
 // Forward declarations of Swift defined types
+// Forward declaration of `HybridBetterPdfCacheSpec_cxx` to properly resolve imports.
+namespace NitroBetterPdf { class HybridBetterPdfCacheSpec_cxx; }
 // Forward declaration of `HybridBetterPdfViewSpec_cxx` to properly resolve imports.
 namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 
