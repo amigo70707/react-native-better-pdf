@@ -18,7 +18,8 @@ function getNativeCache(): BetterPdfCache {
 }
 
 function abortReason(signal: AbortSignal): unknown {
-  if (signal.reason !== undefined) return signal.reason;
+  // React Native's AbortSignal (types and polyfill) has no `reason`.
+  if ('reason' in signal && signal.reason !== undefined) return signal.reason;
   const error = new Error('The download was aborted');
   error.name = 'AbortError';
   return error;
