@@ -288,6 +288,21 @@ export function ViewerScreen() {
             if (mark.current != null) ref.current?.goToViewport(mark.current);
           }}
         />
+        <Button
+          title="Print"
+          onPress={() => {
+            ref.current
+              ?.print()
+              .then((result) =>
+                setLastEvent(
+                  `print: ${result.isSubmitted ? 'submitted' : 'cancelled'}`,
+                ),
+              )
+              .catch((error: unknown) =>
+                setLastEvent(`print: ${String(error)}`),
+              );
+          }}
+        />
       </View>
 
       {showSearch && (

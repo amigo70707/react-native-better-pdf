@@ -48,6 +48,7 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   func getOutline() throws -> Promise<[PdfOutlineEntry]>
   func getPageSizes() throws -> Promise<[PdfPageSize]>
   func renderPage(page: Double, options: PdfRenderPageOptions) throws -> Promise<PdfPageImage>
+  func print(jobName: String) throws -> Promise<PdfPrintResult>
   func search(query: String) throws -> Void
   func searchNext() throws -> Void
   func searchPrevious() throws -> Void

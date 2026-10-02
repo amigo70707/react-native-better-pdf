@@ -46,6 +46,8 @@ namespace margelo::nitro::betterpdf { struct PdfPageImage; }
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 // Forward declaration of `PdfPageTapEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
+// Forward declaration of `PdfPrintResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
@@ -85,6 +87,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfPageImage.hpp"
 #include "PdfPageSize.hpp"
 #include "PdfPageTapEvent.hpp"
+#include "PdfPrintResult.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
@@ -1050,6 +1053,40 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.value();
   }
   
+  // pragma MARK: std::shared_ptr<Promise<PdfPrintResult>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<PdfPrintResult>>`.
+   */
+  using std__shared_ptr_Promise_PdfPrintResult__ = std::shared_ptr<Promise<PdfPrintResult>>;
+  inline std::shared_ptr<Promise<PdfPrintResult>> create_std__shared_ptr_Promise_PdfPrintResult__() noexcept {
+    return Promise<PdfPrintResult>::create();
+  }
+  inline PromiseHolder<PdfPrintResult> wrap_std__shared_ptr_Promise_PdfPrintResult__(std::shared_ptr<Promise<PdfPrintResult>> promise) noexcept {
+    return PromiseHolder<PdfPrintResult>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const PdfPrintResult& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const PdfPrintResult&)>`.
+   */
+  using Func_void_PdfPrintResult = std::function<void(const PdfPrintResult& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PdfPrintResult& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_PdfPrintResult_Wrapper final {
+  public:
+    explicit Func_void_PdfPrintResult_Wrapper(std::function<void(const PdfPrintResult& /* result */)>&& func): _function(std::make_unique<std::function<void(const PdfPrintResult& /* result */)>>(std::move(func))) {}
+    inline void call(PdfPrintResult result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PdfPrintResult& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PdfPrintResult create_Func_void_PdfPrintResult(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PdfPrintResult_Wrapper wrap_Func_void_PdfPrintResult(Func_void_PdfPrintResult value) noexcept {
+    return Func_void_PdfPrintResult_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridBetterPdfViewSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridBetterPdfViewSpec>`.
@@ -1096,6 +1133,15 @@ namespace margelo::nitro::betterpdf::bridge::swift {
   }
   inline Result_std__shared_ptr_Promise_PdfPageImage___ create_Result_std__shared_ptr_Promise_PdfPageImage___(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<PdfPageImage>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<PdfPrintResult>>>
+  using Result_std__shared_ptr_Promise_PdfPrintResult___ = Result<std::shared_ptr<Promise<PdfPrintResult>>>;
+  inline Result_std__shared_ptr_Promise_PdfPrintResult___ create_Result_std__shared_ptr_Promise_PdfPrintResult___(const std::shared_ptr<Promise<PdfPrintResult>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<PdfPrintResult>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_PdfPrintResult___ create_Result_std__shared_ptr_Promise_PdfPrintResult___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<PdfPrintResult>>>::withError(error);
   }
 
 } // namespace margelo::nitro::betterpdf::bridge::swift

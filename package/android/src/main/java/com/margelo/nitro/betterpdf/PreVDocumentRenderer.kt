@@ -13,6 +13,8 @@ internal class PreVDocumentRenderer private constructor(private val renderer: Pd
 
   override fun openPage(index: Int): DocumentPage = PreVDocumentPage(renderer.openPage(index))
 
+  override fun writeUnprotected(destination: ParcelFileDescriptor) = renderer.write(destination, true)
+
   override fun close() = renderer.close()
 
   companion object {

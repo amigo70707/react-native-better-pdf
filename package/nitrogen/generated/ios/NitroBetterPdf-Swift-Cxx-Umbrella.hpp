@@ -46,6 +46,8 @@ namespace margelo::nitro::betterpdf { struct PdfPageImage; }
 namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 // Forward declaration of `PdfPageTapEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageTapEvent; }
+// Forward declaration of `PdfPrintResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 // Forward declaration of `PdfRenderPageOptions` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 // Forward declaration of `PdfScaleChangeEvent` to properly resolve imports.
@@ -81,6 +83,7 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "PdfPageImage.hpp"
 #include "PdfPageSize.hpp"
 #include "PdfPageTapEvent.hpp"
+#include "PdfPrintResult.hpp"
 #include "PdfRenderPageOptions.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"

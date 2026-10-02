@@ -20,6 +20,7 @@ import {
 import BetterPdfViewConfig from '../nitrogen/generated/shared/json/BetterPdfViewConfig.json';
 import { nativeColor } from './nativeColor';
 import { buildOutlineTree } from './outline';
+import { defaultPrintJobName } from './printJobName';
 import { normalizeSource, sourceKey, type PdfSource } from './source';
 import type {
   PdfViewMethods,
@@ -37,6 +38,8 @@ import type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
 import type { PdfPageImage } from './types/PdfPageImage';
 import type { PdfPageSize } from './types/PdfPageSize';
 import type { PdfPageTapEvent } from './types/PdfPageTapEvent';
+import type { PdfPrintOptions } from './types/PdfPrintOptions';
+import type { PdfPrintResult } from './types/PdfPrintResult';
 import type { PdfRenderPageOptions } from './types/PdfRenderPageOptions';
 import type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
@@ -102,6 +105,17 @@ export interface PdfViewRef {
     page: number,
     options: PdfRenderPageOptions,
   ): Promise<PdfPageImage>;
+  /**
+   * Opens the system print dialog for the loaded document and resolves when
+   * it closes, with whether the user printed (or saved as PDF). Prints the
+   * document as loaded: unlocked when it was opened with a
+   * {@linkcode PdfViewProps.password}, the downloaded copy of a remote
+   * source. Rejects before {@linkcode PdfViewProps.onLoad}, while a print
+   * dialog of this view is open, when the device cannot print or the app is
+   * not in the foreground, and on iOS when the document does not permit
+   * printing.
+   */
+  print(options?: PdfPrintOptions): Promise<PdfPrintResult>;
   /**
    * Searches the document's text (case-insensitive), replacing any previous
    * search; `''` clears it. Results arrive through
@@ -401,6 +415,11 @@ export function PdfView({
   ...viewProps
 }: PdfViewProps) {
   const nativeSource = useStableSource(source);
+  // For print's default job name; read when called, like the handlers.
+  const latestSource = useRef(nativeSource);
+  useLayoutEffect(() => {
+    latestSource.current = nativeSource;
+  });
   const initialPosition = useInitialPosition(
     initialPage,
     initialScale,
@@ -495,6 +514,14 @@ export function PdfView({
         const native = nativeRef.current;
         if (native == null) throw new Error('The PDF view is not mounted');
         return native.renderPage(page, options);
+      },
+      async print(options) {
+        const native = nativeRef.current;
+        if (native == null) throw new Error('The PDF view is not mounted');
+        const jobName = options?.jobName?.trim() ?? '';
+        return native.print(
+          jobName === '' ? defaultPrintJobName(latestSource.current) : jobName,
+        );
       },
       getStats() {
         return nativeRef.current?.getStats() ?? null;

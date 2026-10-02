@@ -43,6 +43,10 @@ const nativeInstance = {
       width: options.width,
       height: 2 * options.width,
     }),
+  print: (jobName: string) => {
+    nativeCalls.push(`print(${jobName})`);
+    return Promise.resolve({ isSubmitted: true });
+  },
   goToViewport: (viewport: object) =>
     nativeCalls.push(`goToViewport(${JSON.stringify(viewport)})`),
   getOutline: () =>
@@ -487,6 +491,26 @@ describe('PdfView', () => {
     };
     (lastHost().onViewportChange as { f: (e: unknown) => void }).f(event);
     expect(events).toEqual([event]);
+  });
+
+  test("print rejects before mount and names the job after the source's file", async () => {
+    const ref = createRef<PdfViewRef>();
+    render(
+      <PdfView ref={ref} source={{ uri: 'https://x.test/files/q3.pdf?t=1' }} />,
+    );
+    await expect(ref.current!.print()).rejects.toThrow('not mounted');
+    const hybridRef = lastHost().hybridRef as {
+      f: (instance: typeof nativeInstance) => void;
+    };
+    hybridRef.f(nativeInstance);
+    expect(await ref.current!.print()).toEqual({ isSubmitted: true });
+    await ref.current!.print({ jobName: ' Invoice 7 ' });
+    await ref.current!.print({ jobName: '  ' });
+    expect(nativeCalls).toEqual([
+      'print(q3.pdf)',
+      'print(Invoice 7)',
+      'print(q3.pdf)',
+    ]);
   });
 
   test('getPageSizes rejects before mount and forwards after', async () => {

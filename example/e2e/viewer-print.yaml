@@ -1,0 +1,49 @@
+# Printing (ref.print): the system print dialog previews the document — the
+# bundled sample, and the password-protected fixture from its unlocked copy
+# (a locked copy would not preview) — and closing it without printing
+# resolves isSubmitted: false. Android also saves the protected document
+# through the built-in "Save as PDF" printer, named after the source file,
+# which resolves isSubmitted: true. A simulator has no printer to submit to.
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- tapOn: "Bundled sample.*"
+- extendedWaitUntil: { visible: "1 / 3", timeout: 15000 }
+- tapOn: "Print"
+- extendedWaitUntil: { visible: "Page 1 of 3", timeout: 10000 }
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - tapOn: "Close"
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - tapOn: "Cancel"
+- extendedWaitUntil: { visible: "print: cancelled", timeout: 5000 }
+- tapOn: "‹ Back"
+
+- scrollUntilVisible: { element: "encrypted.*" }
+- tapOn: "encrypted.*"
+- extendedWaitUntil: { visible: "password-required", timeout: 15000 }
+- tapOn: "Try fixture"
+- extendedWaitUntil: { visible: "1 / 2", timeout: 15000 }
+- tapOn: "Print"
+- extendedWaitUntil: { visible: "Page 1 of 2", timeout: 10000 }
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - tapOn: "Close"
+      - extendedWaitUntil: { visible: "print: cancelled", timeout: 5000 }
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - tapOn: { id: "com.android.printspooler:id/destination_spinner" }
+      - tapOn: "Save as PDF"
+      - tapOn: "Save to PDF"
+      # The file picker proposes the job name: the source's file name.
+      - extendedWaitUntil: { visible: "encrypted.*\\.pdf", timeout: 10000 }
+      - tapOn: "SAVE"
+      - extendedWaitUntil: { visible: "print: submitted", timeout: 10000 }
+- takeScreenshot: viewer-print
+- tapOn: "‹ Back"

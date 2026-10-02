@@ -996,6 +996,53 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
 
+## Printing (v0.2)
+
+```ts
+ref.print(options?: { jobName?: string }): Promise<{ isSubmitted: boolean }>;
+```
+
+Requested in react-native-pdf as print (and share) of the displayed
+document (#378, #303, #371) — one reaction each, all from 2019; people
+printed `onLoadComplete`'s path with another library. The method exists
+for what those libraries cannot do: password-protected documents (the
+print system opens files without a password), `content://` sources (no
+file path), and anchoring the dialog to the viewer on iPad.
+
+- **On the view, not standalone.** It prints the document as loaded —
+  unlocked, downloaded — with no second download or password prompt.
+  Printing without a viewer belongs with the `PdfDocument` question below.
+- **Protected documents print from an unlocked copy that never touches
+  disk.** iOS: `PDFDocument.dataRepresentation()` of an unlocked document
+  writes it without encryption (measured with the `encrypted` fixture:
+  the copy reports `isEncrypted == false`, two readable pages), serialized
+  off the main thread on a separate instance and handed to
+  `UIPrintInteractionController` as data. Android: `PdfRenderer.write(fd,
+  removePasswordProtection = true)` (API 35, and `PdfRendererPreV` on 12–14
+  with extension 13 — every renderer that can open a protected document)
+  writes straight into the spooler's descriptor. Other documents print
+  from the file itself (iOS) or a positional copy of the open descriptor
+  (Android), so the spooler gets the original, vector bytes.
+- **`isSubmitted` is measured, not assumed.** iOS reports it in the
+  completion handler. On Android the adapter's `onFinish` cannot tell: a
+  cancelled job is still "created" when the dialog closes and turns
+  "cancelled" within 500 ms, while a saved job is already "completed"
+  (measured on API 37). The view waits up to 2 s for the job to leave
+  "created".
+- **Permissions:** iOS refuses documents whose permissions forbid printing
+  (`allowsPrinting`); Android's `PdfRenderer` exposes no permissions, so
+  it prints them.
+- **Default job name** from the source in JS (`report.pdf` from a URL
+  without its query), so native reads no metadata. `'Document'` when the
+  source names no file — including bundled assets in development, which
+  Metro serves from `/assets/?unstable_path=…`.
+- **Tested:** `viewer-print` on both platforms (dialog previews the
+  bundled sample and the unlocked protected fixture, closing resolves
+  `false`); on Android the protected document saved through "Save as PDF"
+  resolves `true`, and the saved file is unencrypted with both pages
+  (checked with PDFKit). Not tested: submitting on iOS (a simulator has no
+  printer; Printer Simulator is not installed) and real printers.
+
 ## Open questions
 
 - A `PdfDocument` Hybrid Object for metadata/page count without mounting a view.

@@ -97,6 +97,7 @@ users see.
 | `trustAllCerts` | — | Intentionally not supported. |
 | `renderActivityIndicator`, `progressContainerStyle` | — | Render your own; see `onLoadProgress`. |
 | `style` and other `View` props | same | |
+| — | `ref.print()` | New: the system print dialog for the loaded document, protected documents included. |
 
 ## Callbacks
 

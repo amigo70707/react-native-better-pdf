@@ -15,6 +15,7 @@ import type { PdfPageChangeEvent } from '../types/PdfPageChangeEvent';
 import type { PdfPageImage } from '../types/PdfPageImage';
 import type { PdfPageSize } from '../types/PdfPageSize';
 import type { PdfPageTapEvent } from '../types/PdfPageTapEvent';
+import type { PdfPrintResult } from '../types/PdfPrintResult';
 import type { PdfRenderPageOptions } from '../types/PdfRenderPageOptions';
 import type { PdfScaleChangeEvent } from '../types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from '../types/PdfSearchChangeEvent';
@@ -108,6 +109,12 @@ export interface PdfViewMethods extends HybridViewMethods {
     page: number,
     options: PdfRenderPageOptions,
   ): Promise<PdfPageImage>;
+  /**
+   * Opens the system print dialog for the loaded document (unlocked when it
+   * has a password) and resolves when the dialog closes. Rejects before a
+   * document has loaded and while a print dialog of this view is open.
+   */
+  print(jobName: string): Promise<PdfPrintResult>;
   /** Starts a case-insensitive text search, replacing any previous one; '' clears it. */
   search(query: string): void;
   /** Moves to the next match (wrapping) and scrolls it into view. */

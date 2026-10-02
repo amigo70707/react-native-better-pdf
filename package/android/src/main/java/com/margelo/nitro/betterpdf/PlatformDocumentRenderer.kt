@@ -11,6 +11,13 @@ internal class PlatformDocumentRenderer private constructor(private val renderer
 
   override fun openPage(index: Int): DocumentPage = PlatformDocumentPage(renderer.openPage(index))
 
+  override fun writeUnprotected(destination: ParcelFileDescriptor) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+      throw UnsupportedOperationException("Writing a document requires Android 15")
+    }
+    renderer.write(destination, true)
+  }
+
   override fun close() = renderer.close()
 
   companion object {

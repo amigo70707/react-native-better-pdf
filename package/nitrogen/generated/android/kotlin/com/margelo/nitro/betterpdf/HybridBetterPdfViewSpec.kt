@@ -313,6 +313,10 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   
   @DoNotStrip
   @Keep
+  abstract fun print(jobName: String): Promise<PdfPrintResult>
+  
+  @DoNotStrip
+  @Keep
   abstract fun search(query: String): Unit
   
   @DoNotStrip

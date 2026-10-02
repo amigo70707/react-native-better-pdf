@@ -15,6 +15,14 @@ internal interface DocumentRenderer : AutoCloseable {
 
   fun openPage(index: Int): DocumentPage
 
+  /**
+   * Writes the document to [destination] without its password protection,
+   * e.g. for the print spooler, which opens documents without a password.
+   * Only renderers that can open password-protected documents can (see
+   * [supportsPasswords]). Does not close [destination].
+   */
+  fun writeUnprotected(destination: ParcelFileDescriptor)
+
   companion object {
     /** Whether this device can open password-protected documents. */
     val supportsPasswords: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM || hasPreV

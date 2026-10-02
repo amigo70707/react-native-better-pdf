@@ -18,6 +18,8 @@ export type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
 export type { PdfPageImage } from './types/PdfPageImage';
 export type { PdfPageSize } from './types/PdfPageSize';
 export type { PdfPageTapEvent } from './types/PdfPageTapEvent';
+export type { PdfPrintOptions } from './types/PdfPrintOptions';
+export type { PdfPrintResult } from './types/PdfPrintResult';
 export type { PdfRenderPageOptions } from './types/PdfRenderPageOptions';
 export type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 export type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';

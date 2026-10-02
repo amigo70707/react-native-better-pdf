@@ -17,7 +17,9 @@ import com.margelo.nitro.betterpdf.outline.PdfDocumentReader
 import com.margelo.nitro.betterpdf.outline.PdfFormatException
 import com.margelo.nitro.betterpdf.outline.PdfOutlineReader
 import com.margelo.nitro.betterpdf.outline.PdfPageSizeReader
+import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.channels.Channels
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -206,6 +208,33 @@ class PdfDocumentSession(
         val matrix = Matrix().apply { setScale(width / pdfPage.width.toFloat(), height / pdfPage.height.toFloat()) }
         pdfPage.renderForDisplay(bitmap, null, matrix)
         return bitmap
+      }
+    }
+  }
+
+  /**
+   * Writes the document to [destination] for printing: the file as it is,
+   * or, when it was opened with a password, a copy without the protection
+   * written by a separate renderer (the print spooler opens documents
+   * without a password). The copy goes straight to [destination], never to
+   * disk. Devices that cannot open protected documents opened this one
+   * without the password, so the file as it is prints. Positional reads
+   * leave the shared file offset alone. Blocking: call off the main
+   * thread. Does not close [destination].
+   */
+  fun writeForPrinting(destination: ParcelFileDescriptor) {
+    if (!password.isNullOrEmpty() && DocumentRenderer.supportsPasswords) {
+      DocumentRenderer.open(duplicateDescriptor(), password).use { it.writeUnprotected(destination) }
+      return
+    }
+    ParcelFileDescriptor.AutoCloseInputStream(duplicateDescriptor()).channel.use { source ->
+      val target = Channels.newChannel(FileOutputStream(destination.fileDescriptor))
+      val size = source.size()
+      var position = 0L
+      while (position < size) {
+        val written = source.transferTo(position, size - position, target)
+        if (written <= 0) throw IOException("The document could not be written for printing")
+        position += written
       }
     }
   }

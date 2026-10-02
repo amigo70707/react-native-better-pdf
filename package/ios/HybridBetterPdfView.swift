@@ -351,6 +351,80 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
 
   private static let maxRenderWidth: Double = 4096
 
+  func print(jobName: String) throws -> Promise<PdfPrintResult> {
+    let promise = Promise<PdfPrintResult>()
+    DispatchQueue.main.async { [weak self] in
+      guard let self, let document = self.pdfView?.document, let url = document.documentURL else {
+        promise.reject(withError: RuntimeError.error(withMessage: "No document is loaded"))
+        return
+      }
+      guard UIPrintInteractionController.isPrintingAvailable else {
+        promise.reject(withError: RuntimeError.error(withMessage: "Printing is not available on this device"))
+        return
+      }
+      guard document.allowsPrinting else {
+        promise.reject(withError: RuntimeError.error(withMessage: "The document does not permit printing"))
+        return
+      }
+      guard !self.isPrinting else {
+        promise.reject(withError: RuntimeError.error(withMessage: "A print dialog is already open"))
+        return
+      }
+      self.isPrinting = true
+      guard document.isEncrypted else {
+        self.presentPrintDialog(printing: url, jobName: jobName, promise: promise)
+        return
+      }
+      // The print system opens files without a password: print an unlocked
+      // copy, kept in memory. Serialized off the main thread on a separate
+      // instance of the file, like renderPage.
+      let password = self.password
+      Self.readQueue.async {
+        let copy = PDFDocument(url: url)
+        if copy?.isLocked == true { _ = copy?.unlock(withPassword: password ?? "") }
+        let data = copy.flatMap { $0.isLocked ? nil : $0.dataRepresentation() }
+        DispatchQueue.main.async { [weak self] in
+          guard let self, let data else {
+            self?.isPrinting = false
+            promise.reject(withError: RuntimeError.error(withMessage: "The document could not be prepared for printing"))
+            return
+          }
+          self.presentPrintDialog(printing: data, jobName: jobName, promise: promise)
+        }
+      }
+    }
+    return promise
+  }
+
+  /// Whether this view's print dialog is open (main thread).
+  private var isPrinting = false
+
+  /// `item`: a file URL or PDF data. Main thread.
+  private func presentPrintDialog(printing item: Any, jobName: String, promise: Promise<PdfPrintResult>) {
+    let controller = UIPrintInteractionController.shared
+    let info = UIPrintInfo(dictionary: nil)
+    info.jobName = jobName
+    info.outputType = .general
+    controller.printInfo = info
+    controller.printingItem = item
+    let completion: UIPrintInteractionController.CompletionHandler = { [weak self] _, completed, error in
+      self?.isPrinting = false
+      if let error {
+        promise.reject(withError: error)
+      } else {
+        promise.resolve(withResult: PdfPrintResult(isSubmitted: completed))
+      }
+    }
+    // iPad shows the dialog as a popover, which needs an anchor.
+    let presented = UIDevice.current.userInterfaceIdiom == .pad
+      ? controller.present(from: container.bounds, in: container, animated: true, completionHandler: completion)
+      : controller.present(animated: true, completionHandler: completion)
+    if !presented {
+      isPrinting = false
+      promise.reject(withError: RuntimeError.error(withMessage: "The print dialog could not be opened (another one may be open)"))
+    }
+  }
+
   func zoomTo(scale: Double, animated: Bool) throws {
     DispatchQueue.main.async { [weak self] in
       guard let self, let pdfView = self.pdfView, self.fitScale > 0 else { return }
