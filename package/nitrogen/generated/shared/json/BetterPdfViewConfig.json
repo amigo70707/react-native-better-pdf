@@ -15,6 +15,7 @@
     "enableRTL": true,
     "singlePage": true,
     "fitPolicy": true,
+    "spreadMode": true,
     "enableDoubleTapZoom": true,
     "scrollEnabled": true,
     "pageAccessibilityLabel": true,

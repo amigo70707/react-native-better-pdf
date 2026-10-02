@@ -146,6 +146,7 @@ re-renders never reload the document.
 | `enableRTL` | `boolean` | `false` | horizontal layouts run right to left (iOS: with `enablePaging` only) |
 | `singlePage` | `boolean` | `false` | one static page (`initialPage`, switched by `goToPage`) for thumbnails; ignores touches |
 | `fitPolicy` | `'width' \| 'height' \| 'page'` | `'width'`, or `'page'` with `horizontal` / `enablePaging` | how pages are scaled at zoom 1 |
+| `spreadMode` | `'none' \| 'pairs' \| 'book'` | `'none'` | facing pages side by side in the vertical continuous layout; see [Facing pages](#facing-pages) |
 | `searchHighlightColor` | `ColorValue` | `'rgba(255, 214, 0, 0.4)'` | background of search matches; use a translucent colour |
 | `searchCurrentHighlightColor` | `ColorValue` | `'rgba(255, 140, 0, 0.6)'` | background of the current match |
 | `onLoad` | `({ pageCount, firstPageWidth, firstPageHeight, filePath?, isStale }) => void` | | first page's size in PDF points, as displayed (crop box, rotation applied); `filePath`: the local file being displayed (downloaded copy, local file or extracted asset; not for `content://`); `isStale`: an outdated stored copy shown because the server could not be reached (see [Offline reading and caching](#offline-reading-and-caching)) |
@@ -202,6 +203,7 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Vertical continuous scrolling, fling, platform scroll indicators
 - Card layouts: `borderRadius` clips the document; a short document starts
   at the top on both platforms
+- Facing pages (two-page spreads) for tablets, with or without a cover page
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
 - Every page's size (`getPageSizes`), cheap even for long documents
@@ -352,6 +354,24 @@ const image = await pdf.current?.renderPage(page, {
   example's thumbnail strip) needs no files; `renderPage` is for images
   you pass elsewhere — `<Image>` lists, sharing, uploads.
 
+## Facing pages
+
+```tsx
+const { width, height } = useWindowDimensions();
+<PdfView source={source} spreadMode={width > height ? 'book' : 'none'} />;
+```
+
+- `'pairs'` shows pages 1–2, 3–4, … side by side; `'book'` shows the first
+  page alone, like a cover, then 2–3, 4–5, …, like a magazine.
+- Each page fits half the view's width; a page without a partner (the
+  cover, an odd last page) is centred. Rows scroll vertically.
+- `onPageChange` reports the first page of the spread under the viewport
+  centre (the last page at the end). Switching `spreadMode` or the layout
+  keeps the page the reader was on.
+- Vertical continuous layouts only: ignored with `horizontal`,
+  `enablePaging` and `singlePage` (iOS's PDFKit lays out facing pages only
+  there). Facing pages run left to right.
+
 ## Printing
 
 ```tsx
@@ -428,7 +448,8 @@ Screen readers get the document's text and position:
 
 ## Limitations
 
-- **Not implemented yet**: editing annotations or forms.
+- **Not implemented yet**: editing annotations or forms; facing pages in
+  horizontal or paged layouts, or right to left.
 - **Text selection**: iOS uses PDFKit's selection, which can span pages.
   Android draws its own: a selection stays on one page, Select all selects
   that page, copying ends the selection (as in a text field), dragging a

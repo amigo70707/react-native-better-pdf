@@ -94,6 +94,11 @@ class HybridBetterPdfView(
       field = value
       needsLayoutModeUpdate = true
     }
+  override var spreadMode: PdfSpreadMode? = null
+    set(value) {
+      field = value
+      needsLayoutModeUpdate = true
+    }
   override var enableDoubleTapZoom: Boolean? = null
     set(value) {
       field = value
@@ -159,7 +164,14 @@ class HybridBetterPdfView(
       val fit = fitPolicy?.toLayoutFit()
         ?: if (horizontal || paged || singlePage) PdfDocumentLayout.Fit.PAGE else PdfDocumentLayout.Fit.WIDTH
       documentView.setLayoutMode(
-        LayoutMode(horizontal, paged, fit, singlePage, isRightToLeft = enableRTL ?: false),
+        LayoutMode(
+          horizontal,
+          paged,
+          fit,
+          singlePage,
+          isRightToLeft = enableRTL ?: false,
+          spread = spreadMode?.toLayoutSpread() ?: PdfDocumentLayout.Spread.NONE,
+        ),
       )
     }
     if (needsScaleUpdate) {

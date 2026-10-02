@@ -139,6 +139,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   /** Single-page mode: only [shownPage] is laid out for scrolling and rendered; touches pass through. */
   private var isSinglePage = false
   private var isRightToLeft = false
+  /** Facing pages requested; the layout applies them to vertical continuous layouts only. */
+  private var spread = PdfDocumentLayout.Spread.NONE
   /** Last zoom sent through [Listener.onScaleSettled]. */
   private var lastReportedScale = 1f
   /** Last position sent through [Listener.onViewportSettled]; null until the document's first. */
@@ -177,6 +179,14 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   /** Set when a fling in paged mode was turned into a page snap. */
   private var pagingFlingHandled = false
   private var currentPage = -1
+  /**
+   * The page a layout switch keeps: [currentPage], except that with facing
+   * pages a page the reader was on stays while it is on screen — spreads
+   * report the first page of the row under the centre, which on a tall view
+   * can be the row below the one navigated to. Switching to spreads and
+   * back returns to the reader's page.
+   */
+  private var readingPage = -1
   private var previousVisible: IntRange = IntRange.EMPTY
 
   // region Accessibility
@@ -458,6 +468,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     offsetX = 0f
     offsetY = 0f
     currentPage = -1
+    readingPage = -1
     previousVisible = IntRange.EMPTY
     lastSubmitted = emptyList()
     statHits = 0
@@ -561,6 +572,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       return
     }
     if (isSinglePage) shownPage = page
+    readingPage = page
     val target = if (point.page == page) point else PagePoint(page, 0f, 0f)
     setOffsets(layout.contentX(target) * this.scale, layout.contentY(target) * this.scale)
     scheduleSettle()
@@ -573,6 +585,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       return
     }
     val target = page.coerceIn(0, layout.pageCount - 1)
+    // Navigation names the reader's page, also within a spread whose first
+    // page is reported (see readingPage).
+    readingPage = target
     if (isSinglePage) {
       // Nothing to animate through: the other pages are not shown.
       scroller.forceFinished(true)
@@ -595,7 +610,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     val newPaged = mode.isPaged || mode.isSinglePage
     if (
       newAxis == axis && newPaged == isPaged && mode.fit == fit &&
-      mode.isSinglePage == isSinglePage && mode.isRightToLeft == isRightToLeft
+      mode.isSinglePage == isSinglePage && mode.isRightToLeft == isRightToLeft && mode.spread == spread
     ) {
       return
     }
@@ -603,11 +618,12 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     isPaged = newPaged
     isSinglePage = mode.isSinglePage
     isRightToLeft = mode.isRightToLeft
+    spread = mode.spread
     fit = mode.fit
     scroller.forceFinished(true)
     zoomAnimator?.cancel()
     textSelection.clear()
-    if (layout != null) pendingInitialPage = currentPage.coerceAtLeast(0)
+    if (layout != null) pendingInitialPage = (if (readingPage >= 0) readingPage else currentPage).coerceAtLeast(0)
     scale = minScale
     offsetX = 0f
     offsetY = 0f
@@ -991,13 +1007,14 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     var anchorPage = -1
     var anchorFraction = 0f
     val sameMode = old != null && old.axis == axis && old.isPaged == isPaged && old.fit == fit &&
-      old.isReversed == (isRightToLeft && isHorizontal)
+      old.isReversed == (isRightToLeft && isHorizontal) &&
+      old.spread == (if (axis == PdfDocumentLayout.Axis.VERTICAL && !isPaged) spread else PdfDocumentLayout.Spread.NONE)
     if (old != null && sameMode && old.pageCount == pageSizes.size) {
       val position = mainOffset / scale
       anchorPage = old.slotAt(position)
       anchorFraction = (position - old.slotStart(anchorPage)) / (old.slotEnd(anchorPage) - old.slotStart(anchorPage))
     }
-    val newLayout = PdfDocumentLayout(pageSizes, width.toFloat(), spacingPx, height.toFloat(), axis, isPaged, fit, isRightToLeft)
+    val newLayout = PdfDocumentLayout(pageSizes, width.toFloat(), spacingPx, height.toFloat(), axis, isPaged, fit, isRightToLeft, spread)
     layout = newLayout
     // Tiles are positioned in the old layout's coordinates.
     clearTiles()
@@ -1009,6 +1026,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       pendingInitialPage = null
       pendingInitialPoint = null
       shownPage = initialPoint.page
+      readingPage = initialPoint.page
       scale = scale.coerceIn(minScale, maxScale)
       // Clamped by clampAndRefresh below.
       offsetX = newLayout.contentX(initialPoint) * scale
@@ -1017,6 +1035,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       pendingInitialPage = null
       pendingInitialPoint = null
       shownPage = initial.coerceIn(0, newLayout.pageCount - 1)
+      readingPage = shownPage
       scale = scale.coerceIn(minScale, maxScale)
       setMainOffsetRaw(clampMain(newLayout.slotStart(initial.coerceIn(0, newLayout.pageCount - 1)) * scale))
       // Content wider than the view (pages of different widths) starts centred.
@@ -1172,6 +1191,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       lastPageEdgeReached -> layout.pageCount - 1
       else -> layout.pageAt((mainOffset + mainViewportLength / 2f) / scale)
     }
+    val keepsReadingPage = layout.spread != PdfDocumentLayout.Spread.NONE &&
+      readingPage in layout.visibleRange(mainOffset / scale, (mainOffset + mainViewportLength) / scale)
+    if (page >= 0 && !keepsReadingPage) readingPage = page
     if (page >= 0 && page != currentPage) {
       currentPage = page
       listener?.onPageChanged(page, layout.pageCount)

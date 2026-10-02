@@ -364,6 +364,23 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var spreadMode: bridge.std__optional_PdfSpreadMode_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_PdfSpreadMode_ in
+        if let __unwrappedValue = self.__implementation.spreadMode {
+          return bridge.create_std__optional_PdfSpreadMode_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.spreadMode = newValue.value
+    }
+  }
+  
   public final var enableDoubleTapZoom: bridge.std__optional_bool_ {
     @inline(__always)
     get {

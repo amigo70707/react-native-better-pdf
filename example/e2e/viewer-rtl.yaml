@@ -55,6 +55,8 @@ appId: software.gmi.betterpdf.example
 
 # Back to vertical: page kept.
 - tapOn: "Paged RTL"
+- tapOn: "Pairs"
+- tapOn: "Book"
 - extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
 - waitForAnimationToEnd
 - assertVisible: "100 / 100"

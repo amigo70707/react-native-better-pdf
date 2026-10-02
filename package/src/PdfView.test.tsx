@@ -295,6 +295,7 @@ describe('PdfView', () => {
         password="p"
         minScale={2}
         fitPolicy="height"
+        spreadMode="pairs"
         horizontal
         enableTextSelection={false}
         searchHighlightColor="blue"
@@ -312,6 +313,7 @@ describe('PdfView', () => {
       horizontal: false,
       enablePaging: false,
       fitPolicy: 'width',
+      spreadMode: 'none',
       showsVerticalScrollIndicator: true,
       showsHorizontalScrollIndicator: true,
       singlePage: false,
@@ -372,6 +374,7 @@ describe('PdfView', () => {
         horizontal
         enablePaging
         fitPolicy="height"
+        spreadMode="book"
         password="p"
         enableTextSelection={false}
       />,
@@ -386,6 +389,7 @@ describe('PdfView', () => {
       horizontal: true,
       enablePaging: true,
       fitPolicy: 'height',
+      spreadMode: 'book',
       password: 'p',
       enableTextSelection: false,
     });

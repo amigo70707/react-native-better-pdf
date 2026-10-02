@@ -19,6 +19,7 @@ import type { PdfPrintResult } from '../types/PdfPrintResult';
 import type { PdfRenderPageOptions } from '../types/PdfRenderPageOptions';
 import type { PdfScaleChangeEvent } from '../types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from '../types/PdfSearchChangeEvent';
+import type { PdfSpreadMode } from '../types/PdfSpreadMode';
 import type { PdfTextSelectionChangeEvent } from '../types/PdfTextSelectionChangeEvent';
 import type { PdfViewport } from '../types/PdfViewport';
 import type { PdfViewportChangeEvent } from '../types/PdfViewportChangeEvent';
@@ -49,6 +50,8 @@ export interface PdfViewProps extends HybridViewProps {
   singlePage?: boolean;
   /** Default 'width' when vertical and continuous, otherwise 'page'. */
   fitPolicy?: PdfFitPolicy;
+  /** Facing pages side by side; vertical continuous layouts only. Default 'none'. */
+  spreadMode?: PdfSpreadMode;
   /** Double tap toggles zoom; when false, taps are reported without waiting for a second tap. Default true. */
   enableDoubleTapZoom?: boolean;
   /** Drags scroll the document (else they go to parent views). Default true. */

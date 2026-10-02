@@ -88,6 +88,7 @@ users see.
 | `singlePage` | `singlePage` | Shows `initialPage` (react-native-pdf: `page`); touches are ignored as before. Default fit is the whole page. |
 | `enableRTL` | `enableRTL` | Horizontal layouts only, page numbers in document order on both platforms. react-native-pdf on Android also reversed vertical layouts and page numbers; iOS (PDFKit) supports it only with `enablePaging`, as before. |
 | `fitPolicy={0 \| 1 \| 2}` | `fitPolicy="width" \| "height" \| "page"` | Named values. iOS applies one scale to the whole document (see the API docs). |
+| — | `spreadMode="pairs" \| "book"` | New: facing pages side by side in the vertical continuous layout. |
 | `scrollEnabled` | `scrollEnabled` | Same name and default. Disables drag scrolling (also paging swipes); the drag goes to parent views. |
 | `enableDoubleTapZoom` | `enableDoubleTapZoom` | Same name and default. When `false`, `onPageTap` also fires without waiting for a possible second tap. |
 | `enableAntialiasing` | — | Always on. |

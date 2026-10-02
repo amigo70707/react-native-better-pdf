@@ -1,0 +1,71 @@
+# Facing pages (spreadMode) in the vertical continuous layout, on the
+# 100-page `medium` fixture. The page indicator names the first page of the
+# spread under the viewport centre, so the same goToPage lands on a
+# different first page in pairs (11–12) and in a book (cover alone, then
+# 10–11); the last page is reported at the end; switching layouts keeps
+# the reader's page, not the spread's first page.
+appId: software.gmi.betterpdf.example
+---
+# Fresh state: the toolbar's layout mode lasts while the app runs.
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "medium.*" }
+- tapOn: "medium.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 15000 }
+# The layout button cycles to Pairs after the six single-page modes.
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- tapOn: "Paged"
+- tapOn: "Paged H"
+- tapOn: "RTL"
+- tapOn: "Paged RTL"
+- extendedWaitUntil: { visible: "Pairs", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "1 / 100"
+
+# goToPage(10), the 11th page: pairs show pages 11–12.
+- tapOn: "+10"
+- extendedWaitUntil: { visible: "11 / 100", timeout: 5000 }
+- tapOn: "+10"
+- extendedWaitUntil: { visible: "21 / 100", timeout: 5000 }
+- takeScreenshot: spreads-pairs
+
+# The same page in a book is the second of pages 20–21.
+- tapOn: "Pairs"
+- extendedWaitUntil: { visible: "Book", timeout: 5000 }
+- extendedWaitUntil: { visible: "20 / 100", timeout: 5000 }
+- takeScreenshot: spreads-book
+# The view resizing (the search bar opens and closes, as on rotation)
+# keeps the spread at the top: page 20's top-left within 2 digits of it.
+- tapOn: "Find"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 20 · y -?[0-9]{1,2} · .*" }
+    timeout: 5000
+- tapOn: "Find"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 20 · y -?[0-9]{1,2} · .*" }
+    timeout: 5000
+- assertVisible: "20 / 100"
+# One page per row again: the reader's page 21, not the spread's 20.
+- tapOn: "Book"
+- extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
+- waitForAnimationToEnd
+- assertVisible: "21 / 100"
+
+# At the end, the last page — not the first page of the last spread.
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- tapOn: "Paged"
+- tapOn: "Paged H"
+- tapOn: "RTL"
+- tapOn: "Paged RTL"
+- extendedWaitUntil: { visible: "Pairs", timeout: 5000 }
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "100 / 100", timeout: 5000 }
+- tapOn: "Pairs"
+- tapOn: "Book"
+- extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
+- tapOn: "‹ Back"

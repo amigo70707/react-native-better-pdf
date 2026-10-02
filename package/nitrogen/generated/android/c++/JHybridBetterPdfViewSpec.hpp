@@ -72,6 +72,8 @@ namespace margelo::nitro::betterpdf {
     void setSinglePage(std::optional<bool> singlePage) override;
     std::optional<PdfFitPolicy> getFitPolicy() override;
     void setFitPolicy(std::optional<PdfFitPolicy> fitPolicy) override;
+    std::optional<PdfSpreadMode> getSpreadMode() override;
+    void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) override;
     std::optional<bool> getEnableDoubleTapZoom() override;
     void setEnableDoubleTapZoom(std::optional<bool> enableDoubleTapZoom) override;
     std::optional<bool> getScrollEnabled() override;

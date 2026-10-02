@@ -305,4 +305,152 @@ class PdfDocumentLayoutTest {
     assertTrue(rtl.isEndVisible(0f, 595f))
     assertFalse(rtl.isEndVisible(rtl.contentWidth - 595f, rtl.contentWidth))
   }
+
+  // region Facing pages
+
+  private fun spreads(
+    count: Int,
+    spread: PdfDocumentLayout.Spread,
+    sizes: List<PageSize> = List(count) { a4 },
+    fit: PdfDocumentLayout.Fit = PdfDocumentLayout.Fit.WIDTH,
+  ) = PdfDocumentLayout(sizes, viewportWidth = 1000f, spacing = 10f, viewportHeight = 800f, fit = fit, spread = spread)
+
+  @Test
+  fun `pairs put two pages in a row, each fitting half the width and meeting in the middle`() {
+    val layout = spreads(4, PdfDocumentLayout.Spread.PAIRS)
+    val height = 500f * 842f / 595f
+    assertEquals(500f, layout.pageWidth(0), 0.01f)
+    assertEquals(0f, layout.pageLeft(0), 0.01f)
+    assertEquals(500f, layout.pageLeft(1), 0.01f)
+    assertEquals(layout.pageTop(0), layout.pageTop(1), 0f)
+    assertEquals(5f, layout.pageTop(0), 0f)
+    assertEquals(5f + height + 10f, layout.pageTop(2), 0.01f)
+    assertEquals(layout.pageTop(2), layout.pageTop(3), 0f)
+    assertEquals(2 * height + 2 * 10f, layout.contentHeight, 0.01f)
+    assertEquals(1000f, layout.contentWidth, 0.01f)
+  }
+
+  @Test
+  fun `book shows the first page alone and centred, then pairs`() {
+    val layout = spreads(4, PdfDocumentLayout.Spread.BOOK)
+    // Rows: [0], [1, 2], [3].
+    assertEquals(250f, layout.pageLeft(0), 0.01f)
+    assertEquals(0f, layout.pageLeft(1), 0.01f)
+    assertEquals(500f, layout.pageLeft(2), 0.01f)
+    assertEquals(layout.pageTop(1), layout.pageTop(2), 0f)
+    // A last page without a partner is centred too.
+    assertEquals(250f, layout.pageLeft(3), 0.01f)
+    assertTrue(layout.pageTop(3) > layout.pageBottom(1))
+  }
+
+  @Test
+  fun `an odd page at the end of pairs is centred`() {
+    val layout = spreads(3, PdfDocumentLayout.Spread.PAIRS)
+    assertEquals(250f, layout.pageLeft(2), 0.01f)
+  }
+
+  @Test
+  fun `a shorter facing page is centred along its row, and rows of different widths are centred as a whole`() {
+    val landscape = PageSize(842f, 595f)
+    val layout = PdfDocumentLayout(
+      listOf(a4, landscape),
+      viewportWidth = 1000f,
+      spacing = 10f,
+      viewportHeight = 600f,
+      fit = PdfDocumentLayout.Fit.PAGE,
+      spread = PdfDocumentLayout.Spread.PAIRS,
+    )
+    // Fit page within a 500-wide column, 600 high: A4 is limited by height.
+    val a4Width = 600f * 595f / 842f
+    val landscapeHeight = 500f * 595f / 842f
+    assertEquals(600f, layout.pageHeight(0), 0.01f)
+    assertEquals(a4Width, layout.pageWidth(0), 0.01f)
+    assertEquals(500f, layout.pageWidth(1), 0.01f)
+    assertEquals(5f, layout.pageTop(0), 0.01f)
+    assertEquals(5f + (600f - landscapeHeight) / 2f, layout.pageTop(1), 0.01f)
+    // The pair is centred, its pages touching.
+    assertEquals((1000f - a4Width - 500f) / 2f, layout.pageLeft(0), 0.01f)
+    assertEquals(layout.pageRight(0), layout.pageLeft(1), 0.01f)
+  }
+
+  @Test
+  fun `fit height ignores the columns`() {
+    val layout = spreads(2, PdfDocumentLayout.Spread.PAIRS, fit = PdfDocumentLayout.Fit.HEIGHT)
+    assertEquals(800f, layout.pageHeight(0), 0.01f)
+    assertEquals(800f * 595f / 842f, layout.pageWidth(0), 0.01f)
+  }
+
+  @Test
+  fun `lookups report the first page of a spread and move by rows`() {
+    val layout = spreads(5, PdfDocumentLayout.Spread.BOOK)
+    // Rows: [0], [1, 2], [3, 4].
+    assertEquals(1, layout.pageAt(layout.pageTop(2) + 10f))
+    assertEquals(3, layout.slotAt(layout.slotStart(4) + 1f))
+    assertEquals(layout.slotStart(1), layout.slotStart(2), 0f)
+    assertEquals(0, layout.spreadStart(0))
+    assertEquals(1, layout.spreadStart(2))
+    assertEquals(3, layout.spreadStart(4))
+    assertEquals(1, layout.nextInScrollOrder(0))
+    assertEquals(3, layout.nextInScrollOrder(2))
+    assertEquals(5, layout.nextInScrollOrder(4))
+    assertEquals(1, layout.previousInScrollOrder(4))
+    assertEquals(-1, layout.previousInScrollOrder(0))
+    // Both pages of every intersecting row.
+    assertEquals(1..4, layout.visibleRange(layout.pageTop(1) + 1f, layout.pageTop(3) + 1f))
+  }
+
+  @Test
+  fun `pagePointAt and pagePointNear pick the facing page by x`() {
+    val layout = spreads(2, PdfDocumentLayout.Spread.PAIRS)
+    val y = layout.pageTop(0) + 100f
+    assertEquals(0, layout.pagePointAt(100f, y)?.page)
+    val right = layout.pagePointAt(600f, y)
+    assertEquals(1, right?.page)
+    assertEquals(100f / layout.pointsToPixels(1), right!!.x, 0.01f)
+    assertEquals(1, layout.pagePointNear(900f, layout.slotStart(0))?.page)
+    assertEquals(0, layout.pagePointNear(10f, layout.slotStart(0))?.page)
+    // Round trip.
+    val point = layout.pagePointNear(700f, 300f)!!
+    assertEquals(700f, layout.contentX(point), 0.01f)
+    assertEquals(300f, layout.contentY(point), 0.01f)
+  }
+
+  @Test
+  fun `pagePointNear beside a lone page gives a point off the page`() {
+    val layout = spreads(3, PdfDocumentLayout.Spread.BOOK)
+    val point = layout.pagePointNear(0f, layout.slotStart(0))!!
+    assertEquals(0, point.page)
+    assertTrue(point.x < 0f)
+  }
+
+  @Test
+  fun `isEndVisible uses the bottom of the last row`() {
+    val layout = spreads(4, PdfDocumentLayout.Spread.PAIRS)
+    assertTrue(layout.isEndVisible(layout.pageBottom(3) - 800f, layout.pageBottom(3)))
+    assertFalse(layout.isEndVisible(0f, 800f))
+  }
+
+  @Test
+  fun `facing pages apply to vertical continuous layouts only`() {
+    val sizes = List(4) { a4 }
+    val horizontal = PdfDocumentLayout(sizes, 1000f, 10f, 800f, PdfDocumentLayout.Axis.HORIZONTAL, spread = PdfDocumentLayout.Spread.PAIRS)
+    val paged = PdfDocumentLayout(sizes, 1000f, 10f, 800f, isPaged = true, spread = PdfDocumentLayout.Spread.BOOK)
+    val single = PdfDocumentLayout(sizes, 1000f, 10f, 800f, PdfDocumentLayout.Axis.HORIZONTAL)
+    assertEquals(PdfDocumentLayout.Spread.NONE, horizontal.spread)
+    assertEquals(PdfDocumentLayout.Spread.NONE, paged.spread)
+    for (page in 0 until 4) {
+      assertEquals(single.pageLeft(page), horizontal.pageLeft(page), 0f)
+      assertEquals(page, paged.spreadStart(page))
+    }
+  }
+
+  @Test
+  fun `facing pages handle tiny documents`() {
+    assertEquals(-1, spreads(0, PdfDocumentLayout.Spread.BOOK).pageAt(0f))
+    val one = spreads(1, PdfDocumentLayout.Spread.PAIRS)
+    assertEquals(250f, one.pageLeft(0), 0.01f)
+    assertEquals(0..0, one.visibleRange(0f, 2000f))
+  }
+
+  // endregion
 }

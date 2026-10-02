@@ -23,6 +23,7 @@ export type { PdfPrintResult } from './types/PdfPrintResult';
 export type { PdfRenderPageOptions } from './types/PdfRenderPageOptions';
 export type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 export type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
+export type { PdfSpreadMode } from './types/PdfSpreadMode';
 export type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
 export type { PdfViewport } from './types/PdfViewport';
 export type { PdfViewportChangeEvent } from './types/PdfViewportChangeEvent';

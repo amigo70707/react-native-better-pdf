@@ -19,6 +19,8 @@ namespace margelo::nitro::betterpdf { struct NativePdfSource; }
 namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfSpreadMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -59,6 +61,7 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include <string>
 #include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfSpreadMode.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -129,6 +132,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setSinglePage(std::optional<bool> singlePage) = 0;
       virtual std::optional<PdfFitPolicy> getFitPolicy() = 0;
       virtual void setFitPolicy(std::optional<PdfFitPolicy> fitPolicy) = 0;
+      virtual std::optional<PdfSpreadMode> getSpreadMode() = 0;
+      virtual void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) = 0;
       virtual std::optional<bool> getEnableDoubleTapZoom() = 0;
       virtual void setEnableDoubleTapZoom(std::optional<bool> enableDoubleTapZoom) = 0;
       virtual std::optional<bool> getScrollEnabled() = 0;

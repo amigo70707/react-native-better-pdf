@@ -996,6 +996,66 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
 
+## Facing pages (v0.2)
+
+```ts
+spreadMode?: 'none' | 'pairs' | 'book'; // default 'none'
+```
+
+Requested in react-native-pdf as two pages side by side on tablets
+(#415, 6 reactions: landscape, swipe to the next two; #921; #666).
+
+- **Vertical continuous only, on both platforms.** Measured on iOS 26 with
+  the `small` fixture: PDFKit's `.twoUpContinuous` lays out facing pages
+  (with `displaysAsBook` for a cover), but its page view controller —
+  which `enablePaging` uses — always shows single pages; horizontal
+  two-up overlaps pages; and `.twoUp` without the page view controller
+  shows one spread that no swipe moves. Paged spreads (#415's swipe) would
+  mean a page view controller of our own with one `PDFView` per spread,
+  re-implementing search, selection, links, the viewport and
+  accessibility on iOS — out of scope. Android lays out everything
+  itself, but offers the same subset so the prop means the same on both.
+- **One literal union, named by what the reader sees** (`pairs` / `book`
+  rather than pdf.js's odd / even, or a boolean plus a cover flag). No
+  `'auto'`: the app knows its breakpoints, and switching `spreadMode` with
+  `useWindowDimensions()` keeps the reader's page.
+- **Geometry follows PDFKit** (measured on screenshots): each page fits
+  half the width at `fitPolicy` `'width'`, facing pages touch at the
+  spine, and a page without a partner — the cover, an odd last page — is
+  centred; rows are separated by `pageSpacing`. Android also fits each
+  page individually (iOS applies one scale to the document, as without
+  spreads), so it centres a row of two different widths as a whole and
+  centres the shorter page along its row. `'height'` and `'page'` fit
+  half-width columns on iOS too.
+- **The current page is the spread's first page** under the viewport
+  centre — the spine is the centre, so "the page under the centre" would
+  be arbitrary — and the last page once scrolled to the end, as without
+  spreads. Index arithmetic on both platforms (`spreadStart`).
+- **Switching keeps the reader's page, not the spread's first page.**
+  Both platforms keep a reading page: the reported page, except that with
+  facing pages it stays on the page the reader navigated to or was on
+  while that page is on screen. Two rules were not enough: keeping it only
+  while its spread was the reported one walked readers back a page per
+  switch (6 → 5 → 4), and on a tall view the row under the centre is the
+  one below the row `goToPage` put at the top, which walked them forward
+  (6 → 8, caught by `viewer-layout-modes` after `viewer-spreads`).
+  `goToPage`, `goToViewport` and the initial page set it. iOS puts the kept
+  page's spread at the top after a layout switch and after a resize that
+  lost it (PDFKit's `go(to:)` left it anywhere on screen; a resize is what
+  rotation does — `viewer-spreads` resizes by opening the search bar).
+- **Android:** `PdfDocumentLayout` now lays out rows of one or two pages;
+  every lookup (`slotStart`, `pageAt`, `visibleRange`, `isEndVisible`,
+  scroll order for accessibility) works on rows, and `pagePointAt` /
+  `pagePointNear` choose the facing page by x. The refactor kept all
+  existing layout tests passing unchanged before spreads were added.
+- **Not included:** right-to-left spreads (`enableRTL` stays horizontal
+  only), spreads in `singlePage` thumbnails.
+- **Tested:** 11 JVM layout tests (pairs, book, odd counts, unequal
+  pages, fit policies, lookups, points by x, end, ignored in other
+  layouts); `viewer-spreads` on both platforms (goToPage lands on 11–12 in
+  pairs and 10–11 in a book, the last page at the end, the reader's page
+  kept); the full e2e suite on both platforms.
+
 ## Printing (v0.2)
 
 ```ts

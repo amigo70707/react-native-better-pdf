@@ -46,6 +46,8 @@ appId: software.gmi.betterpdf.example
 - tapOn: "Paged H"
 - tapOn: "RTL"
 - tapOn: "Paged RTL"
+- tapOn: "Pairs"
+- tapOn: "Book"
 - extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
 - waitForAnimationToEnd
 - assertVisible: "6 / 100"

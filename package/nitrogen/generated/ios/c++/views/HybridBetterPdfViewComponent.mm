@@ -164,6 +164,12 @@ using namespace margelo::nitro::betterpdf::views;
           : !newViewProps.fitPolicy.hasSameValue(oldViewProps->fitPolicy)) {
       swiftPart.setFitPolicy(newViewProps.fitPolicy.get());
     }
+    // spreadMode: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.spreadMode.isProvided()
+          : !newViewProps.spreadMode.hasSameValue(oldViewProps->spreadMode)) {
+      swiftPart.setSpreadMode(newViewProps.spreadMode.get());
+    }
     // enableDoubleTapZoom: optional
     if (oldViewProps == nullptr
           ? newViewProps.enableDoubleTapZoom.isProvided()

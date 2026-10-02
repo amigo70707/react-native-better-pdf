@@ -15,6 +15,8 @@ namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
 namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfSpreadMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -65,6 +67,8 @@ namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 #include "JPdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "JPdfFitPolicy.hpp"
+#include "PdfSpreadMode.hpp"
+#include "JPdfSpreadMode.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "JFunc_void_PdfLoadEvent.hpp"
@@ -247,6 +251,15 @@ namespace margelo::nitro::betterpdf {
   void JHybridBetterPdfViewSpec::setFitPolicy(std::optional<PdfFitPolicy> fitPolicy) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JPdfFitPolicy> /* fitPolicy */)>("setFitPolicy");
     method(_javaPart, fitPolicy.has_value() ? JPdfFitPolicy::fromCpp(fitPolicy.value()) : nullptr);
+  }
+  std::optional<PdfSpreadMode> JHybridBetterPdfViewSpec::getSpreadMode() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPdfSpreadMode>()>("getSpreadMode");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setSpreadMode(std::optional<PdfSpreadMode> spreadMode) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JPdfSpreadMode> /* spreadMode */)>("setSpreadMode");
+    method(_javaPart, spreadMode.has_value() ? JPdfSpreadMode::fromCpp(spreadMode.value()) : nullptr);
   }
   std::optional<bool> JHybridBetterPdfViewSpec::getEnableDoubleTapZoom() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JBoolean>()>("getEnableDoubleTapZoom");

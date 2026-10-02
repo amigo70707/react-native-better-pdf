@@ -54,6 +54,8 @@ namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
+// Forward declaration of `PdfSpreadMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -87,6 +89,7 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "PdfRenderPageOptions.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
+#include "PdfSpreadMode.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfViewport.hpp"

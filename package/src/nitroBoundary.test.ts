@@ -62,6 +62,7 @@ describe('Nitro boundary', () => {
         'showsVerticalScrollIndicator',
         'singlePage',
         'source',
+        'spreadMode',
       ].sort(),
     );
   });

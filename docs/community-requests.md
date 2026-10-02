@@ -16,7 +16,7 @@ Source: `gh api` on wonday/react-native-pdf (1,814 stars; 821 issues, 383 open; 
 6. Annotation/signature fidelity on Android; editing — 10 issues, 9 r / 41 c: #848, #975, #930, #863, #862, #687, #314, PR #1042. partly.
 7. Large PDFs: fast first page, low memory — 6 issues, 10 r / 24 c: #659, #799, #482; OOM #519/#579/#682; lag #638. partly (measured advantage).
 8. Tap coordinates in PDF space; React overlays on page — #523 (6r), #616, #722, PR #618; overlays #350, #254, #449, #484. taps covered, overlays missing.
-9. Two-page spread — 4 issues, 7 r / 12 c: #415, #921, #666, #200. missing.
+9. Two-page spread — 4 issues, 7 r / 12 c: #415, #921, #666, #200. partly: vertical continuous (`spreadMode`); paged spreads are not possible with PDFKit (see api-design "Facing pages").
 10. Text selection + copy — 5 issues, 3 r / 13 c: #459, #419, #925, #690 (+ half of #555). COVERED.
 11. Cache control: purge, per-URL invalidation, prefetch, offline — 11 issues, 2 r / 21 c: #952, #964, #572, #566, #689, #696, #246. COVERED (cache options on the source, `PdfCache`; see api-design "Caching and offline").
 12. Per-page dimensions — 4 issues, 2 r / 24 c: #302, #346, #898. COVERED (`getPageSizes`).

@@ -43,6 +43,7 @@ import type { PdfPrintResult } from './types/PdfPrintResult';
 import type { PdfRenderPageOptions } from './types/PdfRenderPageOptions';
 import type { PdfScaleChangeEvent } from './types/PdfScaleChangeEvent';
 import type { PdfSearchChangeEvent } from './types/PdfSearchChangeEvent';
+import type { PdfSpreadMode } from './types/PdfSpreadMode';
 import type { PdfTextSelectionChangeEvent } from './types/PdfTextSelectionChangeEvent';
 import type { PdfViewport } from './types/PdfViewport';
 import type { PdfViewportChangeEvent } from './types/PdfViewportChangeEvent';
@@ -206,6 +207,20 @@ export interface PdfViewProps extends ViewProps {
    * scrolling vertically; otherwise the first page is fitted.
    */
   fitPolicy?: PdfFitPolicy;
+  /**
+   * Shows facing pages side by side, e.g. on a tablet in landscape (pass it
+   * from `useWindowDimensions()` to switch with the orientation): each page
+   * fits half the view's width, and a page without a partner (the cover in
+   * `'book'`, an odd page at the end) is centred. Vertical continuous
+   * layouts only: ignored with {@linkcode PdfViewProps.horizontal},
+   * {@linkcode PdfViewProps.enablePaging} and
+   * {@linkcode PdfViewProps.singlePage}. Default `'none'`.
+   *
+   * {@linkcode PdfViewProps.onPageChange} reports the first page of the
+   * spread under the viewport centre, or the last page once scrolled to the
+   * end.
+   */
+  spreadMode?: PdfSpreadMode;
   /**
    * Double tap toggles zoom (Android: fitted page ↔ 2×; iOS: PDFKit's own
    * zoom step, e.g. 1.7× for an A4 page on an iPhone). When `false`,
@@ -392,6 +407,7 @@ export function PdfView({
   enableRTL,
   singlePage,
   fitPolicy,
+  spreadMode,
   enableDoubleTapZoom,
   scrollEnabled,
   pageAccessibilityLabel,
@@ -579,6 +595,7 @@ export function PdfView({
             ? 'page'
             : 'width')
         }
+        spreadMode={spreadMode ?? 'none'}
         enableDoubleTapZoom={enableDoubleTapZoom ?? true}
         scrollEnabled={scrollEnabled ?? true}
         pageAccessibilityLabel={

@@ -67,6 +67,7 @@ example/e2e/run.sh <device> stress-open-close stress-rapid        # stress flows
 | `viewer-load-progress` | download progress of a remote document (fixture server throttled via `?bytesPerSecond=`) |
 | `viewer-offline` | `PdfCache` and cache options: persistent vs session copies across an app restart, 304 revalidation, stale copy while the fixture server is "offline" (`/__control/offline`), removal, cancellation, `clear()` |
 | `viewer-print` | print dialog previews the bundled sample and the unlocked protected fixture; closing resolves `isSubmitted: false`; Android saves the protected document as PDF (`isSubmitted: true`) |
+| `viewer-spreads` | facing pages (`pairs`, `book`) on 100 pages: the indicator names a spread's first page, the last page at the end; switching layouts keeps the reader's page |
 | `viewer-short-document` | a one-page document starts at the top (also after zooming in and out); rounded card on the Embedded screen (screenshot) |
 | `viewer-mixed-sizes` | estimated page sizes corrected on render (portrait, landscape, receipt, square) |
 | `viewer-text-selection` | long press selects a word, one event per handle drag, tap clears, `enableTextSelection={false}` in continuous and paged layouts |

@@ -36,6 +36,14 @@ const LAYOUTS = [
   { title: 'Paged H', horizontal: true, enablePaging: true },
   { title: 'RTL', horizontal: true, enablePaging: false, enableRTL: true },
   { title: 'Paged RTL', horizontal: true, enablePaging: true, enableRTL: true },
+  // Facing pages: vertical continuous only.
+  {
+    title: 'Pairs',
+    horizontal: false,
+    enablePaging: false,
+    spreadMode: 'pairs',
+  },
+  { title: 'Book', horizontal: false, enablePaging: false, spreadMode: 'book' },
 ] as const;
 
 /** `fitPolicy` values cycled by the toolbar button; `undefined` = default. */
@@ -345,6 +353,7 @@ export function ViewerScreen() {
             horizontal={layout.horizontal}
             enablePaging={layout.enablePaging}
             enableRTL={'enableRTL' in layout && layout.enableRTL}
+            spreadMode={'spreadMode' in layout ? layout.spreadMode : 'none'}
             fitPolicy={fit.fitPolicy}
             scrollEnabled={scrollEnabled}
             enableDoubleTapZoom={doubleTapZoom}

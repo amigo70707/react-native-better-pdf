@@ -52,6 +52,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var fitPolicy: PdfFitPolicy? {
     didSet { if fitPolicy != oldValue { needsLayoutModeUpdate = true } }
   }
+  var spreadMode: PdfSpreadMode? {
+    didSet { if spreadMode != oldValue { needsLayoutModeUpdate = true } }
+  }
   var enableDoubleTapZoom: Bool? {
     didSet { container.isDoubleTapZoomEnabled = enableDoubleTapZoom ?? true }
   }
@@ -119,6 +122,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// Paged layouts: the scale PDFKit showed the current page at on arrival.
   private var pagedFitScale: CGFloat?
   private var lastReportedPage = -1
+  /// The page a layout switch or resize keeps: the reported page, except
+  /// that with facing pages a page the reader was on stays while it is on
+  /// screen — spreads report the first page of the row under the centre,
+  /// which on a tall view can be the row below the one navigated to.
+  /// Switching to spreads and back returns to the reader's page.
+  private var readingPage = -1
   /// While a layout mode switch or resize is applied: PDFKit passes through
   /// other pages (often page 1) on the way, which must not count as the
   /// reader's page or reach `onPageChange`.
@@ -202,8 +211,17 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
 
   func goToPage(page: Double, animated: Bool) throws {
     DispatchQueue.main.async { [weak self] in
-      self?.scrollToPage(Int(page.rounded()), animated: animated)
+      guard let self else { return }
+      self.keepReadingPage(Int(page.rounded()))
+      self.scrollToPage(Int(page.rounded()), animated: animated)
     }
+  }
+
+  /// Navigation names the reader's page, also within a spread whose first
+  /// page is reported (see `readingPage`).
+  private func keepReadingPage(_ index: Int) {
+    guard let count = pdfView?.document?.pageCount, count > 0 else { return }
+    readingPage = min(max(index, 0), count - 1)
   }
 
   func goToViewport(viewport: PdfViewport) throws {
@@ -465,6 +483,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     container.resetSelection()
     fitScale = 0
     lastReportedPage = -1
+    readingPage = -1
     setStatsPageCount(0)
     guard let source else { return }
 
@@ -544,7 +563,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     // horizontal layout returns to page 1), so the reader's page is restored.
     let isResize = lastLayoutSize != .zero && container.bounds.size != lastLayoutSize
     lastLayoutSize = container.bounds.size
-    let pageToKeep = isResize && pendingInitialPage == nil ? lastReportedPage : -1
+    let pageToKeep = isResize && pendingInitialPage == nil ? readingPage : -1
     let newFit = currentFitScale(pdfView)
     if newFit > 0, abs(newFit - fitScale) > 0.0001 {
       applyScaleLimits(preservingRelativeScale: fitScale > 0)
@@ -559,11 +578,21 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       } else {
         scrollToPage(page, animated: false, centeredHorizontally: true)
       }
+      keepReadingPage(page)
       reportCurrentPage()
     }
-    if pageToKeep >= 0, currentPageIndex() != pageToKeep, let page = pdfView.document?.page(at: pageToKeep) {
+    // With facing pages the reported page can be another row's (see
+    // readingPage): the kept page is lost only when it left the screen.
+    let isPageLost = isSpreadLayout ? !isPageVisible(pageToKeep) : currentPageIndex() != pageToKeep
+    if pageToKeep >= 0, isPageLost, let page = pdfView.document?.page(at: pageToKeep) {
       pdfView.layoutIfNeeded()
-      pdfView.go(to: page)
+      // PDFKit shows a page of facing pages anywhere on screen; put its
+      // spread at the top, like a layout switch.
+      if isSpreadLayout {
+        scrollToPage(pageToKeep, animated: false)
+      } else {
+        pdfView.go(to: page)
+      }
     }
     applyTopAlignment()
     // The first layout and rotations move the viewport without scrolling.
@@ -577,6 +606,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     guard let pdfView, let document = pdfView.document, document.pageCount > 0, fitScale > 0 else { return }
     let clamped = min(max(index, 0), document.pageCount - 1)
     guard let page = document.page(at: clamped) else { return }
+    keepReadingPage(clamped)
     if isPagedLayout || isSinglePage {
       // Same placement as goToPage; the zoom is relative to the page view
       // controller's own fit (see relativeScale), applied only if it differs.
@@ -690,7 +720,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     if policy == .width && !horizontal {
       return pdfView.scaleFactorForSizeToFit
     }
-    return pdfView.scaleFactorToFit(policy)
+    return pdfView.scaleFactorToFit(policy, columns: isSpreadLayout ? 2 : 1)
   }
 
   private var resolvedMinScale: Double {
@@ -750,6 +780,30 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
 
   private var isRightToLeftLayout: Bool { (enableRTL ?? false) && isHorizontalLayout }
 
+  /// Facing pages side by side: `spreadMode` in the vertical continuous
+  /// layout only. PDFKit lays out two-up pages only there (measured: its
+  /// page view controller shows single pages, and horizontal two-up
+  /// overlaps them).
+  private var isSpreadLayout: Bool {
+    guard !isHorizontalLayout, !isPagedLayout, !isSinglePage else { return false }
+    switch spreadMode {
+    case .some(.pairs), .some(.book): return true
+    default: return false
+    }
+  }
+
+  private func isPageVisible(_ index: Int) -> Bool {
+    guard index >= 0, let pdfView, let page = pdfView.document?.page(at: index) else { return false }
+    return pdfView.visiblePages.contains(page)
+  }
+
+  /// The first page of the spread showing page `index` (itself without spreads).
+  private func spreadStart(of index: Int) -> Int {
+    guard isSpreadLayout else { return index }
+    if spreadMode == .some(.book) { return index == 0 ? 0 : index - (index - 1) % 2 }
+    return index - index % 2
+  }
+
   /// Scrolled to the far end where the last page is, even when it is too
   /// short to reach the centre. PDFKit mirrors RTL content without mirroring
   /// the scroll offset, so RTL checks the last page's on-screen frame.
@@ -781,13 +835,15 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     } else {
       let center = CGPoint(x: pdfView.bounds.midX, y: pdfView.bounds.midY)
       guard let page = pdfView.page(for: center, nearest: true) else { return nil }
-      index = document.index(for: page)
+      // Facing pages meet at the centre: report the spread's first page.
+      index = spreadStart(of: document.index(for: page))
     }
     return index == NSNotFound ? nil : index
   }
 
   private func reportCurrentPage() {
     guard !isRelayingOut, let document = pdfView?.document, let index = currentPageIndex() else { return }
+    if !(isSpreadLayout && isPageVisible(readingPage)) { readingPage = index }
     guard index != lastReportedPage else { return }
     lastReportedPage = index
     onPageChange?(PdfPageChangeEvent(page: Double(index), pageCount: Double(document.pageCount)))
@@ -862,11 +918,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     }
     // The page the app was told about (centre / end rule), not PDFKit's
     // top-of-viewport `currentPage`: they differ on a short last page.
-    let currentPage = lastReportedPage >= 0 ? pdfView.document?.page(at: lastReportedPage) : pdfView.currentPage
+    let currentPage = readingPage >= 0 ? pdfView.document?.page(at: readingPage) : pdfView.currentPage
     let paged = isPagedLayout
     // A single page is static, like react-native-pdf's: PDFKit shows one page
     // and touches go to the React Native parents (e.g. a Pressable thumbnail).
-    pdfView.displayMode = isSinglePage ? .singlePage : .singlePageContinuous
+    pdfView.displayMode = isSinglePage ? .singlePage : (isSpreadLayout ? .twoUpContinuous : .singlePageContinuous)
+    pdfView.displaysAsBook = isSpreadLayout && spreadMode == .some(.book)
     container.isUserInteractionEnabled = !isSinglePage
     pdfView.displayDirection = isHorizontalLayout ? .horizontal : .vertical
     pdfView.displaysRTL = isRightToLeftLayout
@@ -892,7 +949,15 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     pagedFitScale = nil
     layoutDidChange()
     // Switching modes keeps the reader on the same page.
-    if keepingCurrentPage, pendingInitialPage == nil, let currentPage { pdfView.go(to: currentPage) }
+    if keepingCurrentPage, pendingInitialPage == nil, let currentPage {
+      // PDFKit shows a page of facing pages anywhere on screen; put its
+      // spread at the top, like goToPage and Android.
+      if isSpreadLayout, let document = pdfView.document {
+        scrollToPage(document.index(for: currentPage), animated: false)
+      } else {
+        pdfView.go(to: currentPage)
+      }
+    }
   }
 
   /// Panning only: UIScrollView keeps pinch-zooming with scrolling disabled,

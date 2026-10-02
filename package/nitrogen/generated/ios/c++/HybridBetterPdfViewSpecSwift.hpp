@@ -20,6 +20,8 @@ namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
 namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfSpreadMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -66,6 +68,7 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfCacheMode.hpp"
 #include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfSpreadMode.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -211,6 +214,13 @@ namespace margelo::nitro::betterpdf {
     }
     inline void setFitPolicy(std::optional<PdfFitPolicy> fitPolicy) noexcept override {
       _swiftPart.setFitPolicy(fitPolicy);
+    }
+    inline std::optional<PdfSpreadMode> getSpreadMode() noexcept override {
+      auto __result = _swiftPart.getSpreadMode();
+      return __result;
+    }
+    inline void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) noexcept override {
+      _swiftPart.setSpreadMode(spreadMode);
     }
     inline std::optional<bool> getEnableDoubleTapZoom() noexcept override {
       auto __result = _swiftPart.getEnableDoubleTapZoom();

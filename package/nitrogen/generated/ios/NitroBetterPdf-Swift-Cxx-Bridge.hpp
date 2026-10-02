@@ -52,6 +52,8 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 // Forward declaration of `PdfSearchChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
+// Forward declaration of `PdfSpreadMode` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -90,6 +92,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfPrintResult.hpp"
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
+#include "PdfSpreadMode.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfViewport.hpp"
@@ -578,6 +581,21 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline PdfFitPolicy get_std__optional_PdfFitPolicy_(const std::optional<PdfFitPolicy>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<PdfSpreadMode>
+  /**
+   * Specialized version of `std::optional<PdfSpreadMode>`.
+   */
+  using std__optional_PdfSpreadMode_ = std::optional<PdfSpreadMode>;
+  inline std::optional<PdfSpreadMode> create_std__optional_PdfSpreadMode_(const PdfSpreadMode& value) noexcept {
+    return std::optional<PdfSpreadMode>(value);
+  }
+  inline bool has_value_std__optional_PdfSpreadMode_(const std::optional<PdfSpreadMode>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PdfSpreadMode get_std__optional_PdfSpreadMode_(const std::optional<PdfSpreadMode>& optional) noexcept {
     return optional.value();
   }
   
