@@ -23,6 +23,7 @@
 #include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
+#include "PdfColorScheme.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -69,6 +70,7 @@ namespace margelo::nitro::betterpdf::views {
     nitro::ReactProp<std::optional<bool>> singlePage;
     nitro::ReactProp<std::optional<PdfFitPolicy>> fitPolicy;
     nitro::ReactProp<std::optional<PdfSpreadMode>> spreadMode;
+    nitro::ReactProp<std::optional<PdfColorScheme>> colorScheme;
     nitro::ReactProp<std::optional<bool>> enableDoubleTapZoom;
     nitro::ReactProp<std::optional<bool>> scrollEnabled;
     nitro::ReactProp<std::optional<std::string>> pageAccessibilityLabel;
@@ -103,6 +105,7 @@ namespace margelo::nitro::betterpdf::views {
              singlePage.hasSameValue(other.singlePage) &&
              fitPolicy.hasSameValue(other.fitPolicy) &&
              spreadMode.hasSameValue(other.spreadMode) &&
+             colorScheme.hasSameValue(other.colorScheme) &&
              enableDoubleTapZoom.hasSameValue(other.enableDoubleTapZoom) &&
              scrollEnabled.hasSameValue(other.scrollEnabled) &&
              pageAccessibilityLabel.hasSameValue(other.pageAccessibilityLabel) &&
@@ -138,6 +141,7 @@ namespace margelo::nitro::betterpdf::views {
              singlePage.isProvided() ||
              fitPolicy.isProvided() ||
              spreadMode.isProvided() ||
+             colorScheme.isProvided() ||
              enableDoubleTapZoom.isProvided() ||
              scrollEnabled.isProvided() ||
              pageAccessibilityLabel.isProvided() ||

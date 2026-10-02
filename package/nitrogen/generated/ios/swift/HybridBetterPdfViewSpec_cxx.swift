@@ -381,6 +381,23 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var colorScheme: bridge.std__optional_PdfColorScheme_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_PdfColorScheme_ in
+        if let __unwrappedValue = self.__implementation.colorScheme {
+          return bridge.create_std__optional_PdfColorScheme_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.colorScheme = newValue.value
+    }
+  }
+  
   public final var enableDoubleTapZoom: bridge.std__optional_bool_ {
     @inline(__always)
     get {

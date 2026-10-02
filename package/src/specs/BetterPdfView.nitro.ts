@@ -4,6 +4,7 @@ import type {
   HybridViewProps,
 } from 'react-native-nitro-modules';
 import type { NativePdfSource } from '../types/NativePdfSource';
+import type { PdfColorScheme } from '../types/PdfColorScheme';
 import type { PdfError } from '../types/PdfError';
 import type { PdfFitPolicy } from '../types/PdfFitPolicy';
 import type { PdfInitialPosition } from '../types/PdfInitialPosition';
@@ -52,6 +53,8 @@ export interface PdfViewProps extends HybridViewProps {
   fitPolicy?: PdfFitPolicy;
   /** Facing pages side by side; vertical continuous layouts only. Default 'none'. */
   spreadMode?: PdfSpreadMode;
+  /** 'dark' shows pages with lightness inverted and hues kept. Default 'light'. */
+  colorScheme?: PdfColorScheme;
   /** Double tap toggles zoom; when false, taps are reported without waiting for a second tap. Default true. */
   enableDoubleTapZoom?: boolean;
   /** Drags scroll the document (else they go to parent views). Default true. */

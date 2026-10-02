@@ -32,6 +32,7 @@ describe('Nitro boundary', () => {
   test('exposes exactly the reviewed props and events', () => {
     expect(attributes).toEqual(
       [
+        'colorScheme',
         'enableDoubleTapZoom',
         'enableTextSelection',
         'enablePaging',

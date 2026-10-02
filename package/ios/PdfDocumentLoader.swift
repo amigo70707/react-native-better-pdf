@@ -115,7 +115,8 @@ final class PdfDocumentLoader {
   private static func openDocument(at url: URL, password: String?) -> Result<PDFDocument, PdfLoadFailure> {
     // PDFDocument(url:) parses the cross-reference table synchronously; this
     // is why the whole load runs on `workQueue`.
-    guard let document = PDFDocument(url: url) else {
+    // The displayed document draws dark pages (see ColorSchemeDocument).
+    guard let document = ColorSchemeDocument(url: url) else {
       return .failure(.invalidPdf(url.path))
     }
     if document.isLocked {

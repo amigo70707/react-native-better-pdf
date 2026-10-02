@@ -16,6 +16,7 @@
     "singlePage": true,
     "fitPolicy": true,
     "spreadMode": true,
+    "colorScheme": true,
     "enableDoubleTapZoom": true,
     "scrollEnabled": true,
     "pageAccessibilityLabel": true,

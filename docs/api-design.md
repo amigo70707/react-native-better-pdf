@@ -996,6 +996,68 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
 
+## Dark pages (v0.2)
+
+```ts
+colorScheme?: 'light' | 'dark' | 'unspecified' | null; // default 'light'
+```
+
+Requested in react-native-pdf as night mode (#325, #996 — a patch
+exposing AndroidPdfViewer's plain inversion on Android) and as a
+cross-platform theme that does not "distort document colours" (#1038).
+
+- **Lightness inverted, hues kept**, not plain inversion: plain inversion
+  turns a red heading cyan and every photo into a negative — #1038's
+  complaint. Photos are still inverted (a dark mode cannot know which
+  images are photos).
+- **`colorScheme`, typed to take `useColorScheme()` as it is**: React
+  Native 0.86 returns `'light' | 'dark' | 'unspecified'`, older versions
+  `null`; anything but `'dark'` keeps the document's colours. Native code
+  gets a concrete `'light' | 'dark'`. React Native does not export its
+  `ColorSchemeName`, so the union is spelled out.
+- **Android: a colour filter at draw time.** Inversion followed by a 180°
+  hue rotation (the luminance-preserving matrix of CSS `hue-rotate`) as a
+  `ColorMatrixColorFilter` on the paint that draws page bitmaps; the
+  white placeholder becomes black. Rendered bitmaps, the cache and page
+  images are untouched, toggling is an `invalidate()`, and highlights and
+  the selection use their own paints.
+- **iOS: a `PDFPage` subclass**, through `classForPage()` on a
+  `PDFDocument` subclass that is its own delegate (the loader creates it;
+  separate instances for page images, printing and the outline stay
+  plain). When dark, a page is drawn on white, inverted with a difference
+  blend against white, then drawn again into a transparency layer
+  composited in the hue mode — hue from the page, saturation and
+  lightness from the inverted result. Drawn straight in the hue mode,
+  appearance streams that set their own blend mode would escape it.
+- **iOS annotations keep their colours** (measured on iOS 26: PDFKit
+  draws them apart from the page, so the page override never sees them)
+  and PDFKit composites text markup (highlight, underline, strike-out,
+  squiggly) in the multiply mode, which turned it black on a dark page. An
+  annotation subclass (`class(forAnnotationType:)`) skips PDFKit's markup
+  pass while dark, and the page draws markup itself in the screen mode —
+  the inverse of multiply — with highlights at half strength so white
+  text on them should stay readable (not measured: the fixture's
+  highlight covers no text). Toggling light → dark → light restores
+  PDFKit's own markup (checked on the `annotations` fixture). Only these
+  four types get the subclass; links and form fields stay PDFKit's.
+- **Redrawing on iOS:** PDFKit keeps the tiles it drew. `setNeedsDisplay`
+  on its layers, `annotationsChanged(on:)` for every page and toggling
+  `pageShadowsEnabled` all left them (measured); switching `displayBox`
+  away and back makes it draw every page again and ends in the same
+  layout, so the exact scroll offset is put back. Paged layouts keep their
+  page (checked in Paged and Paged H); taps and links still map correctly
+  afterwards (`viewer-links` after three toggles).
+- **Cost:** `stress-rapid` on the 1000-page scan on iOS, dark vs light:
+  213 s vs 218 s, peak RSS 675 MB vs 670 MB (debug build, simulator) —
+  drawing each tile twice did not show. Android filters at draw time.
+- **Not included:** sepia or custom page colours; inverting annotation
+  colours on iOS (would need annotations drawn offscreen and filtered).
+- **Tested:** `viewer-dark` on both platforms (the Embedded card switches
+  while shown; the screenshot is reviewed by hand — Maestro cannot check
+  colours), the prop mapping in a unit test, the `annotations` fixture
+  compared on both platforms, runtime toggles in paged layouts and on
+  `page-boxes` (crop box ≠ media box), and the full suite on both.
+
 ## Facing pages (v0.2)
 
 ```ts

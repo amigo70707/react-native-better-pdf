@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 export const colors = {
   canvas: '#E4E4E7',
+  /** Around dark pages (`colorScheme="dark"`). */
+  darkCanvas: '#27272A',
   card: '#FFFFFF',
   text: '#18181B',
   muted: '#71717A',

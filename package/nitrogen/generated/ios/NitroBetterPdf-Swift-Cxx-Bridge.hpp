@@ -18,6 +18,8 @@ namespace margelo::nitro::betterpdf { struct NativePdfSource; }
 namespace margelo::nitro::betterpdf { struct PdfCacheEntry; }
 // Forward declaration of `PdfCacheMode` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
+// Forward declaration of `PdfColorScheme` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
 // Forward declaration of `PdfDownloadResult` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfDownloadResult; }
 // Forward declaration of `PdfErrorCode` to properly resolve imports.
@@ -75,6 +77,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "NativePdfSource.hpp"
 #include "PdfCacheEntry.hpp"
 #include "PdfCacheMode.hpp"
+#include "PdfColorScheme.hpp"
 #include "PdfDownloadResult.hpp"
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
@@ -596,6 +599,21 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline PdfSpreadMode get_std__optional_PdfSpreadMode_(const std::optional<PdfSpreadMode>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<PdfColorScheme>
+  /**
+   * Specialized version of `std::optional<PdfColorScheme>`.
+   */
+  using std__optional_PdfColorScheme_ = std::optional<PdfColorScheme>;
+  inline std::optional<PdfColorScheme> create_std__optional_PdfColorScheme_(const PdfColorScheme& value) noexcept {
+    return std::optional<PdfColorScheme>(value);
+  }
+  inline bool has_value_std__optional_PdfColorScheme_(const std::optional<PdfColorScheme>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline PdfColorScheme get_std__optional_PdfColorScheme_(const std::optional<PdfColorScheme>& optional) noexcept {
     return optional.value();
   }
   

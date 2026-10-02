@@ -99,6 +99,11 @@ class HybridBetterPdfView(
       field = value
       needsLayoutModeUpdate = true
     }
+  override var colorScheme: PdfColorScheme? = null
+    set(value) {
+      field = value
+      documentView.isDark = value == PdfColorScheme.DARK
+    }
   override var enableDoubleTapZoom: Boolean? = null
     set(value) {
       field = value

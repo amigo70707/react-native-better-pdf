@@ -1,0 +1,16 @@
+# Dark pages (colorScheme): the Embedded screen's toggle switches its card
+# to dark and back while the document is shown. Maestro cannot check
+# colours; the screenshot is for review (black paper, white text).
+appId: software.gmi.betterpdf.example
+---
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Embedded"
+- extendedWaitUntil: { visible: { id: "embedded-pdf" }, timeout: 15000 }
+- tapOn: "Dark off"
+- extendedWaitUntil: { visible: "Dark on", timeout: 5000 }
+- waitForAnimationToEnd
+- takeScreenshot: embedded-dark
+- tapOn: "Dark on"
+- extendedWaitUntil: { visible: "Dark off", timeout: 5000 }
+- assertVisible: "Document page 1"
+- tapOn: "Viewer"

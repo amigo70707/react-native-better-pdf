@@ -32,6 +32,7 @@ namespace margelo::nitro::betterpdf::views {
     singlePage(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "singlePage", rawProps, sourceProps.singlePage)),
     fitPolicy(nitro::ReactProp<std::optional<PdfFitPolicy>>::fromRawValue("BetterPdfView", "fitPolicy", rawProps, sourceProps.fitPolicy)),
     spreadMode(nitro::ReactProp<std::optional<PdfSpreadMode>>::fromRawValue("BetterPdfView", "spreadMode", rawProps, sourceProps.spreadMode)),
+    colorScheme(nitro::ReactProp<std::optional<PdfColorScheme>>::fromRawValue("BetterPdfView", "colorScheme", rawProps, sourceProps.colorScheme)),
     enableDoubleTapZoom(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "enableDoubleTapZoom", rawProps, sourceProps.enableDoubleTapZoom)),
     scrollEnabled(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "scrollEnabled", rawProps, sourceProps.scrollEnabled)),
     pageAccessibilityLabel(nitro::ReactProp<std::optional<std::string>>::fromRawValue("BetterPdfView", "pageAccessibilityLabel", rawProps, sourceProps.pageAccessibilityLabel)),
@@ -66,6 +67,7 @@ namespace margelo::nitro::betterpdf::views {
       case hashString("singlePage"): return true;
       case hashString("fitPolicy"): return true;
       case hashString("spreadMode"): return true;
+      case hashString("colorScheme"): return true;
       case hashString("enableDoubleTapZoom"): return true;
       case hashString("scrollEnabled"): return true;
       case hashString("pageAccessibilityLabel"): return true;

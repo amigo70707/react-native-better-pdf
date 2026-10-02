@@ -27,6 +27,7 @@ import type {
   PdfViewProps as NativeProps,
 } from './specs/BetterPdfView.nitro';
 import type { NativePdfSource } from './types/NativePdfSource';
+import type { PdfColorScheme } from './types/PdfColorScheme';
 import type { PdfError } from './types/PdfError';
 import type { PdfFitPolicy } from './types/PdfFitPolicy';
 import type { PdfInitialPosition } from './types/PdfInitialPosition';
@@ -222,6 +223,20 @@ export interface PdfViewProps extends ViewProps {
    */
   spreadMode?: PdfSpreadMode;
   /**
+   * Shows pages in dark colours for reading in the dark: lightness
+   * inverted, hues kept (white paper turns black, black text white, a red
+   * heading stays red; photos are inverted too). The area around pages is
+   * the view's `backgroundColor`. Page images (`renderPage`) and printing
+   * keep the document's colours. On iOS annotations keep their own colours
+   * (PDFKit draws them apart from the page); highlights, underlines and
+   * strike-outs are lightened onto the dark page.
+   *
+   * Takes `useColorScheme()`'s value as it is, to follow the system:
+   * anything but `'dark'` (also `'unspecified'` and `null`) shows the
+   * document's colours. Default `'light'`.
+   */
+  colorScheme?: PdfColorScheme | 'unspecified' | null;
+  /**
    * Double tap toggles zoom (Android: fitted page ↔ 2×; iOS: PDFKit's own
    * zoom step, e.g. 1.7× for an A4 page on an iPhone). When `false`,
    * double taps do nothing and {@linkcode PdfViewProps.onPageTap} fires
@@ -408,6 +423,7 @@ export function PdfView({
   singlePage,
   fitPolicy,
   spreadMode,
+  colorScheme,
   enableDoubleTapZoom,
   scrollEnabled,
   pageAccessibilityLabel,
@@ -596,6 +612,7 @@ export function PdfView({
             : 'width')
         }
         spreadMode={spreadMode ?? 'none'}
+        colorScheme={colorScheme === 'dark' ? 'dark' : 'light'}
         enableDoubleTapZoom={enableDoubleTapZoom ?? true}
         scrollEnabled={scrollEnabled ?? true}
         pageAccessibilityLabel={

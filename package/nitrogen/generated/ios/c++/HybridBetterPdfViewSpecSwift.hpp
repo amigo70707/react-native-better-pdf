@@ -22,6 +22,8 @@ namespace margelo::nitro::betterpdf { struct PdfInitialPosition; }
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 // Forward declaration of `PdfSpreadMode` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
+// Forward declaration of `PdfColorScheme` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -69,6 +71,7 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfInitialPosition.hpp"
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
+#include "PdfColorScheme.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -221,6 +224,13 @@ namespace margelo::nitro::betterpdf {
     }
     inline void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) noexcept override {
       _swiftPart.setSpreadMode(spreadMode);
+    }
+    inline std::optional<PdfColorScheme> getColorScheme() noexcept override {
+      auto __result = _swiftPart.getColorScheme();
+      return __result;
+    }
+    inline void setColorScheme(std::optional<PdfColorScheme> colorScheme) noexcept override {
+      _swiftPart.setColorScheme(colorScheme);
     }
     inline std::optional<bool> getEnableDoubleTapZoom() noexcept override {
       auto __result = _swiftPart.getEnableDoubleTapZoom();

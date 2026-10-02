@@ -18,6 +18,8 @@ namespace margelo::nitro::betterpdf { struct NativePdfSource; }
 namespace margelo::nitro::betterpdf { struct PdfCacheEntry; }
 // Forward declaration of `PdfCacheMode` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
+// Forward declaration of `PdfColorScheme` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
 // Forward declaration of `PdfDownloadResult` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfDownloadResult; }
 // Forward declaration of `PdfErrorCode` to properly resolve imports.
@@ -71,6 +73,7 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "NativePdfSource.hpp"
 #include "PdfCacheEntry.hpp"
 #include "PdfCacheMode.hpp"
+#include "PdfColorScheme.hpp"
 #include "PdfDownloadResult.hpp"
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"

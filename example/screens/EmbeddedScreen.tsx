@@ -10,6 +10,7 @@ import { Button, colors } from '../ui';
  */
 export function EmbeddedScreen() {
   const [innerScroll, setInnerScroll] = useState(false);
+  const [isDark, setDark] = useState(false);
   const [page, setPage] = useState(0);
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -22,6 +23,10 @@ export function EmbeddedScreen() {
           title={innerScroll ? 'Inner scroll on' : 'Inner scroll off'}
           onPress={() => setInnerScroll((value) => !value)}
         />
+        <Button
+          title={isDark ? 'Dark on' : 'Dark off'}
+          onPress={() => setDark((value) => !value)}
+        />
         <Text style={styles.page}>{`Document page ${page + 1}`}</Text>
       </View>
       <PdfView
@@ -30,10 +35,11 @@ export function EmbeddedScreen() {
         source={require('../assets/sample.pdf')}
         testID="embedded-pdf"
         scrollEnabled={innerScroll}
+        colorScheme={isDark ? 'dark' : 'light'}
         // Screen readers announce pages in the app's language.
         pageAccessibilityLabel="Strona {page} z {pageCount}"
         onPageChange={(event) => setPage(event.page)}
-        style={styles.pdf}
+        style={[styles.pdf, isDark && { backgroundColor: colors.darkCanvas }]}
       />
       {Array.from({ length: 6 }, (_, index) => (
         <Text key={index} style={styles.body}>

@@ -104,6 +104,12 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
+  abstract var colorScheme: PdfColorScheme?
+  
+  @get:DoNotStrip
+  @get:Keep
+  @set:DoNotStrip
+  @set:Keep
   abstract var enableDoubleTapZoom: Boolean?
   
   @get:DoNotStrip

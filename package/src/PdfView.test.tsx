@@ -412,6 +412,25 @@ describe('PdfView', () => {
     expect(lastHost().testID).toBeUndefined();
   });
 
+  test("takes useColorScheme()'s values and sends light or dark", () => {
+    const renderer = render(
+      <PdfView source={{ uri: 'x' }} colorScheme="dark" />,
+    );
+    expect(lastHost().colorScheme).toBe('dark');
+    act(() =>
+      renderer.update(
+        <PdfView source={{ uri: 'x' }} colorScheme="unspecified" />,
+      ),
+    );
+    expect(lastHost().colorScheme).toBe('light');
+    act(() =>
+      renderer.update(<PdfView source={{ uri: 'x' }} colorScheme={null} />),
+    );
+    expect(lastHost().colorScheme).toBe('light');
+    act(() => renderer.update(<PdfView source={{ uri: 'x' }} />));
+    expect(lastHost().colorScheme).toBe('light');
+  });
+
   test('ref methods default to animated and map options to native arguments', () => {
     const ref = createRef<PdfViewRef>();
     render(<PdfView ref={ref} source={{ uri: 'x' }} />);

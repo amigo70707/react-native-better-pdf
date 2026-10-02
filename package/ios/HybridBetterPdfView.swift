@@ -55,6 +55,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var spreadMode: PdfSpreadMode? {
     didSet { if spreadMode != oldValue { needsLayoutModeUpdate = true } }
   }
+  var colorScheme: PdfColorScheme? {
+    didSet { if colorScheme != oldValue { applyColorScheme() } }
+  }
   var enableDoubleTapZoom: Bool? {
     didSet { container.isDoubleTapZoomEnabled = enableDoubleTapZoom ?? true }
   }
@@ -531,6 +534,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     if let x = position?.x, let y = position?.y, x.isFinite, y.isFinite, pendingInitialPage == requestedPage {
       pendingInitialPoint = CGPoint(x: x, y: y)
     }
+    (document as? ColorSchemeDocument)?.isDark = colorScheme == .some(.dark)
     pdfView.document = document
     setStatsPageCount(pageCount)
     // A new document starts at initialPage, not at the previous one's page.
@@ -779,6 +783,34 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private var isPagedLayout: Bool { (enablePaging ?? false) && !isSinglePage }
 
   private var isRightToLeftLayout: Bool { (enableRTL ?? false) && isHorizontalLayout }
+
+  /// Draws the displayed document's pages dark or in their own colours.
+  /// PDFKit keeps the tiles it drew and redraws none on request (measured:
+  /// `setNeedsDisplay` on its layers and `annotationsChanged(on:)` leave
+  /// them), but a display box change makes it lay out and draw every page
+  /// again: switching away and back ends in the same layout, so the exact
+  /// scroll position is put back (an anchor point could land a fraction
+  /// off the end of the document and lose "at the end").
+  private func applyColorScheme() {
+    guard let pdfView, let document = pdfView.document as? ColorSchemeDocument else { return }
+    let isDark = colorScheme == .some(.dark)
+    guard document.isDark != isDark else { return }
+    document.isDark = isDark
+    let offset = isPagedLayout || isSinglePage ? nil : scrollView?.contentOffset
+    let wasRelayingOut = isRelayingOut
+    isRelayingOut = true
+    defer {
+      isRelayingOut = wasRelayingOut
+      if !wasRelayingOut { reportCurrentPage() }
+    }
+    let box = pdfView.displayBox
+    pdfView.displayBox = box == .cropBox ? .mediaBox : .cropBox
+    pdfView.displayBox = box
+    if let offset, let scrollView {
+      pdfView.layoutIfNeeded()
+      scrollView.setContentOffset(offset, animated: false)
+    }
+  }
 
   /// Facing pages side by side: `spreadMode` in the vertical continuous
   /// layout only. PDFKit lays out two-up pages only there (measured: its

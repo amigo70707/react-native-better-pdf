@@ -8,6 +8,8 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
@@ -119,6 +121,21 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     set(value) {
       field = value
       searchCurrentPaint.color = value ?: SEARCH_CURRENT_COLOR
+      invalidate()
+    }
+
+  /**
+   * Pages drawn dark: lightness inverted, hues kept ([DARK_PAGES]). A colour
+   * filter on drawing only — rendered bitmaps, the cache and page images
+   * keep the document's colours; highlights and the selection are drawn
+   * unfiltered.
+   */
+  var isDark = false
+    set(value) {
+      if (field == value) return
+      field = value
+      bitmapPaint.colorFilter = if (value) DARK_PAGES else null
+      placeholderPaint.color = if (value) Color.BLACK else Color.WHITE
       invalidate()
     }
 
@@ -1405,6 +1422,33 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   // endregion
 
   private companion object {
+    /**
+     * Inversion, then a 180° hue rotation (the luminance-preserving matrix
+     * of CSS `hue-rotate`): white paper turns black, black text white, and
+     * a red heading light red rather than cyan.
+     */
+    val DARK_PAGES = ColorMatrixColorFilter(
+      ColorMatrix(
+        floatArrayOf(
+          -1f, 0f, 0f, 0f, 255f,
+          0f, -1f, 0f, 0f, 255f,
+          0f, 0f, -1f, 0f, 255f,
+          0f, 0f, 0f, 1f, 0f,
+        ),
+      ).apply {
+        postConcat(
+          ColorMatrix(
+            floatArrayOf(
+              -0.574f, 1.43f, 0.144f, 0f, 0f,
+              0.426f, 0.43f, 0.144f, 0f, 0f,
+              0.426f, 1.43f, -0.856f, 0f, 0f,
+              0f, 0f, 0f, 1f, 0f,
+            ),
+          ),
+        )
+      },
+    )
+
     /** Translucent yellow and orange, readable over black text on white. */
     const val SEARCH_MATCH_COLOR = 0x66FFD600
     const val SEARCH_CURRENT_COLOR = 0x99FF8C00.toInt()

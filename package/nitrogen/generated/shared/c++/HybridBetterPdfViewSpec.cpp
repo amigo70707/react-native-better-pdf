@@ -38,6 +38,8 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("fitPolicy", &HybridBetterPdfViewSpec::setFitPolicy);
       prototype.registerHybridGetter("spreadMode", &HybridBetterPdfViewSpec::getSpreadMode);
       prototype.registerHybridSetter("spreadMode", &HybridBetterPdfViewSpec::setSpreadMode);
+      prototype.registerHybridGetter("colorScheme", &HybridBetterPdfViewSpec::getColorScheme);
+      prototype.registerHybridSetter("colorScheme", &HybridBetterPdfViewSpec::setColorScheme);
       prototype.registerHybridGetter("enableDoubleTapZoom", &HybridBetterPdfViewSpec::getEnableDoubleTapZoom);
       prototype.registerHybridSetter("enableDoubleTapZoom", &HybridBetterPdfViewSpec::setEnableDoubleTapZoom);
       prototype.registerHybridGetter("scrollEnabled", &HybridBetterPdfViewSpec::getScrollEnabled);

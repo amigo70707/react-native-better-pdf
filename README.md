@@ -147,6 +147,7 @@ re-renders never reload the document.
 | `singlePage` | `boolean` | `false` | one static page (`initialPage`, switched by `goToPage`) for thumbnails; ignores touches |
 | `fitPolicy` | `'width' \| 'height' \| 'page'` | `'width'`, or `'page'` with `horizontal` / `enablePaging` | how pages are scaled at zoom 1 |
 | `spreadMode` | `'none' \| 'pairs' \| 'book'` | `'none'` | facing pages side by side in the vertical continuous layout; see [Facing pages](#facing-pages) |
+| `colorScheme` | `'light' \| 'dark'` (or `useColorScheme()`'s value) | `'light'` | `'dark'` shows pages with lightness inverted and hues kept; see [Dark pages](#dark-pages) |
 | `searchHighlightColor` | `ColorValue` | `'rgba(255, 214, 0, 0.4)'` | background of search matches; use a translucent colour |
 | `searchCurrentHighlightColor` | `ColorValue` | `'rgba(255, 140, 0, 0.6)'` | background of the current match |
 | `onLoad` | `({ pageCount, firstPageWidth, firstPageHeight, filePath?, isStale }) => void` | | first page's size in PDF points, as displayed (crop box, rotation applied); `filePath`: the local file being displayed (downloaded copy, local file or extracted asset; not for `content://`); `isStale`: an outdated stored copy shown because the server could not be reached (see [Offline reading and caching](#offline-reading-and-caching)) |
@@ -204,6 +205,7 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Card layouts: `borderRadius` clips the document; a short document starts
   at the top on both platforms
 - Facing pages (two-page spreads) for tablets, with or without a cover page
+- Dark pages for reading at night, colours' hues kept
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
 - Every page's size (`getPageSizes`), cheap even for long documents
@@ -372,6 +374,27 @@ const { width, height } = useWindowDimensions();
   `enablePaging` and `singlePage` (iOS's PDFKit lays out facing pages only
   there). Facing pages run left to right.
 
+## Dark pages
+
+```tsx
+const scheme = useColorScheme();
+<PdfView
+  source={source}
+  colorScheme={scheme} // 'dark' turns pages dark; anything else keeps them
+  style={{ flex: 1, backgroundColor: scheme === 'dark' ? '#27272A' : '#E4E4E7' }}
+/>;
+```
+
+- Lightness inverted, hues kept: white paper turns black, black text
+  white, and a red heading stays red (lighter). Photos are inverted too.
+- The area around pages is the view's `backgroundColor`; set a dark one.
+- Search and selection highlights keep their colours. Page images
+  (`renderPage`) and printing keep the document's colours.
+- Annotations: Android darkens whatever its renderer draws. On iOS,
+  PDFKit draws annotations apart from the page, so they keep their own
+  colours; highlights, underlines and strike-outs are lightened onto the
+  dark page instead of disappearing.
+
 ## Printing
 
 ```tsx
@@ -450,6 +473,8 @@ Screen readers get the document's text and position:
 
 - **Not implemented yet**: editing annotations or forms; facing pages in
   horizontal or paged layouts, or right to left.
+- **Dark pages on iOS**: annotations keep their own colours (see
+  [Dark pages](#dark-pages)).
 - **Text selection**: iOS uses PDFKit's selection, which can span pages.
   Android draws its own: a selection stays on one page, Select all selects
   that page, copying ends the selection (as in a text field), dragging a

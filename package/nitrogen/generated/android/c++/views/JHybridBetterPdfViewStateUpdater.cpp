@@ -114,6 +114,11 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
     hybridView->setSpreadMode(newProps->spreadMode.get());
   }
   if (oldProps == nullptr
+        ? newProps->colorScheme.isProvided()
+        : !newProps->colorScheme.hasSameValue(oldProps->colorScheme)) {
+    hybridView->setColorScheme(newProps->colorScheme.get());
+  }
+  if (oldProps == nullptr
         ? newProps->enableDoubleTapZoom.isProvided()
         : !newProps->enableDoubleTapZoom.hasSameValue(oldProps->enableDoubleTapZoom)) {
     hybridView->setEnableDoubleTapZoom(newProps->enableDoubleTapZoom.get());
