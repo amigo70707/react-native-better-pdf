@@ -51,5 +51,5 @@ const styles = StyleSheet.create({
   body: { fontSize: 15, color: colors.text, paddingVertical: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   page: { fontSize: 14, color: colors.muted, fontVariant: ['tabular-nums'] },
-  pdf: { height: 420, backgroundColor: colors.canvas },
+  pdf: { height: 420, borderRadius: 12, backgroundColor: colors.canvas },
 });

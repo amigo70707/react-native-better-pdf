@@ -10,6 +10,7 @@ export const FIXTURES = [
   'large',
   'extreme',
   'mixed-sizes',
+  'single-page',
   'links',
   'outline',
   'outline-compressed',

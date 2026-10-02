@@ -58,6 +58,9 @@ users see.
 | **Fit** | `fitPolicy` default `2` (fit whole page) | `'width'` when vertical and continuous; `'page'` with `horizontal` or `enablePaging` | Pass `fitPolicy="page"` to keep react-native-pdf's default. |
 | **Max zoom** | `maxScale` default `3` | `4` | Pass `maxScale={3}` to keep the old limit. |
 | **Page gap** | `spacing` default `10` | `pageSpacing` default `8` | Pass `pageSpacing={10}`. |
+| **Short documents** | Centred vertically (#909, #920) | Start at the top in vertical continuous layouts, on both platforms | Nothing. |
+| **Rounded corners** | `borderRadius` does not clip the pages on iOS (#920, #993) | `style.borderRadius` clips the document on both platforms | Nothing. |
+| **Safe area (iOS)** | PDFKit adds the safe area as an inset, and going to a page ignores it: the first page can start under the status bar (#513, #994) | No automatic insets, like `ScrollView` and Android | Keep the viewer below the status bar (e.g. in a `SafeAreaView`). |
 | **Current page** | Platform-specific (iOS: PDFKit's current page) | Page under the viewport centre; the last page once scrolled to the end — identical on both platforms | Usually nothing; UI showing "page X" becomes consistent. |
 | **Remote file cache** | Opt-in (`source.cache`), persistent, keyed by SHA-1 of the URL computed in JS | Always: for the app session by default, across launches with `cache: 'persistent'`; keyed by URL + headers, or `cacheKey` | `cache: true` → `cache: 'persistent'`; see [Caching](#caching). |
 | **Errors** | `Error` objects; the message is the only information | `PdfError` struct with a stable `code` | Match on `error.code`; see [Errors](#errors). |

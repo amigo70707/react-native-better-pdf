@@ -158,7 +158,14 @@ re-renders never reload the document.
 | `onViewportChange` | `({ viewport, firstVisiblePage, lastVisiblePage, isAtEnd }) => void` | | once after loading and after every settled scroll, zoom or rotation, never per frame; see [Reading position](#reading-position) |
 | `onSearchChange` | `({ query, matchCount, currentMatch?, currentPage?, isComplete, isSupported }) => void` | | search progress and the current match; see [Search](#search) |
 
-Plus all `View` props (`style`, `testID`, …).
+Plus all `View` props (`style`, `testID`, …). They apply to the viewer's
+box, which clips the document: `borderRadius` rounds it on both platforms
+(a shadow needs a surrounding view on iOS).
+
+A document shorter than the view starts at the top in vertical continuous
+layouts; horizontal layouts centre pages across, and paged layouts centre
+each page. The viewer adds no safe-area insets on either platform, like
+`ScrollView`: keep it below the status bar (e.g. in a `SafeAreaView`).
 
 ### Errors
 
@@ -192,6 +199,8 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
   revalidated with `ETag` / `Last-Modified`, shown when the server cannot be
   reached; `PdfCache` downloads ahead of time, reports and deletes copies
 - Vertical continuous scrolling, fling, platform scroll indicators
+- Card layouts: `borderRadius` clips the document; a short document starts
+  at the top on both platforms
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
 - Every page's size (`getPageSizes`), cheap even for long documents

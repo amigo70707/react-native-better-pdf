@@ -455,17 +455,22 @@ function outlineDocument({ objectStreams = false, items = OUTLINE_ITEMS } = {}) 
 /** Dense text set as individually kerned word runs, like real producers. */
 function textPage(
   index,
-  { fontSize = 7, heading = true, kernCharacters = false } = {},
+  {
+    fontSize = 7,
+    heading = true,
+    kernCharacters = false,
+    pageHeight = A4.height,
+  } = {},
 ) {
   const random = prng(index + 1);
   const lines = [];
   const leading = fontSize * 1.25;
   if (heading) {
     lines.push(
-      `BT /F1 18 Tf 50 ${A4.height - 60} Td (Page ${index + 1}) Tj ET`,
+      `BT /F1 18 Tf 50 ${pageHeight - 60} Td (Page ${index + 1}) Tj ET`,
     );
   }
-  let y = A4.height - (heading ? 90 : 50);
+  let y = pageHeight - (heading ? 90 : 50);
   while (y > 40) {
     const words = sentence(random, 16).split(' ');
     // Per-character kerning is what many producers (e.g. word processors)
@@ -716,6 +721,17 @@ const FIXTURES = {
       pageContent: (i) => ({ content: textPage(i, { fontSize: 9 }) }),
     });
   },
+
+  // One landscape page, shorter than a portrait viewport at fit-width:
+  // where a short document sits, and content insets around it.
+  'single-page': () =>
+    buildDocument({
+      pageCount: 1,
+      pageSize: () => ({ width: 842, height: 595 }),
+      pageContent: (i) => ({
+        content: textPage(i, { fontSize: 9, pageHeight: 595 }),
+      }),
+    }),
 };
 
 /**

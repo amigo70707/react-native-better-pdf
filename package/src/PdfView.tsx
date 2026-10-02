@@ -5,7 +5,13 @@ import {
   useRef,
   type Ref,
 } from 'react';
-import { Image, type ColorValue, type ViewProps } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  View,
+  type ColorValue,
+  type ViewProps,
+} from 'react-native';
 import {
   callback,
   getHostComponent,
@@ -352,6 +358,11 @@ function useStableSource(source: PdfSource): NativePdfSource {
  * A native, virtualized PDF viewer. Scrolling, zooming, rendering and
  * caching all happen natively; JS only sends configuration and receives
  * load / page-change / error events.
+ *
+ * `style` and the other {@linkcode ViewProps} apply to the viewer's box, which
+ * clips the document (`overflow: 'hidden'`): `borderRadius` rounds it on both
+ * platforms, e.g. for a card. Clipping hides an iOS shadow; draw one on a
+ * surrounding view.
  */
 export function PdfView({
   source,
@@ -386,6 +397,7 @@ export function PdfView({
   onSearchChange,
   onViewportChange,
   ref,
+  style,
   ...viewProps
 }: PdfViewProps) {
   const nativeSource = useStableSource(source);
@@ -513,55 +525,66 @@ export function PdfView({
     return subscribed.current.has(name) ? nativeCallbacks[name] : undefined;
   };
 
+  // The native view fills a plain View that takes the app's style: Android
+  // ignores `borderRadius` on custom native views, and clipping a scrolling
+  // native view to rounded corners is what `overflow: 'hidden'` does on both
+  // platforms. `collapsable={false}`: the box must exist (clip, testID).
   return (
-    <NativeBetterPdfView
-      {...viewProps}
-      source={nativeSource}
-      // Every optional prop is sent as a concrete value: when a prop is
-      // removed, Fabric sends `null`, which Nitro's optional converters reject.
-      // An empty password means "none" on both platforms.
-      password={password ?? ''}
-      initialPosition={initialPosition}
-      minScale={minScale ?? 1}
-      maxScale={maxScale ?? 4}
-      pageSpacing={pageSpacing ?? 8}
-      horizontal={horizontal ?? false}
-      enablePaging={enablePaging ?? false}
-      enableRTL={enableRTL ?? false}
-      singlePage={singlePage ?? false}
-      fitPolicy={
-        fitPolicy ??
-        (horizontal === true || enablePaging === true || singlePage === true
-          ? 'page'
-          : 'width')
-      }
-      enableDoubleTapZoom={enableDoubleTapZoom ?? true}
-      scrollEnabled={scrollEnabled ?? true}
-      pageAccessibilityLabel={
-        pageAccessibilityLabel ?? 'Page {page} of {pageCount}'
-      }
-      showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? true}
-      showsHorizontalScrollIndicator={showsHorizontalScrollIndicator ?? true}
-      enableTextSelection={enableTextSelection ?? true}
-      searchHighlightColor={nativeColor(
-        searchHighlightColor,
-        DEFAULT_SEARCH_HIGHLIGHT_COLOR,
-      )}
-      searchCurrentHighlightColor={nativeColor(
-        searchCurrentHighlightColor,
-        DEFAULT_SEARCH_CURRENT_HIGHLIGHT_COLOR,
-      )}
-      onLoad={subscription('onLoad')}
-      onLoadProgress={subscription('onLoadProgress')}
-      onError={subscription('onError')}
-      onPageChange={subscription('onPageChange')}
-      onLinkPress={subscription('onLinkPress')}
-      onPageTap={subscription('onPageTap')}
-      onScaleChange={subscription('onScaleChange')}
-      onTextSelectionChange={subscription('onTextSelectionChange')}
-      onSearchChange={subscription('onSearchChange')}
-      onViewportChange={subscription('onViewportChange')}
-      hybridRef={hybridRef}
-    />
+    <View {...viewProps} style={[styles.box, style]} collapsable={false}>
+      <NativeBetterPdfView
+        style={styles.fill}
+        source={nativeSource}
+        // Every optional prop is sent as a concrete value: when a prop is
+        // removed, Fabric sends `null`, which Nitro's optional converters reject.
+        // An empty password means "none" on both platforms.
+        password={password ?? ''}
+        initialPosition={initialPosition}
+        minScale={minScale ?? 1}
+        maxScale={maxScale ?? 4}
+        pageSpacing={pageSpacing ?? 8}
+        horizontal={horizontal ?? false}
+        enablePaging={enablePaging ?? false}
+        enableRTL={enableRTL ?? false}
+        singlePage={singlePage ?? false}
+        fitPolicy={
+          fitPolicy ??
+          (horizontal === true || enablePaging === true || singlePage === true
+            ? 'page'
+            : 'width')
+        }
+        enableDoubleTapZoom={enableDoubleTapZoom ?? true}
+        scrollEnabled={scrollEnabled ?? true}
+        pageAccessibilityLabel={
+          pageAccessibilityLabel ?? 'Page {page} of {pageCount}'
+        }
+        showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? true}
+        showsHorizontalScrollIndicator={showsHorizontalScrollIndicator ?? true}
+        enableTextSelection={enableTextSelection ?? true}
+        searchHighlightColor={nativeColor(
+          searchHighlightColor,
+          DEFAULT_SEARCH_HIGHLIGHT_COLOR,
+        )}
+        searchCurrentHighlightColor={nativeColor(
+          searchCurrentHighlightColor,
+          DEFAULT_SEARCH_CURRENT_HIGHLIGHT_COLOR,
+        )}
+        onLoad={subscription('onLoad')}
+        onLoadProgress={subscription('onLoadProgress')}
+        onError={subscription('onError')}
+        onPageChange={subscription('onPageChange')}
+        onLinkPress={subscription('onLinkPress')}
+        onPageTap={subscription('onPageTap')}
+        onScaleChange={subscription('onScaleChange')}
+        onTextSelectionChange={subscription('onTextSelectionChange')}
+        onSearchChange={subscription('onSearchChange')}
+        onViewportChange={subscription('onViewportChange')}
+        hybridRef={hybridRef}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  box: { overflow: 'hidden' },
+  fill: { flex: 1 },
+});

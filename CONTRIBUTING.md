@@ -66,6 +66,7 @@ example/e2e/run.sh <device> stress-open-close stress-rapid        # stress flows
 | `viewer-links` | page tap coordinates in PDF points, URL link reported (not opened), internal link followed, double tap not reported as a tap |
 | `viewer-load-progress` | download progress of a remote document (fixture server throttled via `?bytesPerSecond=`) |
 | `viewer-offline` | `PdfCache` and cache options: persistent vs session copies across an app restart, 304 revalidation, stale copy while the fixture server is "offline" (`/__control/offline`), removal, cancellation, `clear()` |
+| `viewer-short-document` | a one-page document starts at the top (also after zooming in and out); rounded card on the Embedded screen (screenshot) |
 | `viewer-mixed-sizes` | estimated page sizes corrected on render (portrait, landscape, receipt, square) |
 | `viewer-text-selection` | long press selects a word, one event per handle drag, tap clears, `enableTextSelection={false}` in continuous and paged layouts |
 | `probe-memory-growth` | diagnostic: ~100 distinct pages rendered via jumps; run with the memory sampler |

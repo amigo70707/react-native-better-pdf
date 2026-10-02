@@ -946,6 +946,56 @@ invalidation, prefetch and offline reading (#952, #964, #572, #566, #689,
   platforms with the fixture server's simulated outage
   (`/__control/offline`), including an app restart.
 
+## Short documents, rounded corners, safe area (v0.2)
+
+No new props: `style.borderRadius` and the layout of a short document now
+behave the same on both platforms.
+
+Requested in react-native-pdf as top alignment of a single page (#909,
+#920), rounded corners on iOS (#920, PR #993), the first page starting
+under the iOS status bar (#513, #994) and removable padding (#520, already
+`pageSpacing={0}`).
+
+- **A short document starts at the top** of vertical continuous layouts.
+  Android always placed it there; PDFKit centres it by moving its document
+  view down by half the free height (measured: content insets zero, the
+  document view's origin at `(viewHeight - contentHeight) / 2`). PDFKit
+  centres within the scroll view's content insets, so a bottom inset as
+  tall as the free space leaves nothing to centre, and PDFKit keeps laying
+  out pages itself. The inset follows the content size (zoom), and the
+  offset is held at the top while the document fits: going to the first
+  page while PDFKit still centred it left the offset below the moved-up
+  document, cutting the page off (seen once the example's toolbar wrapped
+  to another row). Horizontal
+  layouts centre pages across and paged layouts centre each page in its
+  slot, on both platforms; a centred vertical document has no use case
+  that a paged layout does not cover, so there is no prop for it.
+- **Rounded corners through the box.** `PdfView` renders the native view
+  inside a `View` that takes `style` and the other View props, with
+  `overflow: 'hidden'` and `collapsable={false}` (the box must exist for
+  the clip and `testID`). Android ignores `borderRadius` on custom native
+  views (React Native 0.86's `BaseViewManager.setBorderRadius` only logs
+  "unsupported"; Nitro views use it); iOS rounds the background but clips
+  children only with `overflow: 'hidden'`. Clipping the box works on both,
+  verified with page content at the corners. Cost: one plain view; a
+  shadow on iOS needs a surrounding view.
+- **No automatic safe-area insets on iOS.** PDFKit's scroll view used
+  `.automatic` (measured), but going to a page ignores content insets, so
+  a viewer under the status bar can open with the first page partly behind
+  it (as reported for react-native-pdf; not reproduced here, the example
+  has no full-screen viewer). `.never` matches React Native's `ScrollView`
+  default and Android.
+- **Not included:** `contentInset` (scrolling padding, e.g. under a
+  translucent header). Feasible in continuous layouts on iOS — PDFKit
+  keeps insets set on its scroll view and centres within them (measured)
+  — but page navigation, the viewport events and Android's layout all
+  have to honour it, and paged layouts use a page view controller; a
+  separate change. Rounded corners on every page: not requested.
+- **Tested:** `viewer-short-document` on both platforms (the view's top
+  within 9 PDF points of the page, also after zooming in and out), the
+  corners on screenshots against a dark background, the box in a unit
+  test, and the full e2e suite (the component tree changed).
+
 ## Open questions
 
 - A `PdfDocument` Hybrid Object for metadata/page count without mounting a view.

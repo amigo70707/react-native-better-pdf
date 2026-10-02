@@ -1,0 +1,32 @@
+# A document shorter than the view (fixture `single-page`: one landscape
+# page) starts at the top of vertical continuous layouts on both platforms,
+# also after zooming in and back out (PDFKit centres it on its own). The
+# Embedded screen's rounded card clips the document (screenshot).
+appId: software.gmi.betterpdf.example
+---
+# Fresh state: the toolbar's layout mode lasts while the app runs.
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+# Slow: a fast scroll flings past the row.
+- scrollUntilVisible: { element: "single-page.*", speed: 10 }
+- tapOn: "single-page.*"
+- extendedWaitUntil: { visible: "1 / 1", timeout: 15000 }
+# The view's top edge is half the page spacing above the page: 4 dp / pt at
+# fit-width is about 9 PDF points. Centred, it would be ~260.
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · y -[0-9] · 1\\.00x.*" }
+    timeout: 5000
+- tapOn: "2.5×"
+- waitForAnimationToEnd
+- tapOn: "1×"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · y -[0-9] · 1\\.00x.*" }
+    timeout: 5000
+- takeScreenshot: viewer-short-document
+- tapOn: "‹ Back"
+- tapOn: "Embedded"
+- extendedWaitUntil: { visible: { id: "embedded-pdf" }, timeout: 15000 }
+- takeScreenshot: embedded-rounded-card
+- tapOn: "Viewer"

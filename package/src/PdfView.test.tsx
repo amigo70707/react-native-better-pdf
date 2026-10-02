@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { createRef } from 'react';
+import { createRef, type ReactNode } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 (
@@ -10,6 +10,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 type HostProps = Record<string, unknown>;
 const hostRenders: HostProps[] = [];
+const boxRenders: HostProps[] = [];
 const nativeCalls: string[] = [];
 
 const stats: PdfViewStats = {
@@ -56,7 +57,17 @@ function FakeHost(props: HostProps) {
   return null;
 }
 
+function FakeView({
+  children,
+  ...props
+}: HostProps & { children?: ReactNode }) {
+  boxRenders.push(props);
+  return children;
+}
+
 mock.module('react-native', () => ({
+  View: FakeView,
+  StyleSheet: { create: <T,>(styles: T) => styles },
   Image: {
     resolveAssetSource: (asset: number) => ({ uri: `asset://${asset}` }),
   },
@@ -91,6 +102,12 @@ import type { PdfViewStats } from './types/PdfViewStats';
 
 // ---------------------------------------------------------------------------
 
+const lastBox = () => {
+  const props = boxRenders[boxRenders.length - 1];
+  if (props == null) throw new Error('box not rendered');
+  return props;
+};
+
 const lastHost = () => {
   const props = hostRenders[hostRenders.length - 1];
   if (props == null) throw new Error('host not rendered');
@@ -108,6 +125,7 @@ function render(element: React.ReactElement): ReactTestRenderer {
 
 beforeEach(() => {
   hostRenders.length = 0;
+  boxRenders.length = 0;
   nativeCalls.length = 0;
 });
 
@@ -367,6 +385,23 @@ describe('PdfView', () => {
       password: 'p',
       enableTextSelection: false,
     });
+  });
+
+  test('puts style and view props on a clipping box the native view fills', () => {
+    render(
+      <PdfView
+        source={{ uri: 'x' }}
+        testID="pdf"
+        style={{ flex: 1, borderRadius: 12 }}
+      />,
+    );
+    expect(lastBox()).toMatchObject({
+      testID: 'pdf',
+      collapsable: false,
+      style: [{ overflow: 'hidden' }, { flex: 1, borderRadius: 12 }],
+    });
+    expect(lastHost().style).toEqual({ flex: 1 });
+    expect(lastHost().testID).toBeUndefined();
   });
 
   test('ref methods default to animated and map options to native arguments', () => {

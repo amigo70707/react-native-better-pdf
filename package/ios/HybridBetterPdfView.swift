@@ -134,6 +134,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// Scroll-offset observation of PDFView's internal scroll view; drives
   /// `onPageChange` with the same rule as Android (see `reportCurrentPage`).
   private var offsetObservation: NSKeyValueObservation?
+  /// Content-size observation of the same scroll view; keeps a short
+  /// document at the top while it is zoomed (see `applyTopAlignment`).
+  private var contentSizeObservation: NSKeyValueObservation?
   private weak var scrollView: UIScrollView?
 
   /// Read from the JS thread by `getStats()`.
@@ -179,6 +182,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   func onDropView() {
     searchController.clear()
     offsetObservation = nil
+    contentSizeObservation = nil
     if let scaleObserver { NotificationCenter.default.removeObserver(scaleObserver) }
     scaleObserver = nil
     settle.cancel()
@@ -487,6 +491,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       pdfView.layoutIfNeeded()
       pdfView.go(to: page)
     }
+    applyTopAlignment()
     // The first layout and rotations move the viewport without scrolling.
     settle.noteMotion()
   }
@@ -726,11 +731,46 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     scrollView = pdfView?.firstDescendantScrollView()
     applyScrollIndicators()
     applyScrollEnabled()
+    applyContentInsetAdjustment()
     offsetObservation = scrollView?.observe(\.contentOffset, options: []) { [weak self] _, _ in
       self?.reportCurrentPage()
       // Every scroll frame, including animated zooms (PDFKit's double tap
       // posts PDFViewScaleChanged only when it starts).
       self?.settle.noteMotion()
+    }
+    contentSizeObservation = scrollView?.observe(\.contentSize, options: []) { [weak self] _, _ in
+      self?.applyTopAlignment()
+    }
+    applyTopAlignment()
+  }
+
+  /// No automatic safe-area insets, as on Android and in React Native's
+  /// ScrollView: PDFKit's page navigation ignores insets, so a view under
+  /// the status bar could show the first page partly behind it. Covers the page
+  /// view controller's scroll views like `applyScrollEnabled`.
+  private func applyContentInsetAdjustment() {
+    pdfView?.descendantScrollViews().forEach { $0.contentInsetAdjustmentBehavior = .never }
+  }
+
+  /// PDFKit centres a document shorter than the view; vertical continuous
+  /// layouts start at the top instead, as on Android. PDFKit centres within
+  /// the content insets, so a bottom inset as tall as the free space leaves
+  /// nothing to centre. Horizontal layouts keep pages centred across and a
+  /// single page stays centred, as on Android. Paged layouts (the page view
+  /// controller's scroll view, not PDFKit's) centre each page in its slot.
+  private func applyTopAlignment() {
+    guard let scrollView, !isPagedLayout else { return }
+    let isVerticalContinuous = !isHorizontalLayout && !isSinglePage
+    let freeHeight = isVerticalContinuous ? max(0, scrollView.bounds.height - scrollView.contentSize.height) : 0
+    if abs(scrollView.contentInset.bottom - freeHeight) > 0.5 {
+      scrollView.contentInset.bottom = freeHeight
+    }
+    // A document that fits has one valid offset, its top. Going to a page
+    // while PDFKit still centred the document left the offset below it,
+    // cutting the page off once the document moved up.
+    let top = -scrollView.adjustedContentInset.top
+    if freeHeight > 0, abs(scrollView.contentOffset.y - top) > 0.5 {
+      scrollView.contentOffset.y = top
     }
   }
 
