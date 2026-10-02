@@ -14,10 +14,10 @@ appId: software.gmi.betterpdf.example
 - tapOn: { point: "85%, 40%" }
 - extendedWaitUntil: { visible: "tap: page 1 at (4[5-9][0-9]|5[0-5][0-9]), [0-9]+ pt", timeout: 5000 }
 # URL link: reported to JS, not opened.
-- tapOn: { point: "25%, 25%" }
+- tapOn: { point: "25%, 40%" }
 - extendedWaitUntil: { visible: "link: https://example.com/better-pdf", timeout: 5000 }
 # Internal link: followed natively, no JS event needed.
-- tapOn: { point: "25%, 62%" }
+- tapOn: { point: "25%, 72%" }
 - extendedWaitUntil: { visible: "3 / 3", timeout: 5000 }
 - assertVisible: "link: https://example.com/better-pdf"
 # A double tap zooms and must not be reported as a page tap (the example
