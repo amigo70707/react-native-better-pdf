@@ -25,6 +25,7 @@
     "showsVerticalScrollIndicator": true,
     "showsHorizontalScrollIndicator": true,
     "enableTextSelection": true,
+    "enableFormFilling": true,
     "searchHighlightColor": true,
     "searchCurrentHighlightColor": true,
     "onLoad": true,
@@ -36,6 +37,7 @@
     "onScaleChange": true,
     "onSearchChange": true,
     "onViewportChange": true,
+    "onFormChange": true,
     "onTextSelectionChange": true,
     "hybridRef": true
   }

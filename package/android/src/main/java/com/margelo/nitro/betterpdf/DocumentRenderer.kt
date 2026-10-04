@@ -24,9 +24,25 @@ internal interface DocumentRenderer : AutoCloseable {
    */
   fun writeUnprotected(destination: ParcelFileDescriptor)
 
+  /**
+   * Whether the document has a form this renderer can fill in (Android 15+,
+   * or 12–14 with SDK extension 13).
+   */
+  val canFillForm: Boolean
+
+  /**
+   * Writes the document, with the form as filled in on this renderer and
+   * its password protection kept, to [destination]. Same renderers as
+   * [writeUnprotected]. Does not close [destination].
+   */
+  fun writeProtected(destination: ParcelFileDescriptor)
+
   companion object {
     /** Whether this device can open password-protected documents. */
     val supportsPasswords: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM || hasPreV
+
+    /** Whether this device can fill forms in and write documents: the same renderers. */
+    val supportsForms: Boolean get() = supportsPasswords
 
     /** Android 12–14 with SDK extension 13; API 35+ uses `PdfRenderer` itself. */
     private val hasPreV: Boolean

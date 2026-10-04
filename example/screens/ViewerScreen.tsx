@@ -24,6 +24,7 @@ import {
   type PdfViewStats,
 } from 'react-native-better-pdf';
 import { DOCUMENTS, type DocumentEntry } from '../documents';
+import { describeField, FormBar } from './FormBar';
 import { OutlinePanel } from './OutlinePanel';
 import { SearchBar } from './SearchBar';
 import { ThumbnailStrip } from './ThumbnailStrip';
@@ -101,6 +102,7 @@ export function ViewerScreen() {
   const mark = useRef<PdfViewport | null>(null);
   const [doubleTapZoom, setDoubleTapZoom] = useState(true);
   const [textSelection, setTextSelection] = useState(true);
+  const [formFilling, setFormFilling] = useState(true);
   /** Counts onTextSelectionChange events: one per settled selection. */
   const selectionEvents = useRef(0);
   /** Counts onScaleChange events: one per settled zoom, never per frame. */
@@ -314,6 +316,24 @@ export function ViewerScreen() {
         />
       </View>
 
+      {entry.form === true && (
+        <FormBar
+          pdf={ref.current}
+          isFillingEnabled={formFilling}
+          onToggleFilling={() => setFormFilling((value) => !value)}
+          onEvent={setLastEvent}
+          onOpen={(filePath) =>
+            void open({
+              id: 'exported-form',
+              title: 'Exported form',
+              subtitle: filePath,
+              resolve: async () => ({ uri: `file://${filePath}` }),
+              form: true,
+            })
+          }
+        />
+      )}
+
       {showSearch && (
         <SearchBar
           pdf={ref.current}
@@ -359,6 +379,10 @@ export function ViewerScreen() {
             scrollEnabled={scrollEnabled}
             enableDoubleTapZoom={doubleTapZoom}
             enableTextSelection={textSelection}
+            enableFormFilling={formFilling}
+            onFormChange={(event) =>
+              setLastEvent(`form: ${describeField(event.field)}`)
+            }
             onLoadProgress={setProgress}
             initialPage={entry.initialPage}
             initialScale={entry.initialScale}

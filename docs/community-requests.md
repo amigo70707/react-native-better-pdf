@@ -13,7 +13,7 @@ Source: `gh api` on wonday/react-native-pdf (1,814 stars; 821 issues, 383 open; 
 3. Working link taps on Android / singlePage — 12 issues, 22 r / 81 c: #983, #464, #384, #533, #594, iOS #841/#877/#839. partly (API 35+).
 4. Layout: padding, top alignment, border radius — 6 issues, 21 r / 34 c: #520, #920, #909, #513, #994, PR #993 unmerged. COVERED except a scrolling `contentInset` (top alignment, `borderRadius`, no iOS safe-area offset, `pageSpacing={0}`; see api-design "Short documents, rounded corners, safe area").
 5. Scroll indicators — 6 issues, 22 r: #569, #828, #412, #421, #813. covered.
-6. Annotation/signature fidelity on Android; editing — 10 issues, 9 r / 41 c: #848, #975, #930, #863, #862, #687, #314, PR #1042. partly.
+6. Annotation/signature fidelity on Android; editing — 10 issues, 9 r / 41 c: #848, #975, #930, #863, #862, #687, #314, PR #1042. partly: forms are filled in, read and exported (see api-design "Forms"); annotations are not edited.
 7. Large PDFs: fast first page, low memory — 6 issues, 10 r / 24 c: #659, #799, #482; OOM #519/#579/#682; lag #638. partly (measured advantage).
 8. Tap coordinates in PDF space; React overlays on page — #523 (6r), #616, #722, PR #618; overlays #350, #254, #449, #484. COVERED (taps; overlays as `PdfPageOverlay`, see api-design "Page overlays").
 9. Two-page spread — 4 issues, 7 r / 12 c: #415, #921, #666, #200. partly: vertical continuous (`spreadMode`); paged spreads are not possible with PDFKit (see api-design "Facing pages").

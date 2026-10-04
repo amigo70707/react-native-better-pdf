@@ -224,6 +224,12 @@ using namespace margelo::nitro::betterpdf::views;
           : !newViewProps.enableTextSelection.hasSameValue(oldViewProps->enableTextSelection)) {
       swiftPart.setEnableTextSelection(newViewProps.enableTextSelection.get());
     }
+    // enableFormFilling: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.enableFormFilling.isProvided()
+          : !newViewProps.enableFormFilling.hasSameValue(oldViewProps->enableFormFilling)) {
+      swiftPart.setEnableFormFilling(newViewProps.enableFormFilling.get());
+    }
     // searchHighlightColor: optional
     if (oldViewProps == nullptr
           ? newViewProps.searchHighlightColor.isProvided()
@@ -289,6 +295,12 @@ using namespace margelo::nitro::betterpdf::views;
           ? newViewProps.onViewportChange.isProvided()
           : !newViewProps.onViewportChange.hasSameValue(oldViewProps->onViewportChange)) {
       swiftPart.setOnViewportChange(newViewProps.onViewportChange.get());
+    }
+    // onFormChange: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.onFormChange.isProvided()
+          : !newViewProps.onFormChange.hasSameValue(oldViewProps->onFormChange)) {
+      swiftPart.setOnFormChange(newViewProps.onFormChange.get());
     }
     // onTextSelectionChange: optional
     if (oldViewProps == nullptr

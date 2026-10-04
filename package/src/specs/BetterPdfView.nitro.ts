@@ -3,9 +3,13 @@ import type {
   HybridViewMethods,
   HybridViewProps,
 } from 'react-native-nitro-modules';
+import type { NativePdfFormChangeEvent } from '../types/NativePdfFormChangeEvent';
+import type { NativePdfFormField } from '../types/NativePdfFormField';
+import type { NativePdfFormValue } from '../types/NativePdfFormValue';
 import type { NativePdfSource } from '../types/NativePdfSource';
 import type { PdfColorScheme } from '../types/PdfColorScheme';
 import type { PdfError } from '../types/PdfError';
+import type { PdfExportResult } from '../types/PdfExportResult';
 import type { PdfFitPolicy } from '../types/PdfFitPolicy';
 import type { PdfInitialPosition } from '../types/PdfInitialPosition';
 import type { PdfLinkPressEvent } from '../types/PdfLinkPressEvent';
@@ -72,6 +76,8 @@ export interface PdfViewProps extends HybridViewProps {
   showsHorizontalScrollIndicator?: boolean;
   /** Long press selects text (Android: API 35+). Default true. */
   enableTextSelection?: boolean;
+  /** Form fields can be filled in by touch (Android: API 35+ or SDK extension 13). Default true. */
+  enableFormFilling?: boolean;
   /** Highlight of search matches, ARGB (`processColor` output). */
   searchHighlightColor?: number;
   /** Highlight of the current search match, ARGB (`processColor` output). */
@@ -88,6 +94,8 @@ export interface PdfViewProps extends HybridViewProps {
   onSearchChange?: (event: PdfSearchChangeEvent) => void;
   /** Once per settled scroll or zoom (and once after loading), never per frame. */
   onViewportChange?: (event: PdfViewportChangeEvent) => void;
+  /** Once per change the reader makes to a form field: a toggle or choice, or text when editing ends. */
+  onFormChange?: (event: NativePdfFormChangeEvent) => void;
   /** Once per settled selection change (gesture end), never per handle move. */
   onTextSelectionChange?: (event: PdfTextSelectionChangeEvent) => void;
 }
@@ -126,6 +134,22 @@ export interface PdfViewMethods extends HybridViewMethods {
    * document has loaded and while a print dialog of this view is open.
    */
   print(jobName: string): Promise<PdfPrintResult>;
+  /**
+   * Every form field with its current value, in the document's field order.
+   * Rejects before a document has loaded.
+   */
+  getFormFields(): Promise<NativePdfFormField[]>;
+  /**
+   * Sets form fields' values; all or none: rejects without changing any
+   * for an unknown or read-only field or a value its type does not take.
+   * Rejects before a document has loaded and where filling is unsupported.
+   */
+  setFormFieldValues(values: NativePdfFormValue[]): Promise<void>;
+  /**
+   * Writes the document with its form as filled in to `filePath` ('' for a
+   * new file in the cache directory). Rejects before a document has loaded.
+   */
+  exportDocument(filePath: string): Promise<PdfExportResult>;
   /** Starts a case-insensitive text search, replacing any previous one; '' clears it. */
   search(query: string): void;
   /** Moves to the next match (wrapping) and scrolls it into view. */

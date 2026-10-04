@@ -56,6 +56,8 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("showsHorizontalScrollIndicator", &HybridBetterPdfViewSpec::setShowsHorizontalScrollIndicator);
       prototype.registerHybridGetter("enableTextSelection", &HybridBetterPdfViewSpec::getEnableTextSelection);
       prototype.registerHybridSetter("enableTextSelection", &HybridBetterPdfViewSpec::setEnableTextSelection);
+      prototype.registerHybridGetter("enableFormFilling", &HybridBetterPdfViewSpec::getEnableFormFilling);
+      prototype.registerHybridSetter("enableFormFilling", &HybridBetterPdfViewSpec::setEnableFormFilling);
       prototype.registerHybridGetter("searchHighlightColor", &HybridBetterPdfViewSpec::getSearchHighlightColor);
       prototype.registerHybridSetter("searchHighlightColor", &HybridBetterPdfViewSpec::setSearchHighlightColor);
       prototype.registerHybridGetter("searchCurrentHighlightColor", &HybridBetterPdfViewSpec::getSearchCurrentHighlightColor);
@@ -78,6 +80,8 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("onSearchChange", &HybridBetterPdfViewSpec::setOnSearchChange);
       prototype.registerHybridGetter("onViewportChange", &HybridBetterPdfViewSpec::getOnViewportChange);
       prototype.registerHybridSetter("onViewportChange", &HybridBetterPdfViewSpec::setOnViewportChange);
+      prototype.registerHybridGetter("onFormChange", &HybridBetterPdfViewSpec::getOnFormChange);
+      prototype.registerHybridSetter("onFormChange", &HybridBetterPdfViewSpec::setOnFormChange);
       prototype.registerHybridGetter("onTextSelectionChange", &HybridBetterPdfViewSpec::getOnTextSelectionChange);
       prototype.registerHybridSetter("onTextSelectionChange", &HybridBetterPdfViewSpec::setOnTextSelectionChange);
       prototype.registerHybridMethod("goToPage", &HybridBetterPdfViewSpec::goToPage);
@@ -88,6 +92,9 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridMethod("getPageSizes", &HybridBetterPdfViewSpec::getPageSizes);
       prototype.registerHybridMethod("renderPage", &HybridBetterPdfViewSpec::renderPage);
       prototype.registerHybridMethod("print", &HybridBetterPdfViewSpec::print);
+      prototype.registerHybridMethod("getFormFields", &HybridBetterPdfViewSpec::getFormFields);
+      prototype.registerHybridMethod("setFormFieldValues", &HybridBetterPdfViewSpec::setFormFieldValues);
+      prototype.registerHybridMethod("exportDocument", &HybridBetterPdfViewSpec::exportDocument);
       prototype.registerHybridMethod("search", &HybridBetterPdfViewSpec::search);
       prototype.registerHybridMethod("searchNext", &HybridBetterPdfViewSpec::searchNext);
       prototype.registerHybridMethod("searchPrevious", &HybridBetterPdfViewSpec::searchPrevious);

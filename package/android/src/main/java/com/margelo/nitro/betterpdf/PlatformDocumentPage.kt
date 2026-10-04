@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
+import android.os.Build
 
 internal class PlatformDocumentPage(private val page: PdfRenderer.Page) : DocumentPage {
   override val width: Int get() = page.width
@@ -18,6 +19,18 @@ internal class PlatformDocumentPage(private val page: PdfRenderer.Page) : Docume
   override fun searchText(query: String): List<List<PageRect>>? = page.findText(query)
 
   override fun selectText(query: TextSelectionQuery): PageTextSelection? = page.selectText(query)
+
+  override fun formWidgets(): List<FormWidget> {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return emptyList()
+    return page.formWidgetInfos.map { it.toFormWidget() }
+  }
+
+  override fun applyFormEdit(edit: FormEdit) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+      throw UnsupportedOperationException("Filling forms requires Android 15")
+    }
+    page.applyEdit(edit.toRecord())
+  }
 
   override fun close() = page.close()
 }

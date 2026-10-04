@@ -11,8 +11,8 @@ internal class PageImageRequest private constructor(
   private val quality: Double,
 ) {
   /** Renders the page with [reads] and writes the image file. Blocking. */
-  fun render(reads: DocumentReads, context: Context): PdfPageImage {
-    val bitmap = reads.renderPageImage(page, width)
+  fun render(reads: DocumentReads, context: Context, formEdits: List<FormEdit> = emptyList()): PdfPageImage {
+    val bitmap = reads.renderPageImage(page, width, formEdits)
     try {
       val file = bitmap.writeToCache(context, format, quality)
       return PdfPageImage(Uri.fromFile(file).toString(), bitmap.width.toDouble(), bitmap.height.toDouble())

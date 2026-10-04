@@ -206,6 +206,8 @@ final class PdfContainerView: UIView, PDFViewDelegate, UIGestureRecognizerDelega
     let pagePoint = pdfView.convert(viewPoint, to: page)
     // Link taps are handled by PDFKit (and `pdfViewWillClick`), not reported as page taps.
     guard !page.hasLink(at: pagePoint) else { return }
+    // Form fields the reader can fill in are edited by PDFKit.
+    guard !page.hasFillableWidget(at: pagePoint) else { return }
     pageTapped?(page, page.topLeftPoint(from: pagePoint, box: pdfView.displayBox))
   }
 }

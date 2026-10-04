@@ -18,6 +18,17 @@ internal class PlatformDocumentRenderer private constructor(private val renderer
     renderer.write(destination, true)
   }
 
+  override val canFillForm: Boolean
+    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
+      renderer.pdfFormType != PdfRenderer.PDF_FORM_TYPE_NONE
+
+  override fun writeProtected(destination: ParcelFileDescriptor) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+      throw UnsupportedOperationException("Writing a document requires Android 15")
+    }
+    renderer.write(destination, false)
+  }
+
   override fun close() = renderer.close()
 
   companion object {

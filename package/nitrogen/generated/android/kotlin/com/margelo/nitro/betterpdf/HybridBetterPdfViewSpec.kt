@@ -158,6 +158,12 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
+  abstract var enableFormFilling: Boolean?
+  
+  @get:DoNotStrip
+  @get:Keep
+  @set:DoNotStrip
+  @set:Keep
   abstract var searchHighlightColor: Double?
   
   @get:DoNotStrip
@@ -292,6 +298,20 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
       onViewportChange = value?.let { it }
     }
   
+  abstract var onFormChange: ((event: NativePdfFormChangeEvent) -> Unit)?
+  
+  private var onFormChange_cxx: Func_void_NativePdfFormChangeEvent?
+    @Keep
+    @DoNotStrip
+    get() {
+      return onFormChange?.let { Func_void_NativePdfFormChangeEvent_java(it) }
+    }
+    @Keep
+    @DoNotStrip
+    set(value) {
+      onFormChange = value?.let { it }
+    }
+  
   abstract var onTextSelectionChange: ((event: PdfTextSelectionChangeEvent) -> Unit)?
   
   private var onTextSelectionChange_cxx: Func_void_PdfTextSelectionChangeEvent?
@@ -338,6 +358,18 @@ abstract class HybridBetterPdfViewSpec: HybridView() {
   @DoNotStrip
   @Keep
   abstract fun print(jobName: String): Promise<PdfPrintResult>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun getFormFields(): Promise<Array<NativePdfFormField>>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun setFormFieldValues(values: Array<NativePdfFormValue>): Promise<Unit>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun exportDocument(filePath: String): Promise<PdfExportResult>
   
   @DoNotStrip
   @Keep

@@ -5,13 +5,16 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.os.ParcelFileDescriptor
 import com.margelo.nitro.betterpdf.outline.FileChannelByteSource
+import com.margelo.nitro.betterpdf.outline.FormFieldEntry
 import com.margelo.nitro.betterpdf.outline.OutlineEntry
 import com.margelo.nitro.betterpdf.outline.PdfDocumentReader
+import com.margelo.nitro.betterpdf.outline.PdfFormReader
 import com.margelo.nitro.betterpdf.outline.PdfFormatException
 import com.margelo.nitro.betterpdf.outline.PdfInfo
 import com.margelo.nitro.betterpdf.outline.PdfInfoReader
 import com.margelo.nitro.betterpdf.outline.PdfOutlineReader
 import com.margelo.nitro.betterpdf.outline.PdfPageSizeReader
+import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -61,6 +64,33 @@ internal class DocumentReads(
   }
 
   /**
+   * The document's form fields with the values the file has. An encrypted
+   * document is read from a copy without its protection, written to
+   * [cacheDirectory] by a renderer and deleted afterwards (the parser does
+   * not decrypt); devices that cannot write one reject it, like the
+   * outline.
+   *
+   * @throws PdfFormatException when the file cannot be parsed.
+   */
+  fun readFormFields(cacheDirectory: File): List<FormFieldEntry> =
+    try {
+      parse { PdfFormReader(it).read() }
+    } catch (error: PdfFormatException) {
+      if (password.isNullOrEmpty() || !DocumentRenderer.supportsPasswords) throw error
+      val copy = File.createTempFile("form", ".pdf", cacheDirectory)
+      try {
+        ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_TRUNCATE).use { target ->
+          DocumentRenderer.open(duplicateDescriptor(), password).use { it.writeUnprotected(target) }
+        }
+        ParcelFileDescriptor.AutoCloseInputStream(ParcelFileDescriptor.open(copy, ParcelFileDescriptor.MODE_READ_ONLY)).channel.use { channel ->
+          PdfFormReader(PdfDocumentReader(FileChannelByteSource(channel))).read()
+        }
+      } finally {
+        copy.delete()
+      }
+    }
+
+  /**
    * Every page's displayed size (see [PdfPageSizeReader]), [pageCount] of
    * them. Read from the page tree, so no page is opened and PDFium caches
    * nothing; documents the parser cannot read (encrypted, or a page tree
@@ -76,14 +106,16 @@ internal class DocumentReads(
 
   /**
    * Renders [page] [width] pixels wide, the height following the page's
-   * aspect ratio, on white like the view, with a renderer of its own.
+   * aspect ratio, on white like the view, with a renderer of its own —
+   * with the form as filled in ([formEdits]).
    *
    * @throws IllegalArgumentException when the image would exceed
    *   [MAX_IMAGE_PIXELS] (e.g. a very tall page at a large width).
    */
-  fun renderPageImage(page: Int, width: Int): Bitmap {
+  fun renderPageImage(page: Int, width: Int, formEdits: List<FormEdit> = emptyList()): Bitmap {
     // The renderer owns (and closes) the duplicate.
     DocumentRenderer.open(duplicateDescriptor(), password).use { renderer ->
+      renderer.applyEdits(formEdits)
       renderer.openPage(page).use { pdfPage ->
         val height = max(1, (width.toDouble() * pdfPage.height / pdfPage.width).roundToInt())
         require(width.toLong() * height <= MAX_IMAGE_PIXELS) {

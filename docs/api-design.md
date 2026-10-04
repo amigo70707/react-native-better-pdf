@@ -997,6 +997,106 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
 
+## Forms (v0.2)
+
+```ts
+enableFormFilling?: boolean; // default true
+onFormChange?: (event: { field: PdfFormField }) => void;
+ref.getFormFields(): Promise<PdfFormField[]>;
+ref.setFormFieldValues(values: Record<string, PdfFormFieldValue>): Promise<void>;
+ref.exportDocument(options?: { filePath?: string }): Promise<{ filePath: string }>;
+```
+
+Requested in react-native-pdf with annotation editing and signature
+fidelity (community request 6). PDFKit already let readers fill forms in
+on iOS; Android showed them read-only.
+
+- **Fields by name, typed by `type`**: a discriminated union (`text`,
+  `checkbox`, `radio`, `combo-box`, `list-box`, `signature`,
+  `push-button`), each with its own members only, set with plain values
+  by fully qualified name (`'address.city'`). Native code sends one flat
+  struct with every member concrete, which `PdfView` narrows; values go
+  the other way as `{ text | isChecked | options }`. Choices are their
+  displayed labels on both platforms (`/Opt` export values are mapped).
+- **`onFormChange` reports the reader's changes only**, text when editing
+  ends — settled, like the other events; code knows what it set.
+- **All or none**: `setFormFieldValues` checks every value against its
+  field (unknown, read-only, type, option, maximum length) before it
+  changes anything.
+- **iOS: PDFKit fills in, the library observes.** PDFKit posts nothing
+  for value changes and sets widget values while it loads pages too
+  (measured: a radio group's state on every load). A `PDFAnnotation`
+  subclass for widgets (the document's `class(forAnnotationType:)`, as for
+  text markup on dark pages) reports value sets; they count as the
+  reader's only between `PDFViewAnnotationWillHit` and
+  `PDFViewAnnotationHit` (buttons, measured) or while PDFKit's text field
+  or view in the PDF view is editing (text and choices, set when editing
+  ends). Writing the document sets buttons again; those are muted.
+  `enableFormFilling={false}` overrides `isReadOnly` on the subclass:
+  PDFKit honours it, and exports keep the field's own flags (`/Ff`
+  unchanged, measured).
+- **iOS names and order** come from the AcroForm tree through CGPDF;
+  PDFKit's `fieldName` is fully qualified (measured). Pages with widgets
+  are found from page dictionaries, so no page loads to list fields.
+- **Android: the platform renderer edits, the library does the rest.**
+  `PdfRenderer` (API 35) and `PdfRendererPreV` (SDK extension 13) report a
+  page's widgets, apply edits (`getFormWidgetInfos`, `applyEdit`) and write
+  the document, but widgets have no field names — the accessibility label
+  is the tooltip (`/TU`) when there is one, else the partial name, and
+  empty for radio buttons — and their indices count widgets only,
+  signatures left out (all measured). So the field tree is parsed from the
+  file (the parser that reads outlines; an encrypted document from an
+  unprotected copy the renderer writes to the cache directory, deleted
+  afterwards) and matched to the renderer's widgets by page and rectangle
+  (±1.5 pt: the renderer rounds to whole points), the rest in order.
+  Values then follow the renderer's widgets after every change.
+- **Android: edits survive renderer recycling.** The render thread
+  re-creates its renderer every 48 page opens to release PDFium's caches,
+  and edits live in the renderer, so every edit is kept and applied again,
+  in order, to each new renderer before it renders — all of them, as a
+  field can show on several pages. Writes, printing and page images use
+  renderers of their own with the same edits.
+- **Android UI**: a checkbox or radio button changes on tap (a click
+  edit); a choice opens a list; text is typed in an `EditText` over the
+  field. The native view is now a `FrameLayout` holding the document view
+  and that editor, which follows the page every frame (like page
+  overlays), is scrolled above the keyboard from the IME inset
+  (edge-to-edge windows do not resize), and is applied when the keyboard's
+  action, a tap elsewhere, its page leaving the screen or a call from code
+  ends editing. The changed page renders again, its old bitmap shown until
+  then (the render thread posts in order, so no older result can follow).
+- **Form work is never dropped**: edits, reads and sets run on the render
+  thread in order, ahead of renders, through a new ordered lane of
+  `RenderQueue` (text selection queries replace each other; edits must
+  not).
+- **Exports keep the password.** Android writes with
+  `removePasswordProtection = false`, keeping the original encryption,
+  and keeps the file's field order (measured on the fixture). iOS writes
+  with PDFKit (`dataRepresentation`, the document's password as user and
+  owner password), which rewrites the whole document: PDF 1.3, nested
+  fields flattened into dotted names, the `/Fields` order changed, and
+  content PDFKit cannot read dropped (all measured; the `large` fixture's
+  JPEGs, which PDFKit cannot decode, came out as empty pages). Default
+  file: `<caches>/BetterPdfExports/<uuid>/<document name>.pdf`.
+- **Line breaks** are `\n` on both platforms (PDFium reports `\r\n`).
+- **Cost:** Android `applyEdit` 0.1–2 ms and writing the 2-page fixture
+  3 ms (emulator). iOS writing with PDFKit runs on the main thread: 30 ms
+  for the fixture, 354 ms for the 100-page, 19.5 MB `medium` (macOS
+  PDFKit, M5 Pro) — paid by `exportDocument` and, once a form changed, by
+  `print` and `renderPage`, which read the displayed document then.
+- **Not included:** form JavaScript (calculations, validation,
+  formatting), signing, XFA, flattening, resetting a form; on Android
+  typing a choice's custom text by touch and screen-reader access to
+  fields; on iOS several options in a list box.
+- **Tested:** `viewer-forms` on both platforms; JVM tests for the AcroForm
+  reader (order, inherited types and flags, values, radio options from
+  appearance states, cropped and rotated pages, object streams, widgets
+  found through page annotations, encrypted files), widget matching, value
+  planning and the ordered queue lane; unit tests for the JS conversion;
+  probes for exported flags, encrypted exports (reopened: password asked),
+  page images of a filled form and a field at the bottom of a page above
+  the keyboard; the full suite on both platforms.
+
 ## Page overlays (v0.2)
 
 ```tsx

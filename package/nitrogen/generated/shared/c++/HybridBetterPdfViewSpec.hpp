@@ -43,6 +43,8 @@ namespace margelo::nitro::betterpdf { struct PdfScaleChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 // Forward declaration of `PdfViewportChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
+// Forward declaration of `NativePdfFormChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormChangeEvent; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -59,6 +61,12 @@ namespace margelo::nitro::betterpdf { struct PdfPageImage; }
 namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 // Forward declaration of `PdfPrintResult` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
+// Forward declaration of `NativePdfFormField` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormField; }
+// Forward declaration of `NativePdfFormValue` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormValue; }
+// Forward declaration of `PdfExportResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfExportResult; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -79,6 +87,7 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfViewportChangeEvent.hpp"
+#include "NativePdfFormChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfViewport.hpp"
@@ -88,6 +97,9 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfPageImage.hpp"
 #include "PdfRenderPageOptions.hpp"
 #include "PdfPrintResult.hpp"
+#include "NativePdfFormField.hpp"
+#include "NativePdfFormValue.hpp"
+#include "PdfExportResult.hpp"
 
 namespace margelo::nitro::betterpdf {
 
@@ -158,6 +170,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setShowsHorizontalScrollIndicator(std::optional<bool> showsHorizontalScrollIndicator) = 0;
       virtual std::optional<bool> getEnableTextSelection() = 0;
       virtual void setEnableTextSelection(std::optional<bool> enableTextSelection) = 0;
+      virtual std::optional<bool> getEnableFormFilling() = 0;
+      virtual void setEnableFormFilling(std::optional<bool> enableFormFilling) = 0;
       virtual std::optional<double> getSearchHighlightColor() = 0;
       virtual void setSearchHighlightColor(std::optional<double> searchHighlightColor) = 0;
       virtual std::optional<double> getSearchCurrentHighlightColor() = 0;
@@ -180,6 +194,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) = 0;
       virtual std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> getOnViewportChange() = 0;
       virtual void setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) = 0;
+      virtual std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>> getOnFormChange() = 0;
+      virtual void setOnFormChange(const std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>& onFormChange) = 0;
       virtual std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() = 0;
       virtual void setOnTextSelectionChange(const std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>& onTextSelectionChange) = 0;
 
@@ -193,6 +209,9 @@ namespace margelo::nitro::betterpdf {
       virtual std::shared_ptr<Promise<std::vector<PdfPageSize>>> getPageSizes() = 0;
       virtual std::shared_ptr<Promise<PdfPageImage>> renderPage(double page, const PdfRenderPageOptions& options) = 0;
       virtual std::shared_ptr<Promise<PdfPrintResult>> print(const std::string& jobName) = 0;
+      virtual std::shared_ptr<Promise<std::vector<NativePdfFormField>>> getFormFields() = 0;
+      virtual std::shared_ptr<Promise<void>> setFormFieldValues(const std::vector<NativePdfFormValue>& values) = 0;
+      virtual std::shared_ptr<Promise<PdfExportResult>> exportDocument(const std::string& filePath) = 0;
       virtual void search(const std::string& query) = 0;
       virtual void searchNext() = 0;
       virtual void searchPrevious() = 0;

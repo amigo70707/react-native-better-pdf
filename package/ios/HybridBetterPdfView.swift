@@ -14,6 +14,7 @@ import UIKit
 final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private let container = PdfContainerView()
   private let pageOverlays = PageOverlays()
+  private lazy var formInteraction = container.pdfView.map(FormInteraction.init(pdfView:))
   private lazy var searchController = PdfSearchController(pdfView: container.pdfView) { [weak self] event in
     self?.onSearchChange?(event)
   }
@@ -88,6 +89,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var enableTextSelection: Bool? {
     didSet { container.isTextSelectionEnabled = enableTextSelection ?? true }
   }
+  var enableFormFilling: Bool? {
+    didSet { applyFormFilling() }
+  }
   var searchHighlightColor: Double? {
     didSet {
       guard let searchHighlightColor else { return }
@@ -110,6 +114,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var onViewportChange: ((PdfViewportChangeEvent) -> Void)?
   var onSearchChange: ((PdfSearchChangeEvent) -> Void)?
   var onTextSelectionChange: ((PdfTextSelectionChangeEvent) -> Void)?
+  var onFormChange: ((NativePdfFormChangeEvent) -> Void)?
 
   // MARK: State (main thread)
 
@@ -155,6 +160,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private var outlineCache: (url: URL, entries: [PdfOutlineEntry])?
   /// `getPageSizes()` result for the displayed file (main thread).
   private var pageSizesCache: (url: URL, sizes: [PdfPageSize])?
+  /// The displayed document's form, read on first use (main thread).
+  private var documentForm: DocumentForm?
   /// Reads separate instances of the displayed file (outline, page sizes).
   private static let readQueue = DispatchQueue(label: "com.betterpdf.read", qos: .userInitiated)
   /// Scroll-offset observation of PDFView's internal scroll view; drives
@@ -186,6 +193,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     container.selectionSettled = { [weak self] text in
       self?.onTextSelectionChange?(PdfTextSelectionChangeEvent(text: text))
     }
+    _ = formInteraction
     // Posted for every frame of a pinch; reported once the zoom settles.
     scaleObserver = NotificationCenter.default.addObserver(
       forName: .PDFViewScaleChanged, object: container.pdfView, queue: .main
@@ -354,11 +362,15 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         return
       }
       let password = self.password
+      // Commits text being typed, so the image shows it.
+      self.container.endEditing(true)
+      let filledForm = self.filledFormData(of: document)
       // A separate instance of the file, like getOutline: PDFKit objects are
-      // not thread-safe and the view draws its own document on main.
+      // not thread-safe and the view draws its own document on main. A
+      // filled-in form is rendered from a copy of the displayed document.
       Self.readQueue.async {
         do {
-          guard let renderDocument = PDFDocument(url: url) else {
+          guard let renderDocument = filledForm.flatMap(PDFDocument.init(data:)) ?? PDFDocument(url: url) else {
             throw RuntimeError.error(withMessage: "The document could not be opened for rendering")
           }
           if renderDocument.isLocked { _ = renderDocument.unlock(withPassword: password ?? "") }
@@ -391,6 +403,13 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         return
       }
       self.isPrinting = true
+      // A filled-in form prints as shown, text being typed included: a copy
+      // of the displayed document, unlocked like the one below.
+      self.container.endEditing(true)
+      if let filledForm = self.filledFormData(of: document) {
+        self.presentPrintDialog(printing: filledForm, jobName: jobName, promise: promise)
+        return
+      }
       guard document.isEncrypted else {
         self.presentPrintDialog(printing: url, jobName: jobName, promise: promise)
         return
@@ -414,6 +433,131 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       }
     }
     return promise
+  }
+
+  func getFormFields() throws -> Promise<[NativePdfFormField]> {
+    let promise = Promise<[NativePdfFormField]>()
+    DispatchQueue.main.async { [weak self] in
+      guard let self, let pdfView = self.pdfView, let document = pdfView.document, let form = self.form() else {
+        promise.reject(withError: RuntimeError.error(withMessage: "No document is loaded"))
+        return
+      }
+      // Commits text being typed, so it is read too.
+      self.container.endEditing(true)
+      let box = pdfView.displayBox
+      promise.resolve(withResult: form.fields().compactMap { field in
+        NativePdfFormField(name: field.name, widgets: field.widgets, document: document, box: box)
+      })
+    }
+    return promise
+  }
+
+  func setFormFieldValues(values: [NativePdfFormValue]) throws -> Promise<Void> {
+    let promise = Promise<Void>()
+    DispatchQueue.main.async { [weak self] in
+      guard let self, let document = self.pdfView?.document as? ColorSchemeDocument, let form = self.form() else {
+        promise.reject(withError: RuntimeError.error(withMessage: "No document is loaded"))
+        return
+      }
+      // Commits text being typed first, so it does not overwrite the values.
+      self.container.endEditing(true)
+      do {
+        try document.withoutReportingChanges(countingAsChange: true) { try form.setValues(values) }
+        promise.resolve(withResult: ())
+      } catch {
+        promise.reject(withError: error)
+      }
+    }
+    return promise
+  }
+
+  func exportDocument(filePath: String) throws -> Promise<PdfExportResult> {
+    let promise = Promise<PdfExportResult>()
+    DispatchQueue.main.async { [weak self] in
+      guard let self, let document = self.pdfView?.document, let url = document.documentURL else {
+        promise.reject(withError: RuntimeError.error(withMessage: "No document is loaded"))
+        return
+      }
+      // Ends text editing, so a field being typed in is written too.
+      self.container.endEditing(true)
+      let destination: URL
+      do {
+        destination = try filePath.isEmpty ? Self.newExportFile(named: url) : URL(fileURLWithPath: filePath)
+      } catch {
+        promise.reject(withError: error)
+        return
+      }
+      // Kept protected: an unlocked document is written without its
+      // encryption unless passwords are given (the print path relies on it).
+      var options: [PDFDocumentWriteOption: Any] = [:]
+      if document.isEncrypted, let password = self.password, !password.isEmpty {
+        options[.userPasswordOption] = password
+        options[.ownerPasswordOption] = password
+      }
+      let write = { document.dataRepresentation(options: options) }
+      guard let data = (document as? ColorSchemeDocument)?.withoutReportingChanges(write) ?? write() else {
+        promise.reject(withError: RuntimeError.error(withMessage: "The document could not be written"))
+        return
+      }
+      Self.readQueue.async {
+        do {
+          try data.write(to: destination, options: .atomic)
+          promise.resolve(withResult: PdfExportResult(filePath: destination.path))
+        } catch {
+          promise.reject(withError: error)
+        }
+      }
+    }
+    return promise
+  }
+
+  /// A new file in the caches directory with the document's file name.
+  private static func newExportFile(named source: URL) throws -> URL {
+    let directory = try FileManager.default
+      .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+      .appendingPathComponent("BetterPdfExports", isDirectory: true)
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let name = source.deletingPathExtension().lastPathComponent
+    return directory.appendingPathComponent(name.isEmpty ? "document" : name).appendingPathExtension("pdf")
+  }
+
+  /// The displayed document's form, read once per document.
+  private func form() -> DocumentForm? {
+    guard let document = pdfView?.document else { return nil }
+    if let documentForm { return documentForm }
+    let form = DocumentForm(document: document)
+    documentForm = form
+    return form
+  }
+
+  /// The displayed document as PDF data once its form was filled in, for
+  /// page images and printing (they read separate instances of the file
+  /// otherwise); written unlocked. Nil while the form is as loaded.
+  private func filledFormData(of document: PDFDocument) -> Data? {
+    guard let document = document as? ColorSchemeDocument, document.formChangeCount > 0 else { return nil }
+    return document.withoutReportingChanges { document.dataRepresentation() }
+  }
+
+  private func reportFormChange(_ widget: FormWidgetAnnotation) {
+    guard formInteraction?.isActive == true else { return }
+    (pdfView?.document as? ColorSchemeDocument)?.noteFormChanged()
+    guard onFormChange != nil, let name = widget.fieldName else { return }
+    // After PDFKit's setter returns, with the whole radio group updated.
+    DispatchQueue.main.async { [weak self] in
+      guard let self, let onFormChange = self.onFormChange, let pdfView = self.pdfView,
+            let document = pdfView.document, let form = self.form(),
+            let field = NativePdfFormField(
+              name: name, widgets: form.widgets(named: name), document: document, box: pdfView.displayBox
+            ) else { return }
+      onFormChange(NativePdfFormChangeEvent(field: field))
+    }
+  }
+
+  private func applyFormFilling() {
+    let isEnabled = enableFormFilling ?? true
+    (pdfView?.document as? ColorSchemeDocument)?.isFormFillingEnabled = isEnabled
+    if !isEnabled { container.endEditing(true) }
   }
 
   /// Whether this view's print dialog is open (main thread).
@@ -524,6 +668,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     lastReportedViewport = nil
     outlineCache = nil
     pageSizesCache = nil
+    documentForm = nil
     guard let pdfView else { return }
     let pageCount = document.pageCount
     let position = initialPosition
@@ -534,7 +679,11 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     if let x = position?.x, let y = position?.y, x.isFinite, y.isFinite, pendingInitialPage == requestedPage {
       pendingInitialPoint = CGPoint(x: x, y: y)
     }
-    (document as? ColorSchemeDocument)?.isDark = colorScheme == .some(.dark)
+    if let document = document as? ColorSchemeDocument {
+      document.isDark = colorScheme == .some(.dark)
+      document.isFormFillingEnabled = enableFormFilling ?? true
+      document.widgetChanged = { [weak self] widget in self?.reportFormChange(widget) }
+    }
     pdfView.document = document
     setStatsPageCount(pageCount)
     // A new document starts at initialPage, not at the previous one's page.

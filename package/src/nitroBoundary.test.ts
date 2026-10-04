@@ -34,6 +34,7 @@ describe('Nitro boundary', () => {
       [
         'colorScheme',
         'enableDoubleTapZoom',
+        'enableFormFilling',
         'enableTextSelection',
         'enablePaging',
         'enableRTL',
@@ -44,6 +45,9 @@ describe('Nitro boundary', () => {
         'maxScale',
         'minScale',
         'onError',
+        // Once per change the reader makes, text when editing ends (see
+        // docs/api-design.md "Forms").
+        'onFormChange',
         'onLinkPress',
         'onLoad',
         'onLoadProgress',

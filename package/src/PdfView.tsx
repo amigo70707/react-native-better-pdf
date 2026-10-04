@@ -20,6 +20,11 @@ import {
   type HybridRef,
 } from 'react-native-nitro-modules';
 import BetterPdfViewConfig from '../nitrogen/generated/shared/json/BetterPdfViewConfig.json';
+import {
+  toFormField,
+  toNativeFilePath,
+  toNativeFormValues,
+} from './formFields';
 import { nativeColor } from './nativeColor';
 import { OverlayRegistryContext, type OverlayRegistry } from './PdfPageOverlay';
 import { buildOutlineTree } from './outline';
@@ -29,10 +34,16 @@ import type {
   PdfViewMethods,
   PdfViewProps as NativeProps,
 } from './specs/BetterPdfView.nitro';
+import type { NativePdfFormChangeEvent } from './types/NativePdfFormChangeEvent';
 import type { NativePdfSource } from './types/NativePdfSource';
 import type { PdfColorScheme } from './types/PdfColorScheme';
 import type { PdfError } from './types/PdfError';
+import type { PdfExportOptions } from './types/PdfExportOptions';
+import type { PdfExportResult } from './types/PdfExportResult';
 import type { PdfFitPolicy } from './types/PdfFitPolicy';
+import type { PdfFormChangeEvent } from './types/PdfFormChangeEvent';
+import type { PdfFormField } from './types/PdfFormField';
+import type { PdfFormFieldValue } from './types/PdfFormFieldValue';
 import type { PdfInitialPosition } from './types/PdfInitialPosition';
 import type { PdfLinkPressEvent } from './types/PdfLinkPressEvent';
 import type { PdfLoadEvent } from './types/PdfLoadEvent';
@@ -122,6 +133,31 @@ export interface PdfViewRef {
    * printing.
    */
   print(options?: PdfPrintOptions): Promise<PdfPrintResult>;
+  /**
+   * Every form (AcroForm) field with its current value, filled in by the
+   * reader or `setFormFieldValues`, in the document's field order; `[]`
+   * without a form. Rejects before {@linkcode PdfViewProps.onLoad}.
+   */
+  getFormFields(): Promise<PdfFormField[]>;
+  /**
+   * Fills form fields in, by name: `{ name: 'Anna', agree: true }` (see
+   * {@linkcode PdfFormFieldValue}). All or none: rejects without changing a
+   * field for an unknown or read-only field, a value its type does not
+   * take or an option it does not have. Does not send
+   * {@linkcode PdfViewProps.onFormChange}. Rejects before
+   * {@linkcode PdfViewProps.onLoad} and where filling is unsupported
+   * (Android below 15 without SDK extension 13).
+   */
+  setFormFieldValues(
+    values: Readonly<Record<string, PdfFormFieldValue>>,
+  ): Promise<void>;
+  /**
+   * Writes the document as shown — its form filled in — to a new PDF file,
+   * e.g. to share or upload it; the source file is never changed. Keeps the
+   * document's password protection. Rejects before
+   * {@linkcode PdfViewProps.onLoad}.
+   */
+  exportDocument(options?: PdfExportOptions): Promise<PdfExportResult>;
   /**
    * Searches the document's text (case-insensitive), replacing any previous
    * search; `''` clears it. Results arrive through
@@ -284,6 +320,14 @@ export interface PdfViewProps extends ViewProps {
    */
   enableTextSelection?: boolean;
   /**
+   * Form fields (text fields, checkboxes, radio buttons, choices) can be
+   * filled in by touch; `false` shows them as they are. Read and set values
+   * with `ref.getFormFields()` / `ref.setFormFieldValues()` either way.
+   * Android: needs Android 15+, or Android 12–14 with SDK extension 13.
+   * Default `true`.
+   */
+  enableFormFilling?: boolean;
+  /**
    * Background of every search match. Use a translucent colour so the text
    * stays readable. `PlatformColor` and `DynamicColorIOS` are not supported
    * (the default is used). Default `'rgba(255, 214, 0, 0.4)'` (yellow).
@@ -348,6 +392,12 @@ export interface PdfViewProps extends ViewProps {
    * the reader left off; `isAtEnd` tells that the end was reached.
    */
   onViewportChange?: (event: PdfViewportChangeEvent) => void;
+  /**
+   * The reader changed a form field: at once for a checkbox, radio button
+   * or choice, when editing ends for text — never per keystroke. Not sent
+   * for `ref.setFormFieldValues()`.
+   */
+  onFormChange?: (event: PdfFormChangeEvent) => void;
   ref?: Ref<PdfViewRef>;
 }
 
@@ -363,6 +413,7 @@ type Handlers = Pick<
   | 'onTextSelectionChange'
   | 'onSearchChange'
   | 'onViewportChange'
+  | 'onFormChange'
 >;
 
 /**
@@ -434,6 +485,7 @@ export function PdfView({
   showsVerticalScrollIndicator,
   showsHorizontalScrollIndicator,
   enableTextSelection,
+  enableFormFilling,
   searchHighlightColor,
   searchCurrentHighlightColor,
   onLoad,
@@ -446,6 +498,7 @@ export function PdfView({
   onTextSelectionChange,
   onSearchChange,
   onViewportChange,
+  onFormChange,
   ref,
   style,
   children,
@@ -478,6 +531,7 @@ export function PdfView({
     onTextSelectionChange,
     onSearchChange,
     onViewportChange,
+    onFormChange,
   };
   const handlers = useRef(renderedHandlers);
   useLayoutEffect(() => {
@@ -512,6 +566,9 @@ export function PdfView({
       ),
       onViewportChange: callback((event: PdfViewportChangeEvent) =>
         handlers.current.onViewportChange?.(event),
+      ),
+      onFormChange: callback((event: NativePdfFormChangeEvent) =>
+        handlers.current.onFormChange?.({ field: toFormField(event.field) }),
       ),
     }),
     [],
@@ -561,6 +618,21 @@ export function PdfView({
         return native.print(
           jobName === '' ? defaultPrintJobName(latestSource.current) : jobName,
         );
+      },
+      async getFormFields() {
+        const native = nativeRef.current;
+        if (native == null) throw new Error('The PDF view is not mounted');
+        return (await native.getFormFields()).map(toFormField);
+      },
+      async setFormFieldValues(values) {
+        const native = nativeRef.current;
+        if (native == null) throw new Error('The PDF view is not mounted');
+        await native.setFormFieldValues(toNativeFormValues(values));
+      },
+      async exportDocument(options) {
+        const native = nativeRef.current;
+        if (native == null) throw new Error('The PDF view is not mounted');
+        return native.exportDocument(toNativeFilePath(options?.filePath));
       },
       getStats() {
         return nativeRef.current?.getStats() ?? null;
@@ -628,6 +700,7 @@ export function PdfView({
         showsVerticalScrollIndicator={showsVerticalScrollIndicator ?? true}
         showsHorizontalScrollIndicator={showsHorizontalScrollIndicator ?? true}
         enableTextSelection={enableTextSelection ?? true}
+        enableFormFilling={enableFormFilling ?? true}
         searchHighlightColor={nativeColor(
           searchHighlightColor,
           DEFAULT_SEARCH_HIGHLIGHT_COLOR,
@@ -646,6 +719,7 @@ export function PdfView({
         onTextSelectionChange={subscription('onTextSelectionChange')}
         onSearchChange={subscription('onSearchChange')}
         onViewportChange={subscription('onViewportChange')}
+        onFormChange={subscription('onFormChange')}
         overlayLayerId={overlayLayerId}
         overlays={overlays}
         hybridRef={hybridRef}

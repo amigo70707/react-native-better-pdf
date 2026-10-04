@@ -36,6 +36,7 @@
 #include "PdfScaleChangeEvent.hpp"
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfViewportChangeEvent.hpp"
+#include "NativePdfFormChangeEvent.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include <memory>
 #include "HybridBetterPdfViewSpec.hpp"
@@ -81,6 +82,7 @@ namespace margelo::nitro::betterpdf::views {
     nitro::ReactProp<std::optional<bool>> showsVerticalScrollIndicator;
     nitro::ReactProp<std::optional<bool>> showsHorizontalScrollIndicator;
     nitro::ReactProp<std::optional<bool>> enableTextSelection;
+    nitro::ReactProp<std::optional<bool>> enableFormFilling;
     nitro::ReactProp<std::optional<double>> searchHighlightColor;
     nitro::ReactProp<std::optional<double>> searchCurrentHighlightColor;
     nitro::ReactProp<std::optional<std::function<void(const PdfLoadEvent& /* event */)>>> onLoad;
@@ -92,6 +94,7 @@ namespace margelo::nitro::betterpdf::views {
     nitro::ReactProp<std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>> onScaleChange;
     nitro::ReactProp<std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>> onSearchChange;
     nitro::ReactProp<std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>> onViewportChange;
+    nitro::ReactProp<std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>> onFormChange;
     nitro::ReactProp<std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>> onTextSelectionChange;
     nitro::ReactProp<std::optional<std::function<void(const std::shared_ptr<HybridBetterPdfViewSpec>& /* ref */)>>> hybridRef;
 
@@ -118,6 +121,7 @@ namespace margelo::nitro::betterpdf::views {
              showsVerticalScrollIndicator.hasSameValue(other.showsVerticalScrollIndicator) &&
              showsHorizontalScrollIndicator.hasSameValue(other.showsHorizontalScrollIndicator) &&
              enableTextSelection.hasSameValue(other.enableTextSelection) &&
+             enableFormFilling.hasSameValue(other.enableFormFilling) &&
              searchHighlightColor.hasSameValue(other.searchHighlightColor) &&
              searchCurrentHighlightColor.hasSameValue(other.searchCurrentHighlightColor) &&
              onLoad.hasSameValue(other.onLoad) &&
@@ -129,6 +133,7 @@ namespace margelo::nitro::betterpdf::views {
              onScaleChange.hasSameValue(other.onScaleChange) &&
              onSearchChange.hasSameValue(other.onSearchChange) &&
              onViewportChange.hasSameValue(other.onViewportChange) &&
+             onFormChange.hasSameValue(other.onFormChange) &&
              onTextSelectionChange.hasSameValue(other.onTextSelectionChange) &&
              hybridRef.hasSameValue(other.hybridRef);
     }
@@ -156,6 +161,7 @@ namespace margelo::nitro::betterpdf::views {
              showsVerticalScrollIndicator.isProvided() ||
              showsHorizontalScrollIndicator.isProvided() ||
              enableTextSelection.isProvided() ||
+             enableFormFilling.isProvided() ||
              searchHighlightColor.isProvided() ||
              searchCurrentHighlightColor.isProvided() ||
              onLoad.isProvided() ||
@@ -167,6 +173,7 @@ namespace margelo::nitro::betterpdf::views {
              onScaleChange.isProvided() ||
              onSearchChange.isProvided() ||
              onViewportChange.isProvided() ||
+             onFormChange.isProvided() ||
              onTextSelectionChange.isProvided() ||
              hybridRef.isProvided();
     }

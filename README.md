@@ -103,6 +103,9 @@ const toc = await pdf.current?.getOutline();   // [{ title, page?, children }]
 const sizes = await pdf.current?.getPageSizes(); // [{ width, height }] per page, PDF points
 const image = await pdf.current?.renderPage(0, { width: 600 }); // { uri, width, height }, a PNG file
 const printed = await pdf.current?.print();    // { isSubmitted }, the system print dialog
+const fields = await pdf.current?.getFormFields(); // [{ name, type, value… }], see Forms
+await pdf.current?.setFormFieldValues({ name: 'Anna', agree: true });
+const { filePath } = await pdf.current!.exportDocument(); // the filled-in PDF
 pdf.current?.search('invoice');                // highlights matches, see onSearchChange
 pdf.current?.searchNext();                     // wraps around; searchPrevious() too
 pdf.current?.clearSearch();                    // or search('')
@@ -141,6 +144,7 @@ re-renders never reload the document.
 | `showsVerticalScrollIndicator` | `boolean` | `true` | platform scroll bar while scrolling |
 | `showsHorizontalScrollIndicator` | `boolean` | `true` | shown only while zoomed wider than the view |
 | `enableTextSelection` | `boolean` | `true` | long press selects text, handles adjust it, the system menu copies; `false` turns selection off (Android: API 35+) |
+| `enableFormFilling` | `boolean` | `true` | form fields can be filled in by touch; `false` shows them as they are (taps on them are page taps); see [Forms](#forms) |
 | `horizontal` | `boolean` | `false` | pages side by side |
 | `enablePaging` | `boolean` | `false` | one page per swipe, along the `horizontal` axis |
 | `enableRTL` | `boolean` | `false` | horizontal layouts run right to left (iOS: with `enablePaging` only) |
@@ -160,6 +164,7 @@ re-renders never reload the document.
 | `onScaleChange` | `({ scale }) => void` | | once per settled zoom change (pinch/double-tap end, `zoomTo`); relative to the fitted page |
 | `onTextSelectionChange` | `({ text }) => void` | | once per settled selection (long press, handle drag or Select all ends); `text` is `''` when cleared |
 | `onViewportChange` | `({ viewport, firstVisiblePage, lastVisiblePage, isAtEnd }) => void` | | once after loading and after every settled scroll, zoom or rotation, never per frame; see [Reading position](#reading-position) |
+| `onFormChange` | `({ field }) => void` | | the reader changed a form field: at once for a checkbox, radio button or choice, when editing ends for text; see [Forms](#forms) |
 | `onSearchChange` | `({ query, matchCount, currentMatch?, currentPage?, isComplete, isSupported }) => void` | | search progress and the current match; see [Search](#search) |
 
 Plus all `View` props (`style`, `testID`, …). They apply to the viewer's
@@ -209,6 +214,9 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Dark pages for reading at night, colours' hues kept
 - Page overlays: React views (form fields, signatures, markers) attached
   to points of a page, moved natively while it scrolls and zooms
+- Forms (AcroForm): filled in by touch or from code, read back by field
+  name, exported as a filled-in PDF (Android: 15+, or 12–14 with SDK
+  extension 13)
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
 - Every page's size (`getPageSizes`), cheap even for long documents
@@ -484,6 +492,53 @@ import { PdfPageOverlay, PdfView } from 'react-native-better-pdf';
   moves (23 overlays: ~0.1 ms per frame on iOS, ~0.2 ms on Android, debug
   builds).
 
+## Forms
+
+```tsx
+<PdfView
+  ref={pdf}
+  source={source}
+  onFormChange={({ field }) => console.log(field.name, field)}
+/>;
+
+const fields = await pdf.current!.getFormFields();
+// [{ name: 'name', type: 'text', value: '', isRequired: true, widgets: [{ page: 0, x, y, width, height }] },
+//  { name: 'agree', type: 'checkbox', isChecked: false, … },
+//  { name: 'plan', type: 'radio', value: 'basic', options: ['basic', 'pro'], … }, …]
+
+await pdf.current!.setFormFieldValues({
+  name: 'Anna', // text, or a combo box's option
+  agree: true, // checkbox
+  plan: 'pro', // radio: the option
+  colours: ['Blue'], // list box: the options
+  'address.city': 'Kraków', // fully qualified names
+});
+const { filePath } = await pdf.current!.exportDocument(); // share or upload it
+```
+
+- Text fields, checkboxes, radio buttons, combo and list boxes are filled
+  in by touch: iOS with PDFKit's own editing, Android with a text field
+  over the form field (kept above the keyboard) and a list to pick
+  choices from. `enableFormFilling={false}` leaves them as they are.
+- `onFormChange` reports the reader's changes only — at once for a toggle
+  or choice, when editing ends for text, never per keystroke — not
+  `setFormFieldValues`.
+- `getFormFields()` returns every field with its current value, typed by
+  `type` (`PdfFormField`); `widgets` are where it is shown, in the same
+  coordinates as `onPageTap` — e.g. to place a `PdfPageOverlay` on a
+  signature field. Choices are their displayed labels.
+- `setFormFieldValues()` sets fields by name, all or none: it rejects,
+  changing nothing, for an unknown or read-only field or a value its type
+  does not take.
+- `exportDocument()` writes the document as shown to a new file (the
+  cache directory by default, or `{ filePath }`), keeping its password
+  protection; the source file is never changed. Printing and `renderPage`
+  show the form as filled in too.
+- `getFormFields`, `setFormFieldValues`, `exportDocument`, `print` and
+  `renderPage` first end text editing, so what the reader is typing counts.
+- Edits live with the open document: reopening the source shows it as
+  stored. Export to keep them.
+
 ## Printing
 
 ```tsx
@@ -564,6 +619,16 @@ Screen readers get the document's text and position:
   horizontal or paged layouts, or right to left.
 - **Dark pages on iOS**: annotations keep their own colours (see
   [Dark pages](#dark-pages)).
+- **Forms**: JavaScript actions and calculations in a form do not run;
+  signature fields cannot be signed (their places are reported); XFA forms
+  are not supported. iOS writes exports anew with PDFKit (field hierarchy
+  flattened into dotted names, field order may change; content PDFKit
+  cannot read is not kept) and keeps one selected option per list box.
+  Android: filling in needs Android 15+, or 12–14 with SDK extension 13
+  (elsewhere fields are read from the file, `setFormFieldValues` rejects
+  and `exportDocument` copies the file); a choice's custom text cannot be
+  typed by touch; a radio group that cannot be turned off cannot be
+  cleared; screen readers do not reach form fields.
 - **Page overlays** are not clipped to their page, and are not drawn in
   page images or printing. On iOS an overlay's drawing is scaled with the
   page, so its text can soften at high zoom (sharp at 2.5× in tests);

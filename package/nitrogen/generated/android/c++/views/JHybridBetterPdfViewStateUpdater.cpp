@@ -159,6 +159,11 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
     hybridView->setEnableTextSelection(newProps->enableTextSelection.get());
   }
   if (oldProps == nullptr
+        ? newProps->enableFormFilling.isProvided()
+        : !newProps->enableFormFilling.hasSameValue(oldProps->enableFormFilling)) {
+    hybridView->setEnableFormFilling(newProps->enableFormFilling.get());
+  }
+  if (oldProps == nullptr
         ? newProps->searchHighlightColor.isProvided()
         : !newProps->searchHighlightColor.hasSameValue(oldProps->searchHighlightColor)) {
     hybridView->setSearchHighlightColor(newProps->searchHighlightColor.get());
@@ -212,6 +217,11 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
         ? newProps->onViewportChange.isProvided()
         : !newProps->onViewportChange.hasSameValue(oldProps->onViewportChange)) {
     hybridView->setOnViewportChange(newProps->onViewportChange.get());
+  }
+  if (oldProps == nullptr
+        ? newProps->onFormChange.isProvided()
+        : !newProps->onFormChange.hasSameValue(oldProps->onFormChange)) {
+    hybridView->setOnFormChange(newProps->onFormChange.get());
   }
   if (oldProps == nullptr
         ? newProps->onTextSelectionChange.isProvided()

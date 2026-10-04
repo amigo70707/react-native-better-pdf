@@ -14,6 +14,12 @@ namespace margelo::nitro::betterpdf { class HybridBetterPdfCacheSpec; }
 namespace margelo::nitro::betterpdf { class HybridBetterPdfDocumentSpec; }
 // Forward declaration of `HybridBetterPdfViewSpec` to properly resolve imports.
 namespace margelo::nitro::betterpdf { class HybridBetterPdfViewSpec; }
+// Forward declaration of `NativePdfFormChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormChangeEvent; }
+// Forward declaration of `NativePdfFormField` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormField; }
+// Forward declaration of `NativePdfFormValue` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormValue; }
 // Forward declaration of `NativePdfSource` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfSource; }
 // Forward declaration of `PdfCacheEntry` to properly resolve imports.
@@ -30,8 +36,14 @@ namespace margelo::nitro::betterpdf { struct PdfDownloadResult; }
 namespace margelo::nitro::betterpdf { enum class PdfErrorCode; }
 // Forward declaration of `PdfError` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfError; }
+// Forward declaration of `PdfExportResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfExportResult; }
 // Forward declaration of `PdfFitPolicy` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
+// Forward declaration of `PdfFormFieldType` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfFormFieldType; }
+// Forward declaration of `PdfFormWidget` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfFormWidget; }
 // Forward declaration of `PdfImageFormat` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 // Forward declaration of `PdfInitialPosition` to properly resolve imports.
@@ -87,6 +99,9 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "HybridBetterPdfCacheSpec.hpp"
 #include "HybridBetterPdfDocumentSpec.hpp"
 #include "HybridBetterPdfViewSpec.hpp"
+#include "NativePdfFormChangeEvent.hpp"
+#include "NativePdfFormField.hpp"
+#include "NativePdfFormValue.hpp"
 #include "NativePdfSource.hpp"
 #include "PdfCacheEntry.hpp"
 #include "PdfCacheMode.hpp"
@@ -95,7 +110,10 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfDownloadResult.hpp"
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
+#include "PdfExportResult.hpp"
 #include "PdfFitPolicy.hpp"
+#include "PdfFormFieldType.hpp"
+#include "PdfFormWidget.hpp"
 #include "PdfImageFormat.hpp"
 #include "PdfInitialPosition.hpp"
 #include "PdfLinkPressEvent.hpp"
@@ -1235,6 +1253,65 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.value();
   }
   
+  // pragma MARK: std::vector<PdfFormWidget>
+  /**
+   * Specialized version of `std::vector<PdfFormWidget>`.
+   */
+  using std__vector_PdfFormWidget_ = std::vector<PdfFormWidget>;
+  inline std::vector<PdfFormWidget> create_std__vector_PdfFormWidget_(size_t size) noexcept {
+    std::vector<PdfFormWidget> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::vector<std::string>
+  /**
+   * Specialized version of `std::vector<std::string>`.
+   */
+  using std__vector_std__string_ = std::vector<std::string>;
+  inline std::vector<std::string> create_std__vector_std__string_(size_t size) noexcept {
+    std::vector<std::string> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::function<void(const NativePdfFormChangeEvent& /* event */)>
+  /**
+   * Specialized version of `std::function<void(const NativePdfFormChangeEvent&)>`.
+   */
+  using Func_void_NativePdfFormChangeEvent = std::function<void(const NativePdfFormChangeEvent& /* event */)>;
+  /**
+   * Wrapper class for a `std::function<void(const NativePdfFormChangeEvent& / * event * /)>`, this can be used from Swift.
+   */
+  class Func_void_NativePdfFormChangeEvent_Wrapper final {
+  public:
+    explicit Func_void_NativePdfFormChangeEvent_Wrapper(std::function<void(const NativePdfFormChangeEvent& /* event */)>&& func): _function(std::make_unique<std::function<void(const NativePdfFormChangeEvent& /* event */)>>(std::move(func))) {}
+    inline void call(NativePdfFormChangeEvent event) const noexcept {
+      _function->operator()(event);
+    }
+  private:
+    std::unique_ptr<std::function<void(const NativePdfFormChangeEvent& /* event */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_NativePdfFormChangeEvent create_Func_void_NativePdfFormChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_NativePdfFormChangeEvent_Wrapper wrap_Func_void_NativePdfFormChangeEvent(Func_void_NativePdfFormChangeEvent value) noexcept {
+    return Func_void_NativePdfFormChangeEvent_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>
+  /**
+   * Specialized version of `std::optional<std::function<void(const NativePdfFormChangeEvent& / * event * /)>>`.
+   */
+  using std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______ = std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>;
+  inline std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>> create_std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______(const std::function<void(const NativePdfFormChangeEvent& /* event */)>& value) noexcept {
+    return std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>(value);
+  }
+  inline bool has_value_std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______(const std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::function<void(const NativePdfFormChangeEvent& /* event */)> get_std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______(const std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>& optional) noexcept {
+    return optional.value();
+  }
+  
   // pragma MARK: std::function<void(const PdfTextSelectionChangeEvent& /* event */)>
   /**
    * Specialized version of `std::function<void(const PdfTextSelectionChangeEvent&)>`.
@@ -1306,6 +1383,111 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return Func_void_PdfPrintResult_Wrapper(std::move(value));
   }
   
+  // pragma MARK: std::vector<NativePdfFormField>
+  /**
+   * Specialized version of `std::vector<NativePdfFormField>`.
+   */
+  using std__vector_NativePdfFormField_ = std::vector<NativePdfFormField>;
+  inline std::vector<NativePdfFormField> create_std__vector_NativePdfFormField_(size_t size) noexcept {
+    std::vector<NativePdfFormField> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::vector<NativePdfFormField>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::vector<NativePdfFormField>>>`.
+   */
+  using std__shared_ptr_Promise_std__vector_NativePdfFormField___ = std::shared_ptr<Promise<std::vector<NativePdfFormField>>>;
+  inline std::shared_ptr<Promise<std::vector<NativePdfFormField>>> create_std__shared_ptr_Promise_std__vector_NativePdfFormField___() noexcept {
+    return Promise<std::vector<NativePdfFormField>>::create();
+  }
+  inline PromiseHolder<std::vector<NativePdfFormField>> wrap_std__shared_ptr_Promise_std__vector_NativePdfFormField___(std::shared_ptr<Promise<std::vector<NativePdfFormField>>> promise) noexcept {
+    return PromiseHolder<std::vector<NativePdfFormField>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::vector<NativePdfFormField>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::vector<NativePdfFormField>&)>`.
+   */
+  using Func_void_std__vector_NativePdfFormField_ = std::function<void(const std::vector<NativePdfFormField>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::vector<NativePdfFormField>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__vector_NativePdfFormField__Wrapper final {
+  public:
+    explicit Func_void_std__vector_NativePdfFormField__Wrapper(std::function<void(const std::vector<NativePdfFormField>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::vector<NativePdfFormField>& /* result */)>>(std::move(func))) {}
+    inline void call(std::vector<NativePdfFormField> result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::vector<NativePdfFormField>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__vector_NativePdfFormField_ create_Func_void_std__vector_NativePdfFormField_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__vector_NativePdfFormField__Wrapper wrap_Func_void_std__vector_NativePdfFormField_(Func_void_std__vector_NativePdfFormField_ value) noexcept {
+    return Func_void_std__vector_NativePdfFormField__Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::optional<std::vector<std::string>>
+  /**
+   * Specialized version of `std::optional<std::vector<std::string>>`.
+   */
+  using std__optional_std__vector_std__string__ = std::optional<std::vector<std::string>>;
+  inline std::optional<std::vector<std::string>> create_std__optional_std__vector_std__string__(const std::vector<std::string>& value) noexcept {
+    return std::optional<std::vector<std::string>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_std__string__(const std::optional<std::vector<std::string>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<std::string> get_std__optional_std__vector_std__string__(const std::optional<std::vector<std::string>>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::vector<NativePdfFormValue>
+  /**
+   * Specialized version of `std::vector<NativePdfFormValue>`.
+   */
+  using std__vector_NativePdfFormValue_ = std::vector<NativePdfFormValue>;
+  inline std::vector<NativePdfFormValue> create_std__vector_NativePdfFormValue_(size_t size) noexcept {
+    std::vector<NativePdfFormValue> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<PdfExportResult>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<PdfExportResult>>`.
+   */
+  using std__shared_ptr_Promise_PdfExportResult__ = std::shared_ptr<Promise<PdfExportResult>>;
+  inline std::shared_ptr<Promise<PdfExportResult>> create_std__shared_ptr_Promise_PdfExportResult__() noexcept {
+    return Promise<PdfExportResult>::create();
+  }
+  inline PromiseHolder<PdfExportResult> wrap_std__shared_ptr_Promise_PdfExportResult__(std::shared_ptr<Promise<PdfExportResult>> promise) noexcept {
+    return PromiseHolder<PdfExportResult>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const PdfExportResult& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const PdfExportResult&)>`.
+   */
+  using Func_void_PdfExportResult = std::function<void(const PdfExportResult& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const PdfExportResult& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_PdfExportResult_Wrapper final {
+  public:
+    explicit Func_void_PdfExportResult_Wrapper(std::function<void(const PdfExportResult& /* result */)>&& func): _function(std::make_unique<std::function<void(const PdfExportResult& /* result */)>>(std::move(func))) {}
+    inline void call(PdfExportResult result) const noexcept {
+      _function->operator()(result);
+    }
+  private:
+    std::unique_ptr<std::function<void(const PdfExportResult& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_PdfExportResult create_Func_void_PdfExportResult(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_PdfExportResult_Wrapper wrap_Func_void_PdfExportResult(Func_void_PdfExportResult value) noexcept {
+    return Func_void_PdfExportResult_Wrapper(std::move(value));
+  }
+  
   // pragma MARK: std::shared_ptr<HybridBetterPdfViewSpec>
   /**
    * Specialized version of `std::shared_ptr<HybridBetterPdfViewSpec>`.
@@ -1334,6 +1516,24 @@ namespace margelo::nitro::betterpdf::bridge::swift {
   }
   inline Result_std__shared_ptr_Promise_PdfPrintResult___ create_Result_std__shared_ptr_Promise_PdfPrintResult___(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<PdfPrintResult>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<std::vector<NativePdfFormField>>>>
+  using Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____ = Result<std::shared_ptr<Promise<std::vector<NativePdfFormField>>>>;
+  inline Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____ create_Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____(const std::shared_ptr<Promise<std::vector<NativePdfFormField>>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<NativePdfFormField>>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____ create_Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<std::vector<NativePdfFormField>>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<PdfExportResult>>>
+  using Result_std__shared_ptr_Promise_PdfExportResult___ = Result<std::shared_ptr<Promise<PdfExportResult>>>;
+  inline Result_std__shared_ptr_Promise_PdfExportResult___ create_Result_std__shared_ptr_Promise_PdfExportResult___(const std::shared_ptr<Promise<PdfExportResult>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<PdfExportResult>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_PdfExportResult___ create_Result_std__shared_ptr_Promise_PdfExportResult___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<PdfExportResult>>>::withError(error);
   }
 
 } // namespace margelo::nitro::betterpdf::bridge::swift

@@ -43,6 +43,14 @@ namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
 // Forward declaration of `PdfViewport` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfViewport; }
+// Forward declaration of `NativePdfFormChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormChangeEvent; }
+// Forward declaration of `NativePdfFormField` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormField; }
+// Forward declaration of `PdfFormFieldType` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfFormFieldType; }
+// Forward declaration of `PdfFormWidget` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfFormWidget; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -55,10 +63,14 @@ namespace margelo::nitro::betterpdf { struct PdfPageSize; }
 namespace margelo::nitro::betterpdf { struct PdfPageImage; }
 // Forward declaration of `PdfPrintResult` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
+// Forward declaration of `PdfExportResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfExportResult; }
 // Forward declaration of `PdfRenderPageOptions` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 // Forward declaration of `PdfImageFormat` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
+// Forward declaration of `NativePdfFormValue` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormValue; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -111,6 +123,15 @@ namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 #include "JPdfViewportChangeEvent.hpp"
 #include "PdfViewport.hpp"
 #include "JPdfViewport.hpp"
+#include "NativePdfFormChangeEvent.hpp"
+#include "JFunc_void_NativePdfFormChangeEvent.hpp"
+#include "JNativePdfFormChangeEvent.hpp"
+#include "NativePdfFormField.hpp"
+#include "JNativePdfFormField.hpp"
+#include "PdfFormFieldType.hpp"
+#include "JPdfFormFieldType.hpp"
+#include "PdfFormWidget.hpp"
+#include "JPdfFormWidget.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "JFunc_void_PdfTextSelectionChangeEvent.hpp"
 #include "JPdfTextSelectionChangeEvent.hpp"
@@ -126,10 +147,15 @@ namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 #include "JPdfPageImage.hpp"
 #include "PdfPrintResult.hpp"
 #include "JPdfPrintResult.hpp"
+#include <NitroModules/JUnit.hpp>
+#include "PdfExportResult.hpp"
+#include "JPdfExportResult.hpp"
 #include "PdfRenderPageOptions.hpp"
 #include "JPdfRenderPageOptions.hpp"
 #include "PdfImageFormat.hpp"
 #include "JPdfImageFormat.hpp"
+#include "NativePdfFormValue.hpp"
+#include "JNativePdfFormValue.hpp"
 
 namespace margelo::nitro::betterpdf {
 
@@ -368,6 +394,15 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JBoolean> /* enableTextSelection */)>("setEnableTextSelection");
     method(_javaPart, enableTextSelection.has_value() ? jni::JBoolean::valueOf(enableTextSelection.value()) : nullptr);
   }
+  std::optional<bool> JHybridBetterPdfViewSpec::getEnableFormFilling() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JBoolean>()>("getEnableFormFilling");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(static_cast<bool>(__result->value())) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setEnableFormFilling(std::optional<bool> enableFormFilling) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JBoolean> /* enableFormFilling */)>("setEnableFormFilling");
+    method(_javaPart, enableFormFilling.has_value() ? jni::JBoolean::valueOf(enableFormFilling.value()) : nullptr);
+  }
   std::optional<double> JHybridBetterPdfViewSpec::getSearchHighlightColor() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JDouble>()>("getSearchHighlightColor");
     auto __result = method(_javaPart);
@@ -539,6 +574,23 @@ namespace margelo::nitro::betterpdf {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_PdfViewportChangeEvent::javaobject> /* onViewportChange */)>("setOnViewportChange_cxx");
     method(_javaPart, onViewportChange.has_value() ? JFunc_void_PdfViewportChangeEvent_cxx::fromCpp(onViewportChange.value()) : nullptr);
   }
+  std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnFormChange() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_NativePdfFormChangeEvent::javaobject>()>("getOnFormChange_cxx");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional([&]() -> std::function<void(const NativePdfFormChangeEvent& /* event */)> {
+      if (__result->isInstanceOf(JFunc_void_NativePdfFormChangeEvent_cxx::javaClassStatic())) [[likely]] {
+        auto downcast = jni::static_ref_cast<JFunc_void_NativePdfFormChangeEvent_cxx::javaobject>(__result);
+        return downcast->cthis()->getFunction();
+      } else {
+        auto __resultRef = jni::make_global(__result);
+        return JNICallable<JFunc_void_NativePdfFormChangeEvent, void(NativePdfFormChangeEvent)>(std::move(__resultRef));
+      }
+    }()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setOnFormChange(const std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>& onFormChange) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JFunc_void_NativePdfFormChangeEvent::javaobject> /* onFormChange */)>("setOnFormChange_cxx");
+    method(_javaPart, onFormChange.has_value() ? JFunc_void_NativePdfFormChangeEvent_cxx::fromCpp(onFormChange.value()) : nullptr);
+  }
   std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> JHybridBetterPdfViewSpec::getOnTextSelectionChange() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_PdfTextSelectionChangeEvent::javaobject>()>("getOnTextSelectionChange_cxx");
     auto __result = method(_javaPart);
@@ -648,6 +700,71 @@ namespace margelo::nitro::betterpdf {
       auto __promise = Promise<PdfPrintResult>::create();
       __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
         auto __result = jni::static_ref_cast<JPdfPrintResult>(__boxedResult);
+        __promise->resolve(__result->toCpp());
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<std::vector<NativePdfFormField>>> JHybridBetterPdfViewSpec::getFormFields() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("getFormFields");
+    auto __result = method(_javaPart);
+    return [&]() {
+      auto __promise = Promise<std::vector<NativePdfFormField>>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<jni::JArrayClass<JNativePdfFormField>>(__boxedResult);
+        __promise->resolve([&](auto&& __input) {
+          size_t __size = __input->size();
+          std::vector<NativePdfFormField> __vector;
+          __vector.reserve(__size);
+          for (size_t __i = 0; __i < __size; __i++) {
+            auto __element = __input->getElement(__i);
+            __vector.push_back(__element->toCpp());
+          }
+          return __vector;
+        }(__result));
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<void>> JHybridBetterPdfViewSpec::setFormFieldValues(const std::vector<NativePdfFormValue>& values) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JArrayClass<JNativePdfFormValue>> /* values */)>("setFormFieldValues");
+    auto __result = method(_javaPart, [&](auto&& __input) {
+      size_t __size = __input.size();
+      jni::local_ref<jni::JArrayClass<JNativePdfFormValue>> __array = jni::JArrayClass<JNativePdfFormValue>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = __input[__i];
+        auto __elementJni = JNativePdfFormValue::fromCpp(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }(values));
+    return [&]() {
+      auto __promise = Promise<void>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
+        __promise->resolve();
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  std::shared_ptr<Promise<PdfExportResult>> JHybridBetterPdfViewSpec::exportDocument(const std::string& filePath) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<jni::JString> /* filePath */)>("exportDocument");
+    auto __result = method(_javaPart, jni::make_jstring(filePath));
+    return [&]() {
+      auto __promise = Promise<PdfExportResult>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
+        auto __result = jni::static_ref_cast<JPdfExportResult>(__boxedResult);
         __promise->resolve(__result->toCpp());
       });
       __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {

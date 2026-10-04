@@ -42,6 +42,13 @@ extension PDFPage {
     return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
   }
 
+  /// Inverse of `pageRect(fromTopLeft:box:)`.
+  func topLeftRect(from pageRect: CGRect, box: PDFDisplayBox) -> CGRect {
+    let a = topLeftPoint(from: CGPoint(x: pageRect.minX, y: pageRect.minY), box: box)
+    let b = topLeftPoint(from: CGPoint(x: pageRect.maxX, y: pageRect.maxY), box: box)
+    return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
+  }
+
   /// `rotation` in clockwise quarter turns, 0–3 (/Rotate may be negative).
   private var quarterTurns: Int {
     ((rotation / 90) % 4 + 4) % 4

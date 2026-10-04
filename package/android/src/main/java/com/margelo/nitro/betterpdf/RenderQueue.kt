@@ -14,12 +14,16 @@ package com.margelo.nitro.betterpdf
  * queue: it is taken before any pending work, [submit] never drops it, and
  * only a newer urgent request replaces it before it starts.
  *
+ * Ordered requests (changes to the document's form) come before both, first
+ * in first out, and are never dropped or replaced.
+ *
  * Pure Kotlin so its guarantees are unit tested (`RenderQueueTest`).
  */
 class RenderQueue<T : Any> {
   private val lock = Object()
   private var pending: List<T> = emptyList()
   private var urgent: T? = null
+  private val ordered = ArrayDeque<T>()
   private var inFlight: T? = null
 
   @Volatile
@@ -58,10 +62,19 @@ class RenderQueue<T : Any> {
     }
   }
 
+  /** Queues [request] ahead of all other work, after earlier ordered requests. Ignored once closed. */
+  fun submitInOrder(request: T) {
+    synchronized(lock) {
+      if (isClosed) return
+      ordered.addLast(request)
+      lock.notifyAll()
+    }
+  }
+
   /** Blocks until work is available; `null` once closed. Marks the result in flight. */
   fun take(): T? {
     synchronized(lock) {
-      while (pending.isEmpty() && urgent == null && !isClosed) lock.wait()
+      while (pending.isEmpty() && urgent == null && ordered.isEmpty() && !isClosed) lock.wait()
       return pollLocked()
     }
   }
@@ -74,13 +87,16 @@ class RenderQueue<T : Any> {
     synchronized(lock) { inFlight = null }
   }
 
-  /** Drops all pending work and wakes the consumer. */
-  fun close() {
+  /** Drops all pending work and wakes the consumer; returns the ordered requests that will not run. */
+  fun close(): List<T> {
     synchronized(lock) {
       isClosed = true
       pending = emptyList()
       urgent = null
+      val dropped = ordered.toList()
+      ordered.clear()
       lock.notifyAll()
+      return dropped
     }
   }
 
@@ -88,6 +104,10 @@ class RenderQueue<T : Any> {
 
   private fun pollLocked(): T? {
     if (isClosed) return null
+    ordered.removeFirstOrNull()?.let {
+      inFlight = it
+      return it
+    }
     urgent?.let {
       urgent = null
       inFlight = it

@@ -14,7 +14,7 @@ import java.lang.ref.WeakReference
  * without JS. Views are found by their `nativeID` and cached until they
  * leave the layer.
  */
-internal class PageOverlays(private val documentView: PdfDocumentView) {
+internal class PageOverlays(private val documentView: PdfDocumentView, private val host: View) {
   var placements: Array<PdfOverlayPlacement> = emptyArray()
   var layerId: String? = null
     set(value) {
@@ -87,8 +87,8 @@ internal class PageOverlays(private val documentView: PdfDocumentView) {
   private fun findLayer(): ViewGroup? {
     layer?.get()?.let { if (it.isAttachedToWindow && nativeId(it) == layerId) return it }
     val layerId = layerId ?: return null
-    // The document view → the box React Native renders for PdfView.
-    val box = documentView.parent as? ViewGroup ?: return null
+    // The native view React Native lays out → the box it renders for PdfView.
+    val box = host.parent as? ViewGroup ?: return null
     for (i in 0 until box.childCount) {
       val child = box.getChildAt(i)
       if (child is ViewGroup && nativeId(child) == layerId) {

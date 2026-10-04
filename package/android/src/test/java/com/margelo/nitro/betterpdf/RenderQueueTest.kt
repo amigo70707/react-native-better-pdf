@@ -131,4 +131,29 @@ class RenderQueueTest {
     queue.submitUrgent(10)
     assertNull(queue.poll())
   }
+
+  @Test
+  fun `ordered work goes first, in order, and is never dropped or replaced`() {
+    val queue = RenderQueue<Int>()
+    queue.submit(listOf(1, 2))
+    queue.submitUrgent(50)
+    queue.submitInOrder(100)
+    queue.submitInOrder(101)
+    queue.submit(listOf(3))
+    queue.submitUrgent(51)
+    assertEquals(listOf(100, 101, 51, 3), generateSequence { queue.poll().also { queue.finish() } }.toList())
+  }
+
+  @Test
+  fun `ordered work wakes a waiting consumer and close drops it`() {
+    val queue = RenderQueue<Int>()
+    val taken = CountDownLatch(1)
+    val consumer = thread { if (queue.take() == 7) taken.countDown() }
+    queue.submitInOrder(7)
+    assertTrue(taken.await(5, TimeUnit.SECONDS))
+    consumer.join()
+    queue.submitInOrder(8)
+    queue.close()
+    assertNull(queue.poll())
+  }
 }

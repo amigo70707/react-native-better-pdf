@@ -14,7 +14,23 @@ export type { PdfColorScheme } from './types/PdfColorScheme';
 export type { PdfDocumentMetadata } from './types/PdfDocumentMetadata';
 export type { PdfError } from './types/PdfError';
 export type { PdfErrorCode } from './types/PdfErrorCode';
+export type { PdfExportOptions } from './types/PdfExportOptions';
+export type { PdfExportResult } from './types/PdfExportResult';
 export type { PdfFitPolicy } from './types/PdfFitPolicy';
+export type { PdfFormChangeEvent } from './types/PdfFormChangeEvent';
+export type {
+  PdfCheckboxFormField,
+  PdfComboBoxFormField,
+  PdfFormField,
+  PdfListBoxFormField,
+  PdfPushButtonFormField,
+  PdfRadioFormField,
+  PdfSignatureFormField,
+  PdfTextFormField,
+} from './types/PdfFormField';
+export type { PdfFormFieldType } from './types/PdfFormFieldType';
+export type { PdfFormFieldValue } from './types/PdfFormFieldValue';
+export type { PdfFormWidget } from './types/PdfFormWidget';
 export type { PdfLinkPressEvent } from './types/PdfLinkPressEvent';
 export type { PdfLoadEvent } from './types/PdfLoadEvent';
 export type { PdfLoadProgressEvent } from './types/PdfLoadProgressEvent';

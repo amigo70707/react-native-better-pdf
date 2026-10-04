@@ -3,6 +3,7 @@ package com.margelo.nitro.betterpdf
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.print.PrintJob
 import android.print.PrintJobInfo
 import android.print.PrintManager
@@ -10,7 +11,12 @@ import android.view.View
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.ThemedReactContext
+import com.margelo.nitro.betterpdf.outline.FormFieldEntry
 import com.margelo.nitro.core.Promise
+import com.margelo.nitro.core.resolve
+import java.io.File
+import java.io.IOException
+import java.util.UUID
 
 /**
  * Android implementation of `BetterPdfView`.
@@ -27,11 +33,17 @@ class HybridBetterPdfView(
   PdfDocumentSession.Listener,
   PdfDocumentView.Listener {
   private val documentView = PdfDocumentView(context).also { it.listener = this }
-  private val pageOverlays = PageOverlays(documentView).also { overlays ->
-    documentView.onPagesMoved = { overlays.layout() }
+  private val container = DocumentContainer(context, documentView)
+  private val formFiller = FormFiller(container, documentView)
+  private val pageOverlays = PageOverlays(documentView, host = container).also { overlays ->
+    documentView.onPagesMoved = {
+      overlays.layout()
+      formFiller.place()
+    }
+    container.onLaidOut = formFiller::place
   }
   private val searchController = SearchController(documentView) { event -> onSearchChange?.invoke(event) }
-  override val view: View = documentView
+  override val view: View = container
 
   private val mainHandler = Handler(Looper.getMainLooper())
   private var session: PdfDocumentSession? = null
@@ -40,6 +52,8 @@ class HybridBetterPdfView(
   private var needsReload = false
   private var needsScaleUpdate = false
   private var needsLayoutModeUpdate = false
+  /** The displayed file's name without extension, for exported copies. */
+  private var documentFileName = "document"
 
   // region Props
 
@@ -116,6 +130,12 @@ class HybridBetterPdfView(
       pageOverlays.placements = value ?: emptyArray()
       layoutOverlaysSoon()
     }
+  override var enableFormFilling: Boolean? = null
+    set(value) {
+      field = value
+      documentView.isFormFillingEnabled = value ?: true
+      if (value == false) formFiller.commit()
+    }
   override var enableDoubleTapZoom: Boolean? = null
     set(value) {
       field = value
@@ -168,6 +188,7 @@ class HybridBetterPdfView(
   override var onViewportChange: ((event: PdfViewportChangeEvent) -> Unit)? = null
   override var onSearchChange: ((event: PdfSearchChangeEvent) -> Unit)? = null
   override var onTextSelectionChange: ((event: PdfTextSelectionChangeEvent) -> Unit)? = null
+  override var onFormChange: ((event: NativePdfFormChangeEvent) -> Unit)? = null
 
   // endregion
 
@@ -256,6 +277,65 @@ class HybridBetterPdfView(
     mainHandler.post { searchController.clear() }
   }
 
+  override fun getFormFields(): Promise<Array<NativePdfFormField>> {
+    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val promise = Promise<Array<NativePdfFormField>>()
+    mainHandler.post {
+      // Text being typed is read too.
+      formFiller.commit()
+      session.readFormFields { result ->
+        result.fold({ fields -> promise.resolve(fields.map { it.toNative() }.toTypedArray()) }, promise::reject)
+      }
+    }
+    return promise
+  }
+
+  override fun setFormFieldValues(values: Array<NativePdfFormValue>): Promise<Unit> {
+    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val promise = Promise<Unit>()
+    mainHandler.post {
+      // Text being typed goes first, so it does not overwrite these values.
+      formFiller.commit()
+      session.setFormValues(values.toList()) { error -> if (error == null) promise.resolve() else promise.reject(error) }
+    }
+    return promise
+  }
+
+  override fun exportDocument(filePath: String): Promise<PdfExportResult> {
+    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val name = documentFileName
+    return afterFormSettles(session) {
+      val file = if (filePath.isEmpty()) newExportFile(name) else File(filePath)
+      ParcelFileDescriptor.open(
+        file,
+        ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE,
+      ).use(session::writeDocument)
+      PdfExportResult(file.absolutePath)
+    }
+  }
+
+  /** A new file in the cache directory with the document's file name. */
+  private fun newExportFile(name: String): File {
+    val directory = File(context.cacheDir, "BetterPdfExports/${UUID.randomUUID()}")
+    if (!directory.mkdirs() && !directory.isDirectory) throw IOException("Could not create $directory")
+    return File(directory, "$name.pdf")
+  }
+
+  /**
+   * Runs [block] off the main thread once text being typed is applied and
+   * earlier form work is done, so it sees the form as the reader left it.
+   */
+  private fun <T> afterFormSettles(session: PdfDocumentSession, block: () -> T): Promise<T> {
+    val promise = Promise<T>()
+    mainHandler.post {
+      formFiller.commit()
+      session.afterFormWork {
+        Promise.parallel(block).then(promise::resolve).catch(promise::reject)
+      }
+    }
+    return promise
+  }
+
   override fun getOutline(): Promise<Array<PdfOutlineEntry>> {
     val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     return Promise.parallel { session.reads.readOutlineEntries() }
@@ -274,7 +354,7 @@ class HybridBetterPdfView(
     } catch (error: IllegalArgumentException) {
       return Promise.rejected(error)
     }
-    return Promise.parallel { request.render(session.reads, context) }
+    return afterFormSettles(session) { request.render(session.reads, context, session.formEdits) }
   }
 
   override fun print(jobName: String): Promise<PdfPrintResult> {
@@ -282,25 +362,31 @@ class HybridBetterPdfView(
     val pageCount = documentView.pageCount
     val promise = Promise<PdfPrintResult>()
     mainHandler.post {
-      val activity = context.currentActivity
-      when {
-        activity == null -> promise.reject(IllegalStateException("Printing needs the app in the foreground"))
-        printJob != null -> promise.reject(IllegalStateException("A print dialog is already open"))
-        else -> try {
-          var job: PrintJob? = null
-          val adapter = PdfPrintAdapter(printFileName(jobName), pageCount, session::writeForPrinting) {
-            printJob = null
-            val opened = job
-            if (opened == null) promise.resolve(PdfPrintResult(isSubmitted = false)) else settlePrint(opened, promise, PRINT_SETTLE_POLLS)
-          }
-          job = activity.getSystemService(PrintManager::class.java).print(jobName, adapter, null)
-          printJob = job
-        } catch (error: Exception) {
-          promise.reject(error)
-        }
-      }
+      // A form prints as filled in, text being typed included.
+      formFiller.commit()
+      session.afterFormWork { openPrintDialog(session, jobName, pageCount, promise) }
     }
     return promise
+  }
+
+  private fun openPrintDialog(session: PdfDocumentSession, jobName: String, pageCount: Int, promise: Promise<PdfPrintResult>) {
+    val activity = context.currentActivity
+    when {
+      activity == null -> promise.reject(IllegalStateException("Printing needs the app in the foreground"))
+      printJob != null -> promise.reject(IllegalStateException("A print dialog is already open"))
+      else -> try {
+        var job: PrintJob? = null
+        val adapter = PdfPrintAdapter(printFileName(jobName), pageCount, session::writeForPrinting) {
+          printJob = null
+          val opened = job
+          if (opened == null) promise.resolve(PdfPrintResult(isSubmitted = false)) else settlePrint(opened, promise, PRINT_SETTLE_POLLS)
+        }
+        job = activity.getSystemService(PrintManager::class.java).print(jobName, adapter, null)
+        printJob = job
+      } catch (error: Exception) {
+        promise.reject(error)
+      }
+    }
   }
 
   /** The job of the open print dialog (main thread). */
@@ -357,6 +443,7 @@ class HybridBetterPdfView(
   }
 
   private fun closeSession() {
+    formFiller.cancel()
     searchController.onDocumentChanged(null)
     loadedSession = null
     session?.close()
@@ -375,6 +462,7 @@ class HybridBetterPdfView(
     val scale = position?.scale?.takeIf { it.isFinite() && it > 0 }?.toFloat() ?: 1f
     documentView.setDocument(session, pageSizes, initial, scale, position?.pagePoint)
     loadedSession = session
+    documentFileName = filePath?.let { File(it).nameWithoutExtension }?.takeIf { it.isNotEmpty() } ?: "document"
     searchController.onDocumentChanged(session)
     val first = pageSizes.first()
     onLoad?.invoke(
@@ -402,6 +490,22 @@ class HybridBetterPdfView(
 
   override fun onPageText(page: Int, text: String?) {
     documentView.onPageText(page, text)
+  }
+
+  override fun onPageFormWidgets(page: Int, widgets: List<FormWidget>) {
+    documentView.onPageFormWidgets(page, widgets)
+  }
+
+  override fun onFormPageChanged(page: Int) {
+    documentView.onFormPageChanged(page)
+  }
+
+  override fun onFormFieldChanged(field: FormFieldEntry) {
+    onFormChange?.invoke(NativePdfFormChangeEvent(field.toNative()))
+  }
+
+  override fun onFormWidgetTapped(page: Int, widget: FormWidget) {
+    formFiller.onWidgetTapped(page, widget)
   }
 
   override fun onPageLinks(page: Int, links: List<PageLink>) {
@@ -449,6 +553,8 @@ class HybridBetterPdfView(
   }
 
   override fun onPageTapped(point: PagePoint) {
+    // A tap beside the field being edited ends editing.
+    formFiller.commit()
     onPageTap?.invoke(PdfPageTapEvent(point.page.toDouble(), point.x.toDouble(), point.y.toDouble()))
   }
 

@@ -31,6 +31,7 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   var showsVerticalScrollIndicator: Bool? { get set }
   var showsHorizontalScrollIndicator: Bool? { get set }
   var enableTextSelection: Bool? { get set }
+  var enableFormFilling: Bool? { get set }
   var searchHighlightColor: Double? { get set }
   var searchCurrentHighlightColor: Double? { get set }
   var onLoad: ((_ event: PdfLoadEvent) -> Void)? { get set }
@@ -42,6 +43,7 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   var onScaleChange: ((_ event: PdfScaleChangeEvent) -> Void)? { get set }
   var onSearchChange: ((_ event: PdfSearchChangeEvent) -> Void)? { get set }
   var onViewportChange: ((_ event: PdfViewportChangeEvent) -> Void)? { get set }
+  var onFormChange: ((_ event: NativePdfFormChangeEvent) -> Void)? { get set }
   var onTextSelectionChange: ((_ event: PdfTextSelectionChangeEvent) -> Void)? { get set }
 
   // Methods
@@ -53,6 +55,9 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   func getPageSizes() throws -> Promise<[PdfPageSize]>
   func renderPage(page: Double, options: PdfRenderPageOptions) throws -> Promise<PdfPageImage>
   func print(jobName: String) throws -> Promise<PdfPrintResult>
+  func getFormFields() throws -> Promise<[NativePdfFormField]>
+  func setFormFieldValues(values: [NativePdfFormValue]) throws -> Promise<Void>
+  func exportDocument(filePath: String) throws -> Promise<PdfExportResult>
   func search(query: String) throws -> Void
   func searchNext() throws -> Void
   func searchPrevious() throws -> Void

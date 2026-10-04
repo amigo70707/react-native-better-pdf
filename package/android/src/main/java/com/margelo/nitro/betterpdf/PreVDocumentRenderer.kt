@@ -15,6 +15,10 @@ internal class PreVDocumentRenderer private constructor(private val renderer: Pd
 
   override fun writeUnprotected(destination: ParcelFileDescriptor) = renderer.write(destination, true)
 
+  override val canFillForm: Boolean get() = renderer.pdfFormType != PdfRendererPreV.PDF_FORM_TYPE_NONE
+
+  override fun writeProtected(destination: ParcelFileDescriptor) = renderer.write(destination, false)
+
   override fun close() = renderer.close()
 
   companion object {

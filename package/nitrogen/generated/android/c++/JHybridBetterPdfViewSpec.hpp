@@ -92,6 +92,8 @@ namespace margelo::nitro::betterpdf {
     void setShowsHorizontalScrollIndicator(std::optional<bool> showsHorizontalScrollIndicator) override;
     std::optional<bool> getEnableTextSelection() override;
     void setEnableTextSelection(std::optional<bool> enableTextSelection) override;
+    std::optional<bool> getEnableFormFilling() override;
+    void setEnableFormFilling(std::optional<bool> enableFormFilling) override;
     std::optional<double> getSearchHighlightColor() override;
     void setSearchHighlightColor(std::optional<double> searchHighlightColor) override;
     std::optional<double> getSearchCurrentHighlightColor() override;
@@ -114,6 +116,8 @@ namespace margelo::nitro::betterpdf {
     void setOnSearchChange(const std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>& onSearchChange) override;
     std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>> getOnViewportChange() override;
     void setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) override;
+    std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>> getOnFormChange() override;
+    void setOnFormChange(const std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>& onFormChange) override;
     std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() override;
     void setOnTextSelectionChange(const std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>& onTextSelectionChange) override;
 
@@ -127,6 +131,9 @@ namespace margelo::nitro::betterpdf {
     std::shared_ptr<Promise<std::vector<PdfPageSize>>> getPageSizes() override;
     std::shared_ptr<Promise<PdfPageImage>> renderPage(double page, const PdfRenderPageOptions& options) override;
     std::shared_ptr<Promise<PdfPrintResult>> print(const std::string& jobName) override;
+    std::shared_ptr<Promise<std::vector<NativePdfFormField>>> getFormFields() override;
+    std::shared_ptr<Promise<void>> setFormFieldValues(const std::vector<NativePdfFormValue>& values) override;
+    std::shared_ptr<Promise<PdfExportResult>> exportDocument(const std::string& filePath) override;
     void search(const std::string& query) override;
     void searchNext() override;
     void searchPrevious() override;

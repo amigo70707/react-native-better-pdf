@@ -26,6 +26,23 @@ const stats: PdfViewStats = {
   meanRenderMs: -1,
 };
 
+const nativeCheckbox = {
+  name: 'agree',
+  type: 'checkbox',
+  isReadOnly: false,
+  isRequired: true,
+  widgets: [{ page: 0, x: 200, y: 270, width: 20, height: 20 }],
+  text: '',
+  isChecked: false,
+  options: [],
+  selectedOptions: [],
+  isMultiline: false,
+  maxLength: 0,
+  isMultiSelect: false,
+  isEditable: false,
+  isSigned: false,
+};
+
 const nativeInstance = {
   goToPage: (page: number, animated: boolean) =>
     nativeCalls.push(`goToPage(${page}, ${animated})`),
@@ -49,6 +66,16 @@ const nativeInstance = {
   },
   goToViewport: (viewport: object) =>
     nativeCalls.push(`goToViewport(${JSON.stringify(viewport)})`),
+  getFormFields: () =>
+    Promise.resolve([{ ...nativeCheckbox, isChecked: true }]),
+  setFormFieldValues: (values: object[]) => {
+    nativeCalls.push(`setFormFieldValues(${JSON.stringify(values)})`);
+    return Promise.resolve();
+  },
+  exportDocument: (filePath: string) => {
+    nativeCalls.push(`exportDocument(${filePath})`);
+    return Promise.resolve({ filePath: filePath || '/cache/form.pdf' });
+  },
   getOutline: () =>
     Promise.resolve([
       { title: 'Chapter', page: 0, depth: 0 },
@@ -665,6 +692,63 @@ describe('PdfView', () => {
     } finally {
       console.error = error;
     }
+  });
+
+  test('form methods reject before mount and convert at the boundary after', async () => {
+    const ref = createRef<PdfViewRef>();
+    render(<PdfView ref={ref} source={{ uri: 'x' }} />);
+    await expect(ref.current!.getFormFields()).rejects.toThrow('not mounted');
+    const hybridRef = lastHost().hybridRef as {
+      f: (instance: typeof nativeInstance) => void;
+    };
+    hybridRef.f(nativeInstance);
+    expect(await ref.current!.getFormFields()).toEqual([
+      {
+        name: 'agree',
+        type: 'checkbox',
+        isChecked: true,
+        isReadOnly: false,
+        isRequired: true,
+        widgets: [{ page: 0, x: 200, y: 270, width: 20, height: 20 }],
+      },
+    ]);
+    await ref.current!.setFormFieldValues({ name: 'Anna', agree: true });
+    expect(await ref.current!.exportDocument()).toEqual({
+      filePath: '/cache/form.pdf',
+    });
+    await ref.current!.exportDocument({
+      filePath: 'file:///tmp/my%20form.pdf',
+    });
+    expect(nativeCalls).toEqual([
+      'setFormFieldValues([{"name":"name","text":"Anna"},{"name":"agree","isChecked":true}])',
+      'exportDocument()',
+      'exportDocument(/tmp/my form.pdf)',
+    ]);
+  });
+
+  test('forwards form changes as typed fields, filling enabled by default', () => {
+    const changes: unknown[] = [];
+    render(
+      <PdfView
+        source={{ uri: 'x' }}
+        onFormChange={(event) => changes.push(event.field)}
+      />,
+    );
+    expect(lastHost().enableFormFilling).toBe(true);
+    const wrapped = lastHost().onFormChange as {
+      f: (event: { field: typeof nativeCheckbox }) => void;
+    };
+    wrapped.f({ field: nativeCheckbox });
+    expect(changes).toEqual([
+      {
+        name: 'agree',
+        type: 'checkbox',
+        isChecked: false,
+        isReadOnly: false,
+        isRequired: true,
+        widgets: nativeCheckbox.widgets,
+      },
+    ]);
   });
 
   test('getOutline rejects before mount and returns a tree after', async () => {

@@ -32,5 +32,11 @@ internal class PreVDocumentPage(private val page: PdfRendererPreV.Page) : Docume
     return selection.toPageTextSelection(query.page)
   }
 
+  override fun formWidgets(): List<FormWidget> = page.formWidgetInfos.map { it.toFormWidget() }
+
+  override fun applyFormEdit(edit: FormEdit) {
+    page.applyEdit(edit.toRecord())
+  }
+
   override fun close() = page.close()
 }

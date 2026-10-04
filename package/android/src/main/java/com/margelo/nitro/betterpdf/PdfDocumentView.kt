@@ -75,6 +75,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
 
     /** The text selection settled at new [text]; empty when cleared. */
     fun onTextSelectionChanged(text: String)
+
+    /** The reader tapped a form widget they can fill in. */
+    fun onFormWidgetTapped(page: Int, widget: FormWidget)
   }
 
   var listener: Listener? = null
@@ -97,6 +100,14 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   /** With [pendingInitialPage]: the page point to put at the top-left corner, instead of the page's top. */
   private var pendingInitialPoint: PagePoint? = null
   private val failedPages = HashSet<Int>()
+  /** Form widgets of pages rendered so far that have any. */
+  private val pageWidgets = HashMap<Int, List<FormWidget>>()
+  /** Pages whose form changed since their bitmap was rendered. */
+  private val staleFormPages = HashSet<Int>()
+
+  /** Taps on form widgets fill them in (else they are page taps). */
+  var isFormFillingEnabled = true
+
   /** Links of pages rendered so far that have any (see [PdfDocumentSession.Listener.onPageLinks]). */
   private val pageLinks = HashMap<Int, List<PageLink>>()
   private var reportedOutOfMemory = false
@@ -484,6 +495,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     lastReportedViewport = null
     failedPages.clear()
     pageLinks.clear()
+    pageWidgets.clear()
+    staleFormPages.clear()
     pageTexts.clear()
     reportedOutOfMemory = false
     cache.clear()
@@ -659,6 +672,32 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     pageLinks[page] = links
   }
 
+  fun onPageFormWidgets(page: Int, widgets: List<FormWidget>) {
+    pageWidgets[page] = widgets
+  }
+
+  /**
+   * The form changed on [page]: render it again. Its bitmap stays on screen
+   * until then. Results of renders that ran before the change have arrived
+   * already (the render thread posts in order), so the next one is current.
+   */
+  fun onFormPageChanged(page: Int) {
+    staleFormPages += page
+    tiles.remove(page)?.let { releaseAfterFrame(it.bitmap) }
+    requestRenders(force = true)
+  }
+
+  /** Applies the reader's change to the form (see [PdfDocumentSession.editForm]). */
+  fun editForm(edit: FormEdit) {
+    session?.editForm(edit)
+  }
+
+  /** Moves the content by ([dx], [dy]) view pixels, within the scrollable area, and reports where it settles. */
+  fun panBy(dx: Float, dy: Float) {
+    scrollByContent(dx, dy)
+    scheduleSettle()
+  }
+
   fun onPageText(page: Int, text: String?) {
     val layout = layout ?: return
     if (page >= layout.pageCount) return
@@ -738,10 +777,17 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     textSelection.clear()
     val layout = layout ?: return
     val point = layout.pagePointAt((offsetX + viewX) / scale, (offsetY + viewY) / scale) ?: return
-    when (val link = pageLinks[point.page]?.firstOrNull { it.contains(point.x, point.y) }) {
-      is PageLink.Goto -> goToPage(link.page, animated = true)
-      is PageLink.Url -> listener?.onLinkPressed(link.url)
-      null -> listener?.onPageTapped(point)
+    val link = pageLinks[point.page]?.firstOrNull { it.contains(point.x, point.y) }
+    val widget = if (link == null && isFormFillingEnabled) {
+      pageWidgets[point.page]?.firstOrNull { it.isFillable && it.rect.contains(point.x, point.y) }
+    } else {
+      null
+    }
+    when {
+      link is PageLink.Goto -> goToPage(link.page, animated = true)
+      link is PageLink.Url -> listener?.onLinkPressed(link.url)
+      widget != null -> listener?.onFormWidgetTapped(point.page, widget)
+      else -> listener?.onPageTapped(point)
     }
   }
 
@@ -846,6 +892,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     when (request) {
       is RenderRequest.Base -> {
         cache.put(request.page, bitmap, protectedKeys = visiblePages().toSet())
+        staleFormPages -= request.page
         updateCacheStats()
       }
       is RenderRequest.Tile -> {
@@ -1326,7 +1373,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       val cached = cache.get(page)
       // Height follows the page's real aspect ratio (decided on the render
       // thread), so only the width identifies a stale resolution.
-      if (cached == null || cached.width != base.bitmapWidth) {
+      if (cached == null || cached.width != base.bitmapWidth || page in staleFormPages) {
         requests += base
       }
     }

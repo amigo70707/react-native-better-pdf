@@ -596,6 +596,30 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var enableFormFilling: bridge.std__optional_bool_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_bool_ in
+        if let __unwrappedValue = self.__implementation.enableFormFilling {
+          return bridge.create_std__optional_bool_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.enableFormFilling = { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(newValue) {
+          let __unwrapped = bridge.get_std__optional_bool_(newValue)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
   public final var searchHighlightColor: bridge.std__optional_double_ {
     @inline(__always)
     get {
@@ -932,6 +956,38 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var onFormChange: bridge.std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______ in
+        if let __unwrappedValue = self.__implementation.onFormChange {
+          return bridge.create_std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______({ () -> bridge.Func_void_NativePdfFormChangeEvent in
+            let __closureWrapper = Func_void_NativePdfFormChangeEvent(__unwrappedValue)
+            return bridge.create_Func_void_NativePdfFormChangeEvent(__closureWrapper.toUnsafe())
+          }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.onFormChange = { () -> ((_ event: NativePdfFormChangeEvent) -> Void)? in
+        if bridge.has_value_std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__function_void_const_NativePdfFormChangeEvent_____event______(newValue)
+          return { () -> (NativePdfFormChangeEvent) -> Void in
+            let __wrappedFunction = bridge.wrap_Func_void_NativePdfFormChangeEvent(__unwrapped)
+            return { (__event: NativePdfFormChangeEvent) -> Void in
+              __wrappedFunction.call(__event)
+            }
+          }()
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
   public final var onTextSelectionChange: bridge.std__optional_std__function_void_const_PdfTextSelectionChangeEvent_____event______ {
     @inline(__always)
     get {
@@ -1095,6 +1151,69 @@ open class HybridBetterPdfViewSpec_cxx {
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()
       return bridge.create_Result_std__shared_ptr_Promise_PdfPrintResult___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func getFormFields() -> bridge.Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____ {
+    do {
+      let __result = try self.__implementation.getFormFields()
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_std__vector_NativePdfFormField___ in
+        let __promise = bridge.create_std__shared_ptr_Promise_std__vector_NativePdfFormField___()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_std__vector_NativePdfFormField___(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve({ () -> bridge.std__vector_NativePdfFormField_ in
+              var __vector = bridge.create_std__vector_NativePdfFormField_(__result.count)
+              for __item in __result {
+                __vector.push_back(__item)
+              }
+              return __vector
+            }()) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_std__vector_NativePdfFormField____(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func setFormFieldValues(values: bridge.std__vector_NativePdfFormValue_) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.setFormFieldValues(values: values.map({ __item in __item }))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func exportDocument(filePath: std.string) -> bridge.Result_std__shared_ptr_Promise_PdfExportResult___ {
+    do {
+      let __result = try self.__implementation.exportDocument(filePath: String(filePath))
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_PdfExportResult__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_PdfExportResult__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_PdfExportResult__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve(__result) })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_PdfExportResult___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_PdfExportResult___(__exceptionPtr)
     }
   }
   

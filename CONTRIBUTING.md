@@ -68,6 +68,7 @@ example/e2e/run.sh <device> stress-open-close stress-rapid        # stress flows
 | `viewer-offline` | `PdfCache` and cache options: persistent vs session copies across an app restart, 304 revalidation, stale copy while the fixture server is "offline" (`/__control/offline`), removal, cancellation, `clear()` |
 | `viewer-print` | print dialog previews the bundled sample and the unlocked protected fixture; closing resolves `isSubmitted: false`; Android saves the protected document as PDF (`isSubmitted: true`) |
 | `viewer-dark` | the Embedded card switches to dark pages and back while shown (screenshot for review: Maestro cannot check colours) |
+| `viewer-forms` | the `forms` fixture filled in by touch (text when editing ends, checkbox, radio, Android's choice list, a field above the keyboard) and from code (all or none), `onFormChange` for the reader's changes only, filling turned off, export and the reopened copy |
 | `viewer-overlays` | `PdfPageOverlay`s tapped by testID on 100 pages: at fit, after their page scrolls in, after a far jump and back (hidden meanwhile), after a resize, zoomed 2.5× (also paged), in paged RTL and in pairs (screenshots for review) |
 | `viewer-spreads` | facing pages (`pairs`, `book`) on 100 pages: the indicator names a spread's first page, the last page at the end; switching layouts keeps the reader's page |
 | `viewer-short-document` | a one-page document starts at the top (also after zooming in and out); rounded card on the Embedded screen (screenshot) |

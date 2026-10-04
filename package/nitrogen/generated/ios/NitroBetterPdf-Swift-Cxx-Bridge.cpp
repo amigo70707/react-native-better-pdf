@@ -208,6 +208,14 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     };
   }
   
+  // pragma MARK: std::function<void(const NativePdfFormChangeEvent& /* event */)>
+  Func_void_NativePdfFormChangeEvent create_Func_void_NativePdfFormChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_NativePdfFormChangeEvent::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const NativePdfFormChangeEvent& event) mutable -> void {
+      swiftClosure.call(event);
+    };
+  }
+  
   // pragma MARK: std::function<void(const PdfTextSelectionChangeEvent& /* event */)>
   Func_void_PdfTextSelectionChangeEvent create_Func_void_PdfTextSelectionChangeEvent(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = NitroBetterPdf::Func_void_PdfTextSelectionChangeEvent::fromUnsafe(swiftClosureWrapper);
@@ -220,6 +228,22 @@ namespace margelo::nitro::betterpdf::bridge::swift {
   Func_void_PdfPrintResult create_Func_void_PdfPrintResult(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = NitroBetterPdf::Func_void_PdfPrintResult::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const PdfPrintResult& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::vector<NativePdfFormField>& /* result */)>
+  Func_void_std__vector_NativePdfFormField_ create_Func_void_std__vector_NativePdfFormField_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_std__vector_NativePdfFormField_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::vector<NativePdfFormField>& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const PdfExportResult& /* result */)>
+  Func_void_PdfExportResult create_Func_void_PdfExportResult(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = NitroBetterPdf::Func_void_PdfExportResult::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const PdfExportResult& result) mutable -> void {
       swiftClosure.call(result);
     };
   }

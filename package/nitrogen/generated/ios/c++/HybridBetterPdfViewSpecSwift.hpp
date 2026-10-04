@@ -48,6 +48,14 @@ namespace margelo::nitro::betterpdf { struct PdfSearchChangeEvent; }
 namespace margelo::nitro::betterpdf { struct PdfViewportChangeEvent; }
 // Forward declaration of `PdfViewport` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfViewport; }
+// Forward declaration of `NativePdfFormChangeEvent` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormChangeEvent; }
+// Forward declaration of `NativePdfFormField` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormField; }
+// Forward declaration of `PdfFormFieldType` to properly resolve imports.
+namespace margelo::nitro::betterpdf { enum class PdfFormFieldType; }
+// Forward declaration of `PdfFormWidget` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfFormWidget; }
 // Forward declaration of `PdfTextSelectionChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfTextSelectionChangeEvent; }
 // Forward declaration of `PdfViewStats` to properly resolve imports.
@@ -64,6 +72,10 @@ namespace margelo::nitro::betterpdf { struct PdfRenderPageOptions; }
 namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 // Forward declaration of `PdfPrintResult` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
+// Forward declaration of `NativePdfFormValue` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativePdfFormValue; }
+// Forward declaration of `PdfExportResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfExportResult; }
 
 #include "NativePdfSource.hpp"
 #include <optional>
@@ -88,6 +100,10 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfSearchChangeEvent.hpp"
 #include "PdfViewportChangeEvent.hpp"
 #include "PdfViewport.hpp"
+#include "NativePdfFormChangeEvent.hpp"
+#include "NativePdfFormField.hpp"
+#include "PdfFormFieldType.hpp"
+#include "PdfFormWidget.hpp"
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfOutlineEntry.hpp"
@@ -97,6 +113,8 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfRenderPageOptions.hpp"
 #include "PdfImageFormat.hpp"
 #include "PdfPrintResult.hpp"
+#include "NativePdfFormValue.hpp"
+#include "PdfExportResult.hpp"
 
 #include "NitroBetterPdf-Swift-Cxx-Umbrella.hpp"
 
@@ -291,6 +309,13 @@ namespace margelo::nitro::betterpdf {
     inline void setEnableTextSelection(std::optional<bool> enableTextSelection) noexcept override {
       _swiftPart.setEnableTextSelection(enableTextSelection);
     }
+    inline std::optional<bool> getEnableFormFilling() noexcept override {
+      auto __result = _swiftPart.getEnableFormFilling();
+      return __result;
+    }
+    inline void setEnableFormFilling(std::optional<bool> enableFormFilling) noexcept override {
+      _swiftPart.setEnableFormFilling(enableFormFilling);
+    }
     inline std::optional<double> getSearchHighlightColor() noexcept override {
       auto __result = _swiftPart.getSearchHighlightColor();
       return __result;
@@ -368,6 +393,13 @@ namespace margelo::nitro::betterpdf {
     inline void setOnViewportChange(const std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>& onViewportChange) noexcept override {
       _swiftPart.setOnViewportChange(onViewportChange);
     }
+    inline std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>> getOnFormChange() noexcept override {
+      auto __result = _swiftPart.getOnFormChange();
+      return __result;
+    }
+    inline void setOnFormChange(const std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>& onFormChange) noexcept override {
+      _swiftPart.setOnFormChange(onFormChange);
+    }
     inline std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>> getOnTextSelectionChange() noexcept override {
       auto __result = _swiftPart.getOnTextSelectionChange();
       return __result;
@@ -430,6 +462,30 @@ namespace margelo::nitro::betterpdf {
     }
     inline std::shared_ptr<Promise<PdfPrintResult>> print(const std::string& jobName) override {
       auto __result = _swiftPart.print(jobName);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::shared_ptr<Promise<std::vector<NativePdfFormField>>> getFormFields() override {
+      auto __result = _swiftPart.getFormFields();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::shared_ptr<Promise<void>> setFormFieldValues(const std::vector<NativePdfFormValue>& values) override {
+      auto __result = _swiftPart.setFormFieldValues(values);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline std::shared_ptr<Promise<PdfExportResult>> exportDocument(const std::string& filePath) override {
+      auto __result = _swiftPart.exportDocument(filePath);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

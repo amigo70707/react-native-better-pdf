@@ -160,10 +160,11 @@ class PdfWriter {
           Buffer.from('\nendstream\nendobj\n', 'latin1'),
         ]);
       } else {
-        body = Buffer.from(
-          `${number} 0 obj\n${object.dictionary}\nendobj\n`,
-          'latin1',
-        );
+        const dictionary =
+          security && number !== encryptNumber && number !== infoNumber
+            ? encryptStrings(object.dictionary, (bytes) => security.encrypt(number, bytes))
+            : object.dictionary;
+        body = Buffer.from(`${number} 0 obj\n${dictionary}\nendobj\n`, 'latin1');
       }
       chunks.push(body);
       offset += body.length;
@@ -182,6 +183,46 @@ class PdfWriter {
     chunks.push(Buffer.from(xref.join(''), 'latin1'));
     return Buffer.concat(chunks);
   }
+}
+
+/**
+ * Replaces the literal strings in `text` (an object's dictionary) with hex
+ * strings of their bytes through `encrypt`, as an encrypted document stores
+ * strings; names and the rest stay.
+ */
+function encryptStrings(text, encrypt) {
+  let out = '';
+  let index = 0;
+  while (index < text.length) {
+    const char = text[index];
+    if (char !== '(') {
+      out += char;
+      index++;
+      continue;
+    }
+    const bytes = [];
+    let depth = 1;
+    index++;
+    while (index < text.length && depth > 0) {
+      let c = text[index++];
+      if (c === '\\') {
+        const next = text[index++];
+        const escapes = { n: 10, r: 13, t: 9, b: 8, f: 12 };
+        if (next in escapes) bytes.push(escapes[next]);
+        else if (/[0-7]/.test(next)) {
+          let octal = next;
+          while (octal.length < 3 && /[0-7]/.test(text[index])) octal += text[index++];
+          bytes.push(parseInt(octal, 8) & 0xff);
+        } else bytes.push(next.charCodeAt(0));
+        continue;
+      }
+      if (c === '(') depth++;
+      if (c === ')' && --depth === 0) break;
+      bytes.push(c.charCodeAt(0) & 0xff);
+    }
+    out += `<${encrypt(Buffer.from(bytes)).toString('hex')}>`;
+  }
+  return out;
 }
 
 /**
@@ -336,8 +377,8 @@ function buildDocument({
     `<< /Type /Pages /Kids [${pageRefs.map((r) => `${r} 0 R`).join(' ')}] /Count ${pageCount}${pagesEntries ? ` ${pagesEntries}` : ''} >>`,
   );
   const extra = catalogEntries ? ` ${catalogEntries(writer, pageRefs)}` : '';
-  if (writer.pendingAnnots) {
-    const { page, refs } = writer.pendingAnnots;
+  // One `{ page, refs }`, or one per page.
+  for (const { page, refs } of [writer.pendingAnnots ?? []].flat()) {
     const object = writer.objects[page - 1];
     object.dictionary = object.dictionary.replace(
       />>\s*$/,
@@ -686,6 +727,25 @@ const FIXTURES = {
       },
     });
   },
+  forms: () => formsDocument(),
+  // The same form, password "secret": its strings are encrypted too.
+  'forms-encrypted': () => formsDocument({ password: 'secret' }),
+  // The same form in object streams, with a cross-reference stream.
+  'forms-compressed': () => formsDocument({ objectStreams: true }),
+  // A text field on a cropped page and one on a page rotated 90°, without /P.
+  'forms-boxes': () =>
+    buildDocument({
+      pageCount: 2,
+      pageBoxes: (i) =>
+        i === 0 ? '/MediaBox [0 0 600 800] /CropBox [50 100 550 700]' : '/MediaBox [0 0 595 842] /Rotate 90',
+      pageContent: (i) => ({ content: `BT /F1 14 Tf 120 ${i === 0 ? 650 : 760} Td (Page ${i + 1}) Tj ET` }),
+      catalogEntries: (writer, r) => {
+        const cropped = writer.add('<< /Type /Annot /Subtype /Widget /FT /Tx /T (cropped) /V (on a cropped page) /Rect [100 600 300 630] >>');
+        const rotated = writer.add('<< /Type /Annot /Subtype /Widget /FT /Tx /T (rotated) /Rect [100 700 300 730] >>');
+        writer.pendingAnnots = [{ page: r[0], refs: [cropped] }, { page: r[1], refs: [rotated] }];
+        return `/AcroForm << /Fields [${cropped} 0 R ${rotated} 0 R] >>`;
+      },
+    }),
   outline: () => outlineDocument(),
   // Timing: 1000 pages, 100 chapters × 10 sections, object streams.
   'outline-large': () =>
@@ -782,6 +842,125 @@ const FIXTURES = {
  * /Rotate, with inheritance from the /Pages node. Each page's heading holds
  * its expected size (width × height in points).
  */
+/**
+ * An AcroForm on two pages: text fields (required and empty, filled,
+ * multiline, read-only, with a tooltip, nested in a parent field, at the
+ * bottom of a page), a checkbox, a radio group, a combo box, a list box,
+ * and an unsigned signature field; page 1 starts with a square annotation
+ * that is not a field. Every widget has an appearance stream and border
+ * and background colours; `/NeedAppearances` lets viewers draw their own.
+ */
+function formsDocument(options = {}) {
+  const labels = [
+    [0, 760, '1. Name (required)'],
+    [0, 710, '2. Email'],
+    [0, 660, '3. Notes (multiline)'],
+    [0, 560, '4. I agree (checkbox)'],
+    [0, 510, '5. Plan (radio): Basic / Pro'],
+    [0, 460, '6. Country (combo box)'],
+    [0, 400, '7. Colours (list box)'],
+    [0, 310, '8. ID (read-only)'],
+    [0, 250, '9. Phone (with a tooltip)'],
+    [0, 200, '10. City (address.city)'],
+    [0, 60, '11. Postcode (bottom)'],
+    [1, 760, '12. Date'],
+    [1, 700, '13. Signature (unsigned)'],
+  ];
+  return buildDocument({
+    ...options,
+    pageCount: 2,
+    pageContent: (i) => ({
+      content: [
+        `0 g BT /F1 14 Tf 40 800 Td (Form, page ${i + 1}) Tj ET`,
+        ...labels
+          .filter(([page]) => page === i)
+          .map(([, y, text]) => `BT /F1 11 Tf 40 ${y + 8} Td (${text.replace(/[()]/g, '\\$&')}) Tj ET`),
+      ].join('\n'),
+    }),
+    catalogEntries: (writer, r) => {
+      const helv = writer.add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+      const zadb = writer.add('<< /Type /Font /Subtype /Type1 /BaseFont /ZapfDingbats >>');
+      const ap = (width, height, content) =>
+        writer.add(
+          `<< /Type /XObject /Subtype /Form /BBox [0 0 ${width} ${height}] ` +
+            `/Resources << /Font << /Helv ${helv} 0 R /ZaDb ${zadb} 0 R >> >> >>`,
+          Buffer.from(content, 'latin1'),
+        );
+      const box = (w, h) => `0.95 0.95 1 rg 0 0 ${w} ${h} re f 0.4 0.4 0.6 RG 1 w 0.5 0.5 ${w - 1} ${h - 1} re S`;
+      const textAp = (w, h, lines = []) =>
+        ap(w, h, `${box(w, h)} /Tx BMC q BT /Helv 12 Tf 0 g 4 ${h - 16} Td ${lines.map((line) => `(${line}) Tj 0 -14 Td`).join(' ')} ET Q EMC`);
+      const rect = (x, y, w, h) => `/Rect [${x} ${y} ${x + w} ${y + h}]`;
+      const da = '/DA (/Helv 12 Tf 0 g)';
+      const fields = [];
+      const pageAnnots = [[], []];
+      const field = (page, dictionary) => {
+        const ref = writer.add(dictionary);
+        fields.push(ref);
+        pageAnnots[page].push(ref);
+        return ref;
+      };
+      const widget = (page, parentRef, dictionary) => {
+        const ref = writer.add(dictionary.replace('<<', `<< /Parent ${parentRef} 0 R`));
+        pageAnnots[page].push(ref);
+        return ref;
+      };
+      const common = (page, caption = '') =>
+        `/Type /Annot /Subtype /Widget /F 4 /P ${r[page]} 0 R /MK << /BC [0.4 0.4 0.6] /BG [0.95 0.95 1]${caption} >>`;
+      // Not a field: widgets are not the page's first annotations.
+      pageAnnots[0].push(
+        writer.add(
+          `<< /Type /Annot /Subtype /Square /F 4 ${rect(520, 790, 40, 30)} /C [1 0 0] ` +
+            `/AP << /N ${ap(40, 30, '1 0 0 RG 2 w 1 1 38 28 re S')} 0 R >> >>`,
+        ),
+      );
+
+      field(0, `<< ${common(0)} /FT /Tx /T (name) /Ff 2 ${da} ${rect(200, 750, 300, 26)} /AP << /N ${textAp(300, 26)} 0 R >> >>`);
+      field(0, `<< ${common(0)} /FT /Tx /T (email) /V (jan@example.com) ${da} ${rect(200, 700, 300, 26)} /AP << /N ${textAp(300, 26, ['jan@example.com'])} 0 R >> >>`);
+      field(0, `<< ${common(0)} /FT /Tx /T (notes) /Ff 4096 ${da} ${rect(200, 600, 300, 76)} /AP << /N ${textAp(300, 76)} 0 R >> >>`);
+      const check = (w) => `0 g BT /ZaDb ${w - 4} Tf 2 3 Td (4) Tj ET`;
+      field(0,
+        `<< ${common(0, ' /CA (4)')} /FT /Btn /T (agree) /V /Off /AS /Off /DA (/ZaDb 0 Tf 0 g) ${rect(200, 552, 20, 20)} ` +
+          `/AP << /N << /Yes ${ap(20, 20, `${box(20, 20)} ${check(20)}`)} 0 R /Off ${ap(20, 20, box(20, 20))} 0 R >> >> >>`,
+      );
+      const radioRef = writer.reserve();
+      fields.push(radioRef);
+      const circle = (on) => `0.95 0.95 1 rg ${ellipse(20, 20)} f 0.4 0.4 0.6 RG 1 w ${ellipse(20, 20)} S` +
+        (on ? ` 0 g 6 10 m 6 12.2 7.8 14 10 14 c 12.2 14 14 12.2 14 10 c 14 7.8 12.2 6 10 6 c 7.8 6 6 7.8 6 10 c f` : '');
+      const radioKids = [['basic', 200], ['pro', 300]].map(([state, x]) =>
+        widget(0, radioRef,
+          `<< ${common(0, ' /CA (l)')} /AS /${state === 'basic' ? 'basic' : 'Off'} ${rect(x, 502, 20, 20)} ` +
+            `/AP << /N << /${state} ${ap(20, 20, circle(true))} 0 R /Off ${ap(20, 20, circle(false))} 0 R >> >> >>`,
+        ),
+      );
+      writer.set(radioRef, `<< /FT /Btn /T (plan) /Ff 49152 /V /basic /Kids [${radioKids.map((k) => `${k} 0 R`).join(' ')}] >>`);
+      field(0,
+        `<< ${common(0)} /FT /Ch /T (country) /Ff 131072 /Opt [(Poland) (Germany) (France)] /V (Poland) ${da} ${rect(200, 452, 200, 26)} ` +
+          `/AP << /N ${textAp(200, 26, ['Poland'])} 0 R >> >>`,
+      );
+      field(0,
+        `<< ${common(0)} /FT /Ch /T (colours) /Opt [(Red) (Green) (Blue) (Yellow)] /V (Green) /I [1] ${da} ${rect(200, 340, 200, 70)} ` +
+          `/AP << /N ${textAp(200, 70, ['Red', 'Green', 'Blue', 'Yellow'])} 0 R >> >>`,
+      );
+      field(0, `<< ${common(0)} /FT /Tx /T (id) /Ff 1 /V (A-1234) ${da} ${rect(200, 302, 200, 26)} /AP << /N ${textAp(200, 26, ['A-1234'])} 0 R >> >>`);
+      field(0, `<< ${common(0)} /FT /Tx /T (phone) /TU (Your phone number) ${da} ${rect(200, 242, 200, 26)} /AP << /N ${textAp(200, 26)} 0 R >> >>`);
+      const addressRef = writer.reserve();
+      fields.push(addressRef);
+      const city = widget(0, addressRef, `<< ${common(0)} /FT /Tx /T (city) ${da} ${rect(200, 192, 200, 26)} /AP << /N ${textAp(200, 26)} 0 R >> >>`);
+      writer.set(addressRef, `<< /T (address) /Kids [${city} 0 R] >>`);
+      field(0, `<< ${common(0)} /FT /Tx /T (postcode) ${da} ${rect(200, 52, 120, 26)} /AP << /N ${textAp(120, 26)} 0 R >> >>`);
+      field(1, `<< ${common(1)} /FT /Tx /T (date) ${da} ${rect(200, 750, 200, 26)} /AP << /N ${textAp(200, 26)} 0 R >> >>`);
+      field(1, `<< ${common(1)} /FT /Sig /T (signature) ${rect(200, 640, 300, 70)} /AP << /N ${ap(300, 70, box(300, 70))} 0 R >> >>`);
+
+      // Attached to the pages by buildDocument (see pendingAnnots).
+      writer.pendingAnnots = pageAnnots.map((refs, page) => ({ page: r[page], refs }));
+      return (
+        `/AcroForm << /Fields [${fields.map((f) => `${f} 0 R`).join(' ')}] /NeedAppearances true ` +
+        `/DR << /Font << /Helv ${helv} 0 R /ZaDb ${zadb} 0 R >> >> /DA (/Helv 12 Tf 0 g) >>`
+      );
+    },
+  });
+}
+
 function pageBoxesDocument(options = {}) {
   const pages = [
     { boxes: '', expect: '612 x 792 inherited media box' },

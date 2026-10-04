@@ -41,6 +41,7 @@ namespace margelo::nitro::betterpdf::views {
     showsVerticalScrollIndicator(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "showsVerticalScrollIndicator", rawProps, sourceProps.showsVerticalScrollIndicator)),
     showsHorizontalScrollIndicator(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "showsHorizontalScrollIndicator", rawProps, sourceProps.showsHorizontalScrollIndicator)),
     enableTextSelection(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "enableTextSelection", rawProps, sourceProps.enableTextSelection)),
+    enableFormFilling(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "enableFormFilling", rawProps, sourceProps.enableFormFilling)),
     searchHighlightColor(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "searchHighlightColor", rawProps, sourceProps.searchHighlightColor)),
     searchCurrentHighlightColor(nitro::ReactProp<std::optional<double>>::fromRawValue("BetterPdfView", "searchCurrentHighlightColor", rawProps, sourceProps.searchCurrentHighlightColor)),
     onLoad(nitro::ReactProp<std::optional<std::function<void(const PdfLoadEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onLoad", rawProps, sourceProps.onLoad)),
@@ -52,6 +53,7 @@ namespace margelo::nitro::betterpdf::views {
     onScaleChange(nitro::ReactProp<std::optional<std::function<void(const PdfScaleChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onScaleChange", rawProps, sourceProps.onScaleChange)),
     onSearchChange(nitro::ReactProp<std::optional<std::function<void(const PdfSearchChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onSearchChange", rawProps, sourceProps.onSearchChange)),
     onViewportChange(nitro::ReactProp<std::optional<std::function<void(const PdfViewportChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onViewportChange", rawProps, sourceProps.onViewportChange)),
+    onFormChange(nitro::ReactProp<std::optional<std::function<void(const NativePdfFormChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onFormChange", rawProps, sourceProps.onFormChange)),
     onTextSelectionChange(nitro::ReactProp<std::optional<std::function<void(const PdfTextSelectionChangeEvent& /* event */)>>>::fromRawValue("BetterPdfView", "onTextSelectionChange", rawProps, sourceProps.onTextSelectionChange)),
     hybridRef(nitro::ReactProp<std::optional<std::function<void(const std::shared_ptr<HybridBetterPdfViewSpec>& /* ref */)>>>::fromRawValue("BetterPdfView", "hybridRef", rawProps, sourceProps.hybridRef)) { }
 
@@ -78,6 +80,7 @@ namespace margelo::nitro::betterpdf::views {
       case hashString("showsVerticalScrollIndicator"): return true;
       case hashString("showsHorizontalScrollIndicator"): return true;
       case hashString("enableTextSelection"): return true;
+      case hashString("enableFormFilling"): return true;
       case hashString("searchHighlightColor"): return true;
       case hashString("searchCurrentHighlightColor"): return true;
       case hashString("onLoad"): return true;
@@ -89,6 +92,7 @@ namespace margelo::nitro::betterpdf::views {
       case hashString("onScaleChange"): return true;
       case hashString("onSearchChange"): return true;
       case hashString("onViewportChange"): return true;
+      case hashString("onFormChange"): return true;
       case hashString("onTextSelectionChange"): return true;
       case hashString("hybridRef"): return true;
       default: return false;

@@ -16,6 +16,8 @@ export const FIXTURES = [
   'outline-compressed',
   'outline-large',
   'annotations',
+  'forms',
+  'forms-encrypted',
   'page-boxes',
   'page-boxes-encrypted',
   'metadata',
@@ -45,6 +47,8 @@ export interface DocumentEntry {
   initialScale?: number;
   /** Shows the example's PdfPageOverlays (pages 1 and 3). */
   overlays?: boolean;
+  /** Shows the form buttons (fill, read, export). */
+  form?: boolean;
 }
 
 const fixtureDirectory = () => {
@@ -115,5 +119,6 @@ export const DOCUMENTS: DocumentEntry[] = [
     title: name,
     subtitle: 'Fixture copied to the device',
     resolve: async () => ({ uri: (await ensureFixture(name)).uri }),
+    form: name.startsWith('forms'),
   })),
 ];

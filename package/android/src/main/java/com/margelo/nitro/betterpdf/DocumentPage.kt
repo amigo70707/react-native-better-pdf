@@ -30,4 +30,16 @@ internal interface DocumentPage : AutoCloseable {
 
   /** Resolves a text selection; null where it selects nothing or text is unavailable. */
   fun selectText(query: TextSelectionQuery): PageTextSelection?
+
+  /** The page's form widgets; empty where the renderer exposes none. */
+  fun formWidgets(): List<FormWidget>
+
+  /**
+   * Applies [edit] to the document.
+   *
+   * @throws IllegalArgumentException when the widget does not take it
+   *   (read-only, another type).
+   * @throws UnsupportedOperationException where forms cannot be edited.
+   */
+  fun applyFormEdit(edit: FormEdit)
 }
