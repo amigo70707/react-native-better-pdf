@@ -1,0 +1,99 @@
+# PdfPageOverlay: React views placed on pages in PDF points, moved by
+# native code as the pages scroll and zoom. The `Overlays` entry puts a
+# "Sign here" field (scales with the page) and a pin (keeps its size) on
+# page 1 and a note on page 3 of the 100-page `medium` fixture. Each step
+# taps an overlay by its testID — Maestro finds it only where it is drawn
+# — after tapping another one, so the event line proves the tap landed.
+appId: software.gmi.betterpdf.example
+---
+# Fresh state: the toolbar's layout mode lasts while the app runs.
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "Overlays.*" }
+- tapOn: "Overlays.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 15000 }
+- waitForAnimationToEnd
+
+# At fit, on page 1; page 3 is off screen, so its note is hidden.
+- tapOn: { id: "overlay-sign" }
+- extendedWaitUntil: { visible: "overlay: sign here", timeout: 5000 }
+- tapOn: { id: "overlay-pin" }
+- extendedWaitUntil: { visible: "overlay: pin", timeout: 5000 }
+- assertNotVisible: { id: "overlay-note" }
+- takeScreenshot: overlays-fit
+
+# Scrolling page 3 in shows its note where it belongs.
+- scrollUntilVisible: { element: { id: "overlay-note" }, direction: DOWN }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-note" }
+- extendedWaitUntil: { visible: "overlay: page 3 note", timeout: 5000 }
+
+# Far away, nothing shows; back at the start, page 1's overlays do.
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "100 / 100", timeout: 5000 }
+- assertNotVisible: { id: "overlay-sign" }
+- assertNotVisible: { id: "overlay-pin" }
+- assertNotVisible: { id: "overlay-note" }
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-sign" }
+- extendedWaitUntil: { visible: "overlay: sign here", timeout: 5000 }
+
+# The viewer resizing (the search bar opens) moves the page and its overlays.
+- tapOn: "Find"
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-pin" }
+- extendedWaitUntil: { visible: "overlay: pin", timeout: 5000 }
+- tapOn: "Find"
+- waitForAnimationToEnd
+
+# Zoomed in, panned to the page's top-left: the field grew with the page.
+- tapOn: "2.5×"
+- waitForAnimationToEnd
+- swipe: { start: "10%, 45%", end: "90%, 90%", duration: 1000 }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-sign" }
+- extendedWaitUntil: { visible: "overlay: sign here", timeout: 5000 }
+- takeScreenshot: overlays-zoomed
+- tapOn: "1×"
+- waitForAnimationToEnd
+
+# Paged: PDFKit zooms each page in its own scroll view on iOS.
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- extendedWaitUntil: { visible: "Paged", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-pin" }
+- extendedWaitUntil: { visible: "overlay: pin", timeout: 5000 }
+- tapOn: "2.5×"
+- waitForAnimationToEnd
+- swipe: { start: "10%, 45%", end: "90%, 90%", duration: 1000 }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-sign" }
+- extendedWaitUntil: { visible: "overlay: sign here", timeout: 5000 }
+- tapOn: "1×"
+- waitForAnimationToEnd
+
+# Right to left, then facing pages: page 1 sits elsewhere, overlays follow.
+- tapOn: "Paged"
+- tapOn: "Paged H"
+- extendedWaitUntil: { visible: "RTL", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-pin" }
+- extendedWaitUntil: { visible: "overlay: pin", timeout: 5000 }
+- tapOn: { id: "overlay-sign" }
+- extendedWaitUntil: { visible: "overlay: sign here", timeout: 5000 }
+- tapOn: "RTL"
+- tapOn: "Paged RTL"
+- extendedWaitUntil: { visible: "Pairs", timeout: 5000 }
+- waitForAnimationToEnd
+- tapOn: { id: "overlay-pin" }
+- extendedWaitUntil: { visible: "overlay: pin", timeout: 5000 }
+- tapOn: { id: "overlay-sign" }
+- extendedWaitUntil: { visible: "overlay: sign here", timeout: 5000 }
+- takeScreenshot: overlays-pairs
+- tapOn: "Pairs"
+- tapOn: "Book"
+- tapOn: "‹ Back"

@@ -27,6 +27,9 @@ class HybridBetterPdfView(
   PdfDocumentSession.Listener,
   PdfDocumentView.Listener {
   private val documentView = PdfDocumentView(context).also { it.listener = this }
+  private val pageOverlays = PageOverlays(documentView).also { overlays ->
+    documentView.onPagesMoved = { overlays.layout() }
+  }
   private val searchController = SearchController(documentView) { event -> onSearchChange?.invoke(event) }
   override val view: View = documentView
 
@@ -100,6 +103,18 @@ class HybridBetterPdfView(
     set(value) {
       field = value
       documentView.isDark = value == PdfColorScheme.DARK
+    }
+  override var overlayLayerId: String? = null
+    set(value) {
+      field = value
+      pageOverlays.layerId = value
+      layoutOverlaysSoon()
+    }
+  override var overlays: Array<PdfOverlayPlacement>? = null
+    set(value) {
+      field = value
+      pageOverlays.placements = value ?: emptyArray()
+      layoutOverlaysSoon()
     }
   override var enableDoubleTapZoom: Boolean? = null
     set(value) {
@@ -190,11 +205,20 @@ class HybridBetterPdfView(
     // No events into JS for a dropped view (clearing the document would
     // report a cleared text selection), as on iOS.
     documentView.listener = null
+    documentView.onPagesMoved = null
     closeSession()
     // JS may keep this hybrid object alive (through `hybridRef`) until its GC
     // runs; hold no pixels in the meantime. (Measured on iOS: ~7.5 MB per
     // closed viewer when only the document was released.)
     documentView.bitmapPool.clear()
+  }
+
+  /**
+   * Overlay views mount before the props that place them, but may get laid
+   * out in the same frame: place them once React Native is done.
+   */
+  private fun layoutOverlaysSoon() {
+    mainHandler.post { if (documentView.onPagesMoved != null) pageOverlays.layout() }
   }
 
   // region Methods (JS thread)

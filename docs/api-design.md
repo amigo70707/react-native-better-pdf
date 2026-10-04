@@ -200,7 +200,8 @@ Decisions:
 - **Coordinates are PDF points from the page's top-left**, identical on both
   platforms and at every zoom level, so they can position overlays or
   annotations. Verified end-to-end: a tap at 85% of an A4 page's width
-  reports x ≈ 505 on both platforms.
+  reports x ≈ 505 on both platforms. The page is the page as displayed
+  (crop box, rotation applied); see "Page overlays" for rotated pages.
 - **Single taps wait for the double-tap window**, so a double tap zooms
   without also producing a page tap. This adds ~300 ms of latency to
   `onPageTap`. With `enableDoubleTapZoom={false}` nothing waits: every tap
@@ -995,6 +996,91 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   within 9 PDF points of the page, also after zooming in and out), the
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
+
+## Page overlays (v0.2)
+
+```tsx
+<PdfView source={source}>
+  <PdfPageOverlay page={0} x={72} y={600} width={180} height={40}>
+    {/* scalesWithZoom?: boolean — default true */}
+  </PdfPageOverlay>
+</PdfView>
+```
+
+Requested in react-native-pdf as views that stay on a point of a page
+while it scrolls and zooms — form fields, signatures, markers (#350,
+#254, #449, #484); apps there converted coordinates themselves from
+scale and offset events.
+
+- **A component, not a conversion API.** A page-to-view conversion needs
+  the viewport on every frame: a per-frame event (`onViewRectChange`)
+  puts JS on the scroll path, and the overlay trails its page by a frame
+  or more whenever JS is busy (`nitroBoundary.test` rejects per-frame
+  events). Instead JS says once where each overlay goes (page and
+  rectangle) and native code moves the React views, in the same frame as
+  the pages.
+- **Coordinates are `onPageTap`'s**: PDF points from the top-left corner
+  of the page as displayed (crop box, rotation applied), on both
+  platforms, so a tap can place an overlay. This found an iOS bug:
+  `onPageTap` and viewport positions there used the unrotated page — on a
+  `/Rotate 90` page a tap further right reported a smaller y. They now
+  follow the displayed page, as Android's renderer does (measured on
+  `page-boxes`: three taps report 209,138 / 421,138 / 209,339 on iOS and
+  211,158 / 421,158 / 211,383 on Android, y differing with the page's
+  place on screen; 180° and −90° pages checked against their on-screen
+  geometry). A viewport saved on iOS on a rotated page before this fix
+  restores elsewhere.
+- **Overlays live in a layer above the native view**, a sibling inside
+  PdfView's box: Android's Nitro view (a `SimpleViewManager`) cannot host
+  React children. Each `PdfPageOverlay` is a `View` with a generated
+  `nativeID`; the native view gets the layer's `nativeID` and the
+  placements (id, page, rectangle, `scalesWithZoom`) as props, finds the
+  layer beside it and the views in it, and keeps weak references. iOS
+  reads React Native's `nativeId` through KVC (its component view class is
+  not visible to Swift); Android uses `ReactFindViewUtil` and the view tag.
+  The layer passes touches between overlays through (`box-none`).
+- **Placed by a transform.** React lays an overlay out at its size, off
+  screen (`left: -100000`); native code sets a translation and a scale
+  (iOS: the view's `transform`; Android: `translationX/Y` and
+  `scaleX/Y` around the top-left corner), in the coordinates of the
+  overlay's parent, so overlays nested in other views work. The app's
+  `style` comes first and cannot move or resize an overlay; a `transform`
+  style would be overwritten.
+- **When:** Android's document view reports every viewport change
+  (scroll, fling, zoom animation, relayout, document cleared). iOS
+  observes the scroll view's `contentOffset`, zoom, layout and page
+  changes and, in paged layouts, the offset and size of every page's
+  scroll view in PDFKit's page view controller: zooming and panning a page
+  there does not move the main scroll view (measured: overlays stayed at
+  their unzoomed place until those were observed). The controller creates
+  them as pages show, so they are collected again on page changes.
+- **Hidden off screen**: an overlay whose page is not visible is hidden
+  (`isHidden` / `INVISIBLE`, so also from screen readers and touches), and
+  every overlay while no document is shown (loading, failed).
+- **Scaling**: by default the view scales with the page — content laid
+  out as if PDF points were dp looks printed on it. `scalesWithZoom={false}`
+  keeps the size with the top-left corner on the point (a 28 pt pin stayed
+  28 pt at 2.5×, on the same word). iOS scales the view's drawing; text
+  was sharp at 2.5× on both platforms, but can soften on iOS towards high
+  zoom.
+- **JS sends changes only**: a registry keyed by overlay keeps the
+  placements; a re-render with the same rectangles sends nothing (the
+  same array), and a `PdfView` without children renders no layer.
+- **Cost:** one placement pass per frame the document moves. With 23
+  overlays: ~0.11 ms per pass on iOS (simulator, debug build) and ~0.2 ms
+  on Android (emulator, debug build), 1–2 % of a 60 Hz frame. iOS runs
+  the pass about three times as often for the same gestures (several
+  scroll views and zoom notifications report per frame). Meant for tens
+  of overlays, not one per page of a long document.
+- **Not included:** clipping overlays to their page; overlays in page
+  images or printing; a page-to-view conversion API.
+- **Tested:** `viewer-overlays` on both platforms (taps by testID at fit,
+  after the page scrolls in, after a far jump and back with all hidden
+  meanwhile, after a resize, zoomed in continuous and paged layouts, in
+  paged RTL and pairs); unit tests for registration, unchanged
+  re-renders, removal, style order and use outside a `PdfView`; probes for
+  the pin at 2.5× and for taps on every rotation of `page-boxes`; the full
+  suite on both platforms.
 
 ## Dark pages (v0.2)
 

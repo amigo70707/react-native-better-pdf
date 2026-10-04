@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import {
+  PdfPageOverlay,
   PdfView,
   type PdfError,
   type PdfLoadProgressEvent,
@@ -403,7 +404,13 @@ export function ViewerScreen() {
             onError={(pdfError) =>
               setState({ kind: 'failed', source, error: pdfError })
             }
-          />
+          >
+            {entry.overlays === true && (
+              <DemoOverlays
+                onPress={(name) => setLastEvent(`overlay: ${name}`)}
+              />
+            )}
+          </PdfView>
         )}
         {pageImage != null && (
           <Pressable
@@ -550,9 +557,69 @@ function formatStats(stats: PdfViewStats): string {
   ].join('\n');
 }
 
+/**
+ * Overlays in PDF points from a page's top-left: a signature field that
+ * scales with the page, a pin that keeps its size, and a note on page 3.
+ */
+function DemoOverlays({ onPress }: { onPress: (name: string) => void }) {
+  return (
+    <>
+      <PdfPageOverlay page={0} x={50} y={110} width={220} height={44}>
+        <Pressable
+          testID="overlay-sign"
+          style={styles.overlayField}
+          onPress={() => onPress('sign here')}
+        >
+          <Text style={styles.overlayText}>Sign here</Text>
+        </Pressable>
+      </PdfPageOverlay>
+      <PdfPageOverlay
+        page={0}
+        x={480}
+        y={110}
+        width={28}
+        height={28}
+        scalesWithZoom={false}
+      >
+        <Pressable
+          testID="overlay-pin"
+          style={styles.overlayPin}
+          onPress={() => onPress('pin')}
+        />
+      </PdfPageOverlay>
+      <PdfPageOverlay page={2} x={50} y={110} width={220} height={44}>
+        <Pressable
+          testID="overlay-note"
+          style={styles.overlayField}
+          onPress={() => onPress('page 3 note')}
+        >
+          <Text style={styles.overlayText}>Page 3 note</Text>
+        </Pressable>
+      </PdfPageOverlay>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pdf: { flex: 1, backgroundColor: colors.canvas },
+  overlayField: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderRadius: 4,
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+  },
+  overlayText: { color: colors.accent, fontSize: 16, fontWeight: '600' },
+  overlayPin: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    backgroundColor: colors.danger,
+  },
   list: { padding: 12, gap: 8 },
   rowWithAction: {
     flexDirection: 'row',

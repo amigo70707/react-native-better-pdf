@@ -24,6 +24,8 @@ namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -72,6 +74,8 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
+#include "PdfOverlayPlacement.hpp"
+#include <vector>
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -87,7 +91,6 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfTextSelectionChangeEvent.hpp"
 #include "PdfViewStats.hpp"
 #include "PdfOutlineEntry.hpp"
-#include <vector>
 #include <NitroModules/Promise.hpp>
 #include "PdfPageSize.hpp"
 #include "PdfPageImage.hpp"
@@ -231,6 +234,20 @@ namespace margelo::nitro::betterpdf {
     }
     inline void setColorScheme(std::optional<PdfColorScheme> colorScheme) noexcept override {
       _swiftPart.setColorScheme(colorScheme);
+    }
+    inline std::optional<std::string> getOverlayLayerId() noexcept override {
+      auto __result = _swiftPart.getOverlayLayerId();
+      return __result;
+    }
+    inline void setOverlayLayerId(const std::optional<std::string>& overlayLayerId) noexcept override {
+      _swiftPart.setOverlayLayerId(overlayLayerId);
+    }
+    inline std::optional<std::vector<PdfOverlayPlacement>> getOverlays() noexcept override {
+      auto __result = _swiftPart.getOverlays();
+      return __result;
+    }
+    inline void setOverlays(const std::optional<std::vector<PdfOverlayPlacement>>& overlays) noexcept override {
+      _swiftPart.setOverlays(overlays);
     }
     inline std::optional<bool> getEnableDoubleTapZoom() noexcept override {
       auto __result = _swiftPart.getEnableDoubleTapZoom();

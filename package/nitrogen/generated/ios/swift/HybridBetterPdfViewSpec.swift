@@ -23,6 +23,8 @@ public protocol HybridBetterPdfViewSpec_protocol: HybridObject, HybridView {
   var fitPolicy: PdfFitPolicy? { get set }
   var spreadMode: PdfSpreadMode? { get set }
   var colorScheme: PdfColorScheme? { get set }
+  var overlayLayerId: String? { get set }
+  var overlays: [PdfOverlayPlacement]? { get set }
   var enableDoubleTapZoom: Bool? { get set }
   var scrollEnabled: Bool? { get set }
   var pageAccessibilityLabel: String? { get set }

@@ -17,6 +17,8 @@
     "fitPolicy": true,
     "spreadMode": true,
     "colorScheme": true,
+    "overlayLayerId": true,
+    "overlays": true,
     "enableDoubleTapZoom": true,
     "scrollEnabled": true,
     "pageAccessibilityLabel": true,

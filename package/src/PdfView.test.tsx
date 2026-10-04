@@ -101,6 +101,7 @@ mock.module(
 );
 
 const { PdfView } = await import('./PdfView');
+const { PdfPageOverlay } = await import('./PdfPageOverlay');
 import type { PdfViewRef } from './PdfView';
 import type { PdfViewStats } from './types/PdfViewStats';
 
@@ -595,6 +596,75 @@ describe('PdfView', () => {
     };
     wrapped.f({ matchCount: 3 });
     expect(events).toEqual([3]);
+  });
+
+  test('places PdfPageOverlays through native props, in the layer it names', () => {
+    const overlays = (page: number, x: number, withPin = true) => (
+      <PdfView source={{ uri: 'x' }}>
+        <PdfPageOverlay page={page} x={x} y={20} width={100} height={40} />
+        {withPin && (
+          <PdfPageOverlay
+            page={1}
+            x={5}
+            y={6}
+            width={24}
+            height={24}
+            scalesWithZoom={false}
+            style={{ left: 0, width: 10, opacity: 0.5 }}
+          />
+        )}
+      </PdfView>
+    );
+    const renderer = render(overlays(0, 10));
+    const layer = boxRenders.find(
+      (props) => props.nativeID === lastHost().overlayLayerId,
+    );
+    expect(layer?.pointerEvents).toBe('box-none');
+    const placed = lastHost().overlays as Array<{ id: string }>;
+    expect(placed.map(({ id: _, ...placement }) => placement)).toEqual([
+      { page: 0, x: 10, y: 20, width: 100, height: 40, scalesWithZoom: true },
+      { page: 1, x: 5, y: 6, width: 24, height: 24, scalesWithZoom: false },
+    ]);
+    // Each placement names its view; the app's style cannot move or resize it.
+    const pin = boxRenders.findLast(
+      (props) => props.nativeID === placed[1]?.id,
+    );
+    expect(pin?.style).toEqual([
+      { left: 0, width: 10, opacity: 0.5 },
+      { position: 'absolute', left: -100000, top: 0 },
+      { width: 24, height: 24 },
+    ]);
+
+    // Re-rendered unchanged: the same array, nothing new for native code.
+    act(() => renderer.update(overlays(0, 10)));
+    expect(lastHost().overlays).toBe(placed);
+
+    act(() => renderer.update(overlays(2, 30)));
+    expect(lastHost().overlays).toEqual([
+      { ...placed[0], page: 2, x: 30 },
+      placed[1],
+    ]);
+
+    act(() => renderer.update(overlays(2, 30, false)));
+    expect(lastHost().overlays).toEqual([{ ...placed[0], page: 2, x: 30 }]);
+  });
+
+  test('sends no overlays and renders no layer without children', () => {
+    render(<PdfView source={{ uri: 'x' }} />);
+    expect(lastHost().overlays).toEqual([]);
+    expect(boxRenders.some((props) => props.pointerEvents != null)).toBe(false);
+  });
+
+  test('PdfPageOverlay outside a PdfView throws', () => {
+    const error = console.error;
+    console.error = () => {};
+    try {
+      expect(() =>
+        render(<PdfPageOverlay page={0} x={0} y={0} width={10} height={10} />),
+      ).toThrow('PdfPageOverlay must be rendered inside a PdfView');
+    } finally {
+      console.error = error;
+    }
   });
 
   test('getOutline rejects before mount and returns a tree after', async () => {

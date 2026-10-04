@@ -19,6 +19,8 @@ namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -73,6 +75,9 @@ namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 #include "JPdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
 #include "JPdfColorScheme.hpp"
+#include "PdfOverlayPlacement.hpp"
+#include <vector>
+#include "JPdfOverlayPlacement.hpp"
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "JFunc_void_PdfLoadEvent.hpp"
@@ -112,7 +117,6 @@ namespace margelo::nitro::betterpdf { enum class PdfImageFormat; }
 #include "PdfViewStats.hpp"
 #include "JPdfViewStats.hpp"
 #include "PdfOutlineEntry.hpp"
-#include <vector>
 #include <NitroModules/Promise.hpp>
 #include <NitroModules/JPromise.hpp>
 #include "JPdfOutlineEntry.hpp"
@@ -273,6 +277,42 @@ namespace margelo::nitro::betterpdf {
   void JHybridBetterPdfViewSpec::setColorScheme(std::optional<PdfColorScheme> colorScheme) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JPdfColorScheme> /* colorScheme */)>("setColorScheme");
     method(_javaPart, colorScheme.has_value() ? JPdfColorScheme::fromCpp(colorScheme.value()) : nullptr);
+  }
+  std::optional<std::string> JHybridBetterPdfViewSpec::getOverlayLayerId() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getOverlayLayerId");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toStdString()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setOverlayLayerId(const std::optional<std::string>& overlayLayerId) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JString> /* overlayLayerId */)>("setOverlayLayerId");
+    method(_javaPart, overlayLayerId.has_value() ? jni::make_jstring(overlayLayerId.value()) : nullptr);
+  }
+  std::optional<std::vector<PdfOverlayPlacement>> JHybridBetterPdfViewSpec::getOverlays() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayClass<JPdfOverlayPlacement>>()>("getOverlays");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional([&](auto&& __input) {
+      size_t __size = __input->size();
+      std::vector<PdfOverlayPlacement> __vector;
+      __vector.reserve(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        auto __element = __input->getElement(__i);
+        __vector.push_back(__element->toCpp());
+      }
+      return __vector;
+    }(__result)) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setOverlays(const std::optional<std::vector<PdfOverlayPlacement>>& overlays) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<jni::JArrayClass<JPdfOverlayPlacement>> /* overlays */)>("setOverlays");
+    method(_javaPart, overlays.has_value() ? [&](auto&& __input) {
+      size_t __size = __input.size();
+      jni::local_ref<jni::JArrayClass<JPdfOverlayPlacement>> __array = jni::JArrayClass<JPdfOverlayPlacement>::newArray(__size);
+      for (size_t __i = 0; __i < __size; __i++) {
+        const auto& __element = __input[__i];
+        auto __elementJni = JPdfOverlayPlacement::fromCpp(__element);
+        __array->setElement(__i, *__elementJni);
+      }
+      return __array;
+    }(overlays.value()) : nullptr);
   }
   std::optional<bool> JHybridBetterPdfViewSpec::getEnableDoubleTapZoom() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JBoolean>()>("getEnableDoubleTapZoom");

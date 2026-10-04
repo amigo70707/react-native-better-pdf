@@ -398,6 +398,60 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var overlayLayerId: bridge.std__optional_std__string_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__string_ in
+        if let __unwrappedValue = self.__implementation.overlayLayerId {
+          return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.overlayLayerId = { () -> String? in
+        if bridge.has_value_std__optional_std__string_(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__string_(newValue)
+          return String(__unwrapped)
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
+  public final var overlays: bridge.std__optional_std__vector_PdfOverlayPlacement__ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_std__vector_PdfOverlayPlacement__ in
+        if let __unwrappedValue = self.__implementation.overlays {
+          return bridge.create_std__optional_std__vector_PdfOverlayPlacement__({ () -> bridge.std__vector_PdfOverlayPlacement_ in
+            var __vector = bridge.create_std__vector_PdfOverlayPlacement_(__unwrappedValue.count)
+            for __item in __unwrappedValue {
+              __vector.push_back(__item)
+            }
+            return __vector
+          }())
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.overlays = { () -> [PdfOverlayPlacement]? in
+        if bridge.has_value_std__optional_std__vector_PdfOverlayPlacement__(newValue) {
+          let __unwrapped = bridge.get_std__optional_std__vector_PdfOverlayPlacement__(newValue)
+          return __unwrapped.map({ __item in __item })
+        } else {
+          return nil
+        }
+      }()
+    }
+  }
+  
   public final var enableDoubleTapZoom: bridge.std__optional_bool_ {
     @inline(__always)
     get {

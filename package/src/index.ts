@@ -1,4 +1,6 @@
 export { PdfView } from './PdfView';
+export { PdfPageOverlay } from './PdfPageOverlay';
+export type { PdfPageOverlayProps } from './PdfPageOverlay';
 export type { NavigationOptions, PdfViewProps, PdfViewRef } from './PdfView';
 export { PdfCache } from './PdfCache';
 export { PdfDocument } from './PdfDocument';

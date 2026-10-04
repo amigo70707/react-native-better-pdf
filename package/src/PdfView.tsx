@@ -1,8 +1,10 @@
 import {
+  useId,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type Ref,
 } from 'react';
 import {
@@ -19,6 +21,7 @@ import {
 } from 'react-native-nitro-modules';
 import BetterPdfViewConfig from '../nitrogen/generated/shared/json/BetterPdfViewConfig.json';
 import { nativeColor } from './nativeColor';
+import { OverlayRegistryContext, type OverlayRegistry } from './PdfPageOverlay';
 import { buildOutlineTree } from './outline';
 import { defaultPrintJobName } from './printJobName';
 import { normalizeSource, sourceKey, type PdfSource } from './source';
@@ -35,6 +38,7 @@ import type { PdfLinkPressEvent } from './types/PdfLinkPressEvent';
 import type { PdfLoadEvent } from './types/PdfLoadEvent';
 import type { PdfLoadProgressEvent } from './types/PdfLoadProgressEvent';
 import type { PdfOutlineItem } from './types/PdfOutlineItem';
+import type { PdfOverlayPlacement } from './types/PdfOverlayPlacement';
 import type { PdfPageChangeEvent } from './types/PdfPageChangeEvent';
 import type { PdfPageImage } from './types/PdfPageImage';
 import type { PdfPageSize } from './types/PdfPageSize';
@@ -444,9 +448,12 @@ export function PdfView({
   onViewportChange,
   ref,
   style,
+  children,
   ...viewProps
 }: PdfViewProps) {
   const nativeSource = useStableSource(source);
+  const { overlays, overlayRegistry } = useOverlays();
+  const overlayLayerId = `pdf-overlays${useId()}`;
   // For print's default job name; read when called, like the handlers.
   const latestSource = useRef(nativeSource);
   useLayoutEffect(() => {
@@ -639,9 +646,62 @@ export function PdfView({
         onTextSelectionChange={subscription('onTextSelectionChange')}
         onSearchChange={subscription('onSearchChange')}
         onViewportChange={subscription('onViewportChange')}
+        overlayLayerId={overlayLayerId}
+        overlays={overlays}
         hybridRef={hybridRef}
       />
+      {children != null && (
+        // Above the document, passing touches through between overlays;
+        // native code moves the PdfPageOverlays in it with their pages.
+        <OverlayRegistryContext.Provider value={overlayRegistry}>
+          <View
+            nativeID={overlayLayerId}
+            collapsable={false}
+            pointerEvents="box-none"
+            style={StyleSheet.absoluteFill}
+          >
+            {children}
+          </View>
+        </OverlayRegistryContext.Provider>
+      )}
     </View>
+  );
+}
+
+/** The placements of the `PdfPageOverlay`s rendered inside a `PdfView`. */
+function useOverlays(): {
+  overlays: PdfOverlayPlacement[];
+  overlayRegistry: OverlayRegistry;
+} {
+  const placements = useRef(new Map<string, PdfOverlayPlacement>());
+  const [overlays, setOverlays] = useState<PdfOverlayPlacement[]>([]);
+  const overlayRegistry = useMemo<OverlayRegistry>(
+    () => ({
+      set(placement) {
+        const previous = placements.current.get(placement.id);
+        if (previous != null && samePlacement(previous, placement)) return;
+        placements.current.set(placement.id, placement);
+        setOverlays([...placements.current.values()]);
+      },
+      remove(id) {
+        if (placements.current.delete(id)) {
+          setOverlays([...placements.current.values()]);
+        }
+      },
+    }),
+    [],
+  );
+  return { overlays, overlayRegistry };
+}
+
+function samePlacement(a: PdfOverlayPlacement, b: PdfOverlayPlacement) {
+  return (
+    a.page === b.page &&
+    a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height &&
+    a.scalesWithZoom === b.scalesWithZoom
   );
 }
 

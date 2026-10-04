@@ -43,6 +43,8 @@ export interface DocumentEntry {
   resolve: () => Promise<PdfSource>;
   initialPage?: number;
   initialScale?: number;
+  /** Shows the example's PdfPageOverlays (pages 1 and 3). */
+  overlays?: boolean;
 }
 
 const fixtureDirectory = () => {
@@ -100,6 +102,13 @@ export const DOCUMENTS: DocumentEntry[] = [
     resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
     initialPage: 4,
     initialScale: 2,
+  },
+  {
+    id: 'medium-overlays',
+    title: 'Overlays',
+    subtitle: 'PdfPageOverlay on pages 1 and 3',
+    resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
+    overlays: true,
   },
   ...FIXTURES.map<DocumentEntry>((name) => ({
     id: `fixture-${name}`,

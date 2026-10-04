@@ -48,6 +48,8 @@ namespace margelo::nitro::betterpdf { struct PdfOpenResult; }
 namespace margelo::nitro::betterpdf { struct PdfOpenedDocument; }
 // Forward declaration of `PdfOutlineEntry` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
+// Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfPageChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageChangeEvent; }
 // Forward declaration of `PdfPageImage` to properly resolve imports.
@@ -102,6 +104,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "PdfOpenResult.hpp"
 #include "PdfOpenedDocument.hpp"
 #include "PdfOutlineEntry.hpp"
+#include "PdfOverlayPlacement.hpp"
 #include "PdfPageChangeEvent.hpp"
 #include "PdfPageImage.hpp"
 #include "PdfPageSize.hpp"
@@ -907,6 +910,32 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline PdfColorScheme get_std__optional_PdfColorScheme_(const std::optional<PdfColorScheme>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::vector<PdfOverlayPlacement>
+  /**
+   * Specialized version of `std::vector<PdfOverlayPlacement>`.
+   */
+  using std__vector_PdfOverlayPlacement_ = std::vector<PdfOverlayPlacement>;
+  inline std::vector<PdfOverlayPlacement> create_std__vector_PdfOverlayPlacement_(size_t size) noexcept {
+    std::vector<PdfOverlayPlacement> vector;
+    vector.reserve(size);
+    return vector;
+  }
+  
+  // pragma MARK: std::optional<std::vector<PdfOverlayPlacement>>
+  /**
+   * Specialized version of `std::optional<std::vector<PdfOverlayPlacement>>`.
+   */
+  using std__optional_std__vector_PdfOverlayPlacement__ = std::optional<std::vector<PdfOverlayPlacement>>;
+  inline std::optional<std::vector<PdfOverlayPlacement>> create_std__optional_std__vector_PdfOverlayPlacement__(const std::vector<PdfOverlayPlacement>& value) noexcept {
+    return std::optional<std::vector<PdfOverlayPlacement>>(value);
+  }
+  inline bool has_value_std__optional_std__vector_PdfOverlayPlacement__(const std::optional<std::vector<PdfOverlayPlacement>>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline std::vector<PdfOverlayPlacement> get_std__optional_std__vector_PdfOverlayPlacement__(const std::optional<std::vector<PdfOverlayPlacement>>& optional) noexcept {
     return optional.value();
   }
   

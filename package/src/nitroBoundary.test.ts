@@ -53,6 +53,10 @@ describe('Nitro boundary', () => {
         'onSearchChange',
         'onTextSelectionChange',
         'onViewportChange',
+        // Placements of PdfPageOverlay views; native code moves the views
+        // every frame without JS (see docs/api-design.md "Page overlays").
+        'overlayLayerId',
+        'overlays',
         'pageAccessibilityLabel',
         'pageSpacing',
         'scrollEnabled',

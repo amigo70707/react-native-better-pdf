@@ -176,6 +176,18 @@ using namespace margelo::nitro::betterpdf::views;
           : !newViewProps.colorScheme.hasSameValue(oldViewProps->colorScheme)) {
       swiftPart.setColorScheme(newViewProps.colorScheme.get());
     }
+    // overlayLayerId: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.overlayLayerId.isProvided()
+          : !newViewProps.overlayLayerId.hasSameValue(oldViewProps->overlayLayerId)) {
+      swiftPart.setOverlayLayerId(newViewProps.overlayLayerId.get());
+    }
+    // overlays: optional
+    if (oldViewProps == nullptr
+          ? newViewProps.overlays.isProvided()
+          : !newViewProps.overlays.hasSameValue(oldViewProps->overlays)) {
+      swiftPart.setOverlays(newViewProps.overlays.get());
+    }
     // enableDoubleTapZoom: optional
     if (oldViewProps == nullptr
           ? newViewProps.enableDoubleTapZoom.isProvided()

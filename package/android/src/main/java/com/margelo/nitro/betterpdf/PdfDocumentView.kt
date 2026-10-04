@@ -79,6 +79,13 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
 
   var listener: Listener? = null
 
+  /**
+   * Called whenever pages move on screen — every scroll and zoom frame,
+   * relayouts, and when the document is cleared. Read positions with
+   * [pageRectInView].
+   */
+  var onPagesMoved: (() -> Unit)? = null
+
   // region Document state
 
   private var session: PdfDocumentSession? = null
@@ -492,6 +499,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     statMisses = 0
     updateCacheStats()
     invalidate()
+    onPagesMoved?.invoke()
   }
 
   fun setScaleLimits(min: Double?, max: Double?) {
@@ -1017,6 +1025,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     if (width <= 0 || (layoutDependsOnHeight && height <= 0) || pageSizes.isEmpty()) {
       layout = null
       invalidate()
+      onPagesMoved?.invoke()
       return
     }
     // Keep the same point of the same page at the viewport start across relayouts.
@@ -1171,6 +1180,22 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     }
   }
 
+  /**
+   * Where the rectangle [x], [y], [width] × [height] — PDF points from the
+   * top-left corner of [page], as [Listener.onPageTapped] reports them — is
+   * on screen now, in this view's pixels, into [out]. False when the page is
+   * not on screen.
+   */
+  fun pageRectInView(page: Int, x: Float, y: Float, width: Float, height: Float, out: RectF): Boolean {
+    val layout = layout ?: return false
+    if (page !in visiblePages()) return false
+    val pixels = layout.pointsToPixels(page) * scale
+    val left = layout.pageLeft(page) * scale - offsetX + x * pixels
+    val top = layout.pageTop(page) * scale - offsetY + y * pixels
+    out.set(left, top, left + width * pixels, top + height * pixels)
+    return true
+  }
+
   private fun visiblePages(): IntRange {
     val layout = layout ?: return IntRange.EMPTY
     if (width <= 0 || height <= 0) return IntRange.EMPTY
@@ -1220,6 +1245,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     textSelection.onViewportMoved()
     requestRenders()
     invalidate()
+    onPagesMoved?.invoke()
   }
 
   private fun scheduleSettle() {

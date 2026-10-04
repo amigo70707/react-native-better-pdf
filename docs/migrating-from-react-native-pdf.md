@@ -100,6 +100,7 @@ users see.
 | `renderActivityIndicator`, `progressContainerStyle` | — | Render your own; see `onLoadProgress`. |
 | `style` and other `View` props | same | |
 | — | `ref.print()` | New: the system print dialog for the loaded document, protected documents included. |
+| — | `<PdfPageOverlay page x y width height>` children | New: React views on pages that follow scrolling and zoom, placed natively (#350, #254, #449, #484). |
 
 ## Callbacks
 

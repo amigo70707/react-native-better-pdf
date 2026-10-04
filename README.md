@@ -148,6 +148,7 @@ re-renders never reload the document.
 | `fitPolicy` | `'width' \| 'height' \| 'page'` | `'width'`, or `'page'` with `horizontal` / `enablePaging` | how pages are scaled at zoom 1 |
 | `spreadMode` | `'none' \| 'pairs' \| 'book'` | `'none'` | facing pages side by side in the vertical continuous layout; see [Facing pages](#facing-pages) |
 | `colorScheme` | `'light' \| 'dark'` (or `useColorScheme()`'s value) | `'light'` | `'dark'` shows pages with lightness inverted and hues kept; see [Dark pages](#dark-pages) |
+| `children` | `PdfPageOverlay` elements | | React views placed on pages, moving with them; see [Page overlays](#page-overlays) |
 | `searchHighlightColor` | `ColorValue` | `'rgba(255, 214, 0, 0.4)'` | background of search matches; use a translucent colour |
 | `searchCurrentHighlightColor` | `ColorValue` | `'rgba(255, 140, 0, 0.6)'` | background of the current match |
 | `onLoad` | `({ pageCount, firstPageWidth, firstPageHeight, filePath?, isStale }) => void` | | first page's size in PDF points, as displayed (crop box, rotation applied); `filePath`: the local file being displayed (downloaded copy, local file or extracted asset; not for `content://`); `isStale`: an outdated stored copy shown because the server could not be reached (see [Offline reading and caching](#offline-reading-and-caching)) |
@@ -155,7 +156,7 @@ re-renders never reload the document.
 | `onPageChange` | `({ page, pageCount }) => void` | | zero-based |
 | `onError` | `(error: PdfError) => void` | | |
 | `onLinkPress` | `({ url }) => void` | | tap on a URL link; the viewer never opens URLs itself |
-| `onPageTap` | `({ page, x, y }) => void` | | tap on a page outside links; zero-based page, `x`/`y` in PDF points from the page's top-left |
+| `onPageTap` | `({ page, x, y }) => void` | | tap on a page outside links; zero-based page, `x`/`y` in PDF points from the top-left of the page as displayed (crop box, rotation applied) |
 | `onScaleChange` | `({ scale }) => void` | | once per settled zoom change (pinch/double-tap end, `zoomTo`); relative to the fitted page |
 | `onTextSelectionChange` | `({ text }) => void` | | once per settled selection (long press, handle drag or Select all ends); `text` is `''` when cleared |
 | `onViewportChange` | `({ viewport, firstVisiblePage, lastVisiblePage, isAtEnd }) => void` | | once after loading and after every settled scroll, zoom or rotation, never per frame; see [Reading position](#reading-position) |
@@ -206,6 +207,8 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
   at the top on both platforms
 - Facing pages (two-page spreads) for tablets, with or without a cover page
 - Dark pages for reading at night, colours' hues kept
+- Page overlays: React views (form fields, signatures, markers) attached
+  to points of a page, moved natively while it scrolls and zooms
 - Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
 - Initial page, imperative page navigation and zoom
 - Every page's size (`getPageSizes`), cheap even for long documents
@@ -441,6 +444,46 @@ const scheme = useColorScheme();
   colours; highlights, underlines and strike-outs are lightened onto the
   dark page instead of disappearing.
 
+## Page overlays
+
+```tsx
+import { PdfPageOverlay, PdfView } from 'react-native-better-pdf';
+
+<PdfView source={source} style={{ flex: 1 }}>
+  {fields.map((field) => (
+    <PdfPageOverlay
+      key={field.id}
+      page={field.page} // zero-based
+      x={field.x} // PDF points from the page's top-left,
+      y={field.y} // as onPageTap reports them
+      width={180}
+      height={40}
+    >
+      <Pressable style={{ flex: 1 }} onPress={() => sign(field)}>
+        <Text>Sign here</Text>
+      </Pressable>
+    </PdfPageOverlay>
+  ))}
+</PdfView>;
+```
+
+- Coordinates are those of `onPageTap`: PDF points from the top-left
+  corner of the page as displayed (crop box, rotation applied), so an
+  overlay can go where the reader tapped.
+- The overlay is laid out at `width` × `height` dp / pt and scaled with
+  the page, as if printed on it. `scalesWithZoom={false}` keeps its size
+  (a pin, a badge), its top-left corner on the point.
+- Native code moves overlays in the same frame as their pages — scrolling,
+  zooming, paging, resizing — without JS. An overlay is hidden while its
+  page is off screen (also from screen readers) and while no document is
+  shown.
+- Between overlays, touches reach the document.
+- `style` cannot move or resize an overlay, and a `transform` on it is
+  overwritten; transform a view inside it instead.
+- Meant for tens of overlays: each is moved every frame the document
+  moves (23 overlays: ~0.1 ms per frame on iOS, ~0.2 ms on Android, debug
+  builds).
+
 ## Printing
 
 ```tsx
@@ -521,6 +564,10 @@ Screen readers get the document's text and position:
   horizontal or paged layouts, or right to left.
 - **Dark pages on iOS**: annotations keep their own colours (see
   [Dark pages](#dark-pages)).
+- **Page overlays** are not clipped to their page, and are not drawn in
+  page images or printing. On iOS an overlay's drawing is scaled with the
+  page, so its text can soften at high zoom (sharp at 2.5× in tests);
+  Android draws it again at the new size.
 - **Text selection**: iOS uses PDFKit's selection, which can span pages.
   Android draws its own: a selection stays on one page, Select all selects
   that page, copying ends the selection (as in a text field), dragging a

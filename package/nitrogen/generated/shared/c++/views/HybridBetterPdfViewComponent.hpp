@@ -24,6 +24,8 @@
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
+#include "PdfOverlayPlacement.hpp"
+#include <vector>
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -71,6 +73,8 @@ namespace margelo::nitro::betterpdf::views {
     nitro::ReactProp<std::optional<PdfFitPolicy>> fitPolicy;
     nitro::ReactProp<std::optional<PdfSpreadMode>> spreadMode;
     nitro::ReactProp<std::optional<PdfColorScheme>> colorScheme;
+    nitro::ReactProp<std::optional<std::string>> overlayLayerId;
+    nitro::ReactProp<std::optional<std::vector<PdfOverlayPlacement>>> overlays;
     nitro::ReactProp<std::optional<bool>> enableDoubleTapZoom;
     nitro::ReactProp<std::optional<bool>> scrollEnabled;
     nitro::ReactProp<std::optional<std::string>> pageAccessibilityLabel;
@@ -106,6 +110,8 @@ namespace margelo::nitro::betterpdf::views {
              fitPolicy.hasSameValue(other.fitPolicy) &&
              spreadMode.hasSameValue(other.spreadMode) &&
              colorScheme.hasSameValue(other.colorScheme) &&
+             overlayLayerId.hasSameValue(other.overlayLayerId) &&
+             overlays.hasSameValue(other.overlays) &&
              enableDoubleTapZoom.hasSameValue(other.enableDoubleTapZoom) &&
              scrollEnabled.hasSameValue(other.scrollEnabled) &&
              pageAccessibilityLabel.hasSameValue(other.pageAccessibilityLabel) &&
@@ -142,6 +148,8 @@ namespace margelo::nitro::betterpdf::views {
              fitPolicy.isProvided() ||
              spreadMode.isProvided() ||
              colorScheme.isProvided() ||
+             overlayLayerId.isProvided() ||
+             overlays.isProvided() ||
              enableDoubleTapZoom.isProvided() ||
              scrollEnabled.isProvided() ||
              pageAccessibilityLabel.isProvided() ||

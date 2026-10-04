@@ -48,6 +48,8 @@ namespace margelo::nitro::betterpdf { struct PdfOpenResult; }
 namespace margelo::nitro::betterpdf { struct PdfOpenedDocument; }
 // Forward declaration of `PdfOutlineEntry` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
+// Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfPageChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfPageChangeEvent; }
 // Forward declaration of `PdfPageImage` to properly resolve imports.
@@ -96,6 +98,7 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "PdfOpenResult.hpp"
 #include "PdfOpenedDocument.hpp"
 #include "PdfOutlineEntry.hpp"
+#include "PdfOverlayPlacement.hpp"
 #include "PdfPageChangeEvent.hpp"
 #include "PdfPageImage.hpp"
 #include "PdfPageSize.hpp"

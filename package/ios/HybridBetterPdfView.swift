@@ -13,6 +13,7 @@ import UIKit
 /// Methods called through `hybridRef` arrive on the JS thread and hop to main.
 final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private let container = PdfContainerView()
+  private let pageOverlays = PageOverlays()
   private lazy var searchController = PdfSearchController(pdfView: container.pdfView) { [weak self] event in
     self?.onSearchChange?(event)
   }
@@ -57,6 +58,19 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   }
   var colorScheme: PdfColorScheme? {
     didSet { if colorScheme != oldValue { applyColorScheme() } }
+  }
+  var overlayLayerId: String? {
+    didSet {
+      pageOverlays.layerId = overlayLayerId
+      layoutOverlaysSoon()
+    }
+  }
+  var overlays: [PdfOverlayPlacement]? {
+    didSet {
+      pageOverlays.placements = overlays ?? []
+      observeOverlayScrollViews()
+      layoutOverlaysSoon()
+    }
   }
   var enableDoubleTapZoom: Bool? {
     didSet { container.isDoubleTapZoomEnabled = enableDoubleTapZoom ?? true }
@@ -149,6 +163,10 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// Content-size observation of the same scroll view; keeps a short
   /// document at the top while it is zoomed (see `applyTopAlignment`).
   private var contentSizeObservation: NSKeyValueObservation?
+  /// The other scroll views in the PDF view: in paged layouts every page of
+  /// the page view controller zooms and pans in its own. Overlays follow
+  /// them too; re-collected as pages show (the controller creates them).
+  private var overlayScrollObservations: [NSKeyValueObservation] = []
   private weak var scrollView: UIScrollView?
 
   /// Read from the JS thread by `getStats()`.
@@ -172,6 +190,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     scaleObserver = NotificationCenter.default.addObserver(
       forName: .PDFViewScaleChanged, object: container.pdfView, queue: .main
     ) { [weak self] _ in
+      self?.layoutOverlays()
       self?.settle.noteMotion()
     }
   }
@@ -195,6 +214,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     searchController.clear()
     offsetObservation = nil
     contentSizeObservation = nil
+    overlayScrollObservations = []
     if let scaleObserver { NotificationCenter.default.removeObserver(scaleObserver) }
     scaleObserver = nil
     settle.cancel()
@@ -461,6 +481,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     loadTask?.cancel()
     loadTask = nil
     pdfView?.document = nil
+    layoutOverlays()
     releaseDisplayedPin()
     container.resetSelection()
     fitScale = 0
@@ -578,6 +599,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       }
     }
     applyTopAlignment()
+    layoutOverlays()
     // The first layout and rotations move the viewport without scrolling.
     settle.noteMotion()
   }
@@ -763,6 +785,18 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
 
   private var isRightToLeftLayout: Bool { (enableRTL ?? false) && isHorizontalLayout }
 
+  /// Moves the `PdfPageOverlay`s onto their pages for the current position.
+  private func layoutOverlays() {
+    guard let pdfView else { return }
+    pageOverlays.layout(pdfView: pdfView, container: container)
+  }
+
+  /// After the props update: the overlay layer is a sibling React mounts
+  /// in the same transaction, after this view.
+  private func layoutOverlaysSoon() {
+    DispatchQueue.main.async { [weak self] in self?.layoutOverlays() }
+  }
+
   /// Draws the displayed document's pages dark or in their own colours.
   /// PDFKit keeps the tiles it drew and redraws none on request (measured:
   /// `setNeedsDisplay` on its layers and `annotationsChanged(on:)` leave
@@ -874,6 +908,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     applyScrollEnabled()
     applyContentInsetAdjustment()
     offsetObservation = scrollView?.observe(\.contentOffset, options: []) { [weak self] _, _ in
+      self?.layoutOverlays()
       self?.reportCurrentPage()
       // Every scroll frame, including animated zooms (PDFKit's double tap
       // posts PDFViewScaleChanged only when it starts).
@@ -883,6 +918,20 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       self?.applyTopAlignment()
     }
     applyTopAlignment()
+    observeOverlayScrollViews()
+  }
+
+  private func observeOverlayScrollViews() {
+    overlayScrollObservations = []
+    guard !pageOverlays.placements.isEmpty, let pdfView else { return }
+    for other in pdfView.descendantScrollViews() where other !== scrollView {
+      overlayScrollObservations.append(other.observe(\.contentOffset, options: []) { [weak self] _, _ in
+        self?.layoutOverlays()
+      })
+      overlayScrollObservations.append(other.observe(\.contentSize, options: []) { [weak self] _, _ in
+        self?.layoutOverlays()
+      })
+    }
   }
 
   /// No automatic safe-area insets, as on Android and in React Native's
@@ -949,6 +998,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       pageChangeObserver = NotificationCenter.default.addObserver(
         forName: .PDFViewPageChanged, object: pdfView, queue: .main
       ) { [weak self] _ in
+        self?.observeOverlayScrollViews()
+        self?.layoutOverlays()
         self?.reportCurrentPage()
         // The relative zoom is measured against the page that just arrived.
         self?.pagedFitScale = nil

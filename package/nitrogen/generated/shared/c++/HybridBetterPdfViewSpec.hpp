@@ -23,6 +23,8 @@ namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
@@ -65,6 +67,8 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
+#include "PdfOverlayPlacement.hpp"
+#include <vector>
 #include "PdfLoadEvent.hpp"
 #include <functional>
 #include "PdfLoadProgressEvent.hpp"
@@ -79,7 +83,6 @@ namespace margelo::nitro::betterpdf { struct PdfPrintResult; }
 #include "PdfViewStats.hpp"
 #include "PdfViewport.hpp"
 #include "PdfOutlineEntry.hpp"
-#include <vector>
 #include <NitroModules/Promise.hpp>
 #include "PdfPageSize.hpp"
 #include "PdfPageImage.hpp"
@@ -139,6 +142,10 @@ namespace margelo::nitro::betterpdf {
       virtual void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) = 0;
       virtual std::optional<PdfColorScheme> getColorScheme() = 0;
       virtual void setColorScheme(std::optional<PdfColorScheme> colorScheme) = 0;
+      virtual std::optional<std::string> getOverlayLayerId() = 0;
+      virtual void setOverlayLayerId(const std::optional<std::string>& overlayLayerId) = 0;
+      virtual std::optional<std::vector<PdfOverlayPlacement>> getOverlays() = 0;
+      virtual void setOverlays(const std::optional<std::vector<PdfOverlayPlacement>>& overlays) = 0;
       virtual std::optional<bool> getEnableDoubleTapZoom() = 0;
       virtual void setEnableDoubleTapZoom(std::optional<bool> enableDoubleTapZoom) = 0;
       virtual std::optional<bool> getScrollEnabled() = 0;

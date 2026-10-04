@@ -7,9 +7,7 @@ extension PDFView {
   /// top-left corner, clamped to the scrollable area. Inverse of
   /// `topLeftAnchor()`.
   func scroll(_ scrollView: UIScrollView, topLeftTo point: CGPoint, on page: PDFPage) {
-    let box = page.bounds(for: displayBox)
-    let pagePoint = CGPoint(x: box.minX + point.x, y: box.maxY - point.y)
-    let viewPoint = convert(pagePoint, from: page)
+    let viewPoint = convert(page.pagePoint(fromTopLeft: point, box: displayBox), from: page)
     let inset = scrollView.adjustedContentInset
     let maxX = max(-inset.left, scrollView.contentSize.width + inset.right - scrollView.bounds.width)
     let maxY = max(-inset.top, scrollView.contentSize.height + inset.bottom - scrollView.bounds.height)

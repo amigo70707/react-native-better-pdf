@@ -12,6 +12,7 @@ import type { PdfLinkPressEvent } from '../types/PdfLinkPressEvent';
 import type { PdfLoadProgressEvent } from '../types/PdfLoadProgressEvent';
 import type { PdfLoadEvent } from '../types/PdfLoadEvent';
 import type { PdfOutlineEntry } from '../types/PdfOutlineEntry';
+import type { PdfOverlayPlacement } from '../types/PdfOverlayPlacement';
 import type { PdfPageChangeEvent } from '../types/PdfPageChangeEvent';
 import type { PdfPageImage } from '../types/PdfPageImage';
 import type { PdfPageSize } from '../types/PdfPageSize';
@@ -55,6 +56,10 @@ export interface PdfViewProps extends HybridViewProps {
   spreadMode?: PdfSpreadMode;
   /** 'dark' shows pages with lightness inverted and hues kept. Default 'light'. */
   colorScheme?: PdfColorScheme;
+  /** `nativeID` of the React view holding `PdfPageOverlay`s, a sibling above this view. */
+  overlayLayerId?: string;
+  /** Overlay views in that layer, placed on their pages natively every frame. */
+  overlays?: PdfOverlayPlacement[];
   /** Double tap toggles zoom; when false, taps are reported without waiting for a second tap. Default true. */
   enableDoubleTapZoom?: boolean;
   /** Drags scroll the document (else they go to parent views). Default true. */
