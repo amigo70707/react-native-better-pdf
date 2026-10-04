@@ -309,8 +309,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
           return
         }
         if document.isLocked { _ = document.unlock(withPassword: password ?? "") }
-        let sizes = (0..<document.pageCount).compactMap { document.page(at: $0)?.displaySize }
-          .map { PdfPageSize(width: Double($0.width), height: Double($0.height)) }
+        let sizes = document.pageSizes()
         DispatchQueue.main.async { [weak self] in
           if self?.pdfView?.document?.documentURL == url { self?.pageSizesCache = (url, sizes) }
         }
@@ -327,18 +326,13 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         promise.reject(withError: RuntimeError.error(withMessage: "No document is loaded"))
         return
       }
-      let pageCount = document.pageCount
-      guard page.isFinite, page == page.rounded(.down), page >= 0, page < Double(pageCount) else {
-        promise.reject(withError: RuntimeError.error(withMessage: "Page \(page) is outside the document (0–\(pageCount - 1))"))
+      let request: PageImageRequest
+      do {
+        request = try PageImageRequest(page: page, pageCount: document.pageCount, options: options)
+      } catch {
+        promise.reject(withError: error)
         return
       }
-      guard options.width.isFinite, options.width >= 1, options.width <= Self.maxRenderWidth else {
-        promise.reject(withError: RuntimeError.error(withMessage: "width must be 1–\(Int(Self.maxRenderWidth)) pixels, got \(options.width)"))
-        return
-      }
-      let width = Int(options.width.rounded())
-      let isJpeg = options.format == .jpeg
-      let quality = options.quality.flatMap { $0.isFinite ? min(max($0, 0), 1) : nil } ?? 0.9
       let password = self.password
       // A separate instance of the file, like getOutline: PDFKit objects are
       // not thread-safe and the view draws its own document on main.
@@ -348,20 +342,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
             throw RuntimeError.error(withMessage: "The document could not be opened for rendering")
           }
           if renderDocument.isLocked { _ = renderDocument.unlock(withPassword: password ?? "") }
-          guard let pdfPage = renderDocument.page(at: Int(page)) else {
-            throw RuntimeError.error(withMessage: "Page \(Int(page)) could not be read")
-          }
-          let image = try pdfPage.renderImage(width: width)
-          guard let data = isJpeg ? image.jpegData(compressionQuality: quality) : image.pngData() else {
-            throw RuntimeError.error(withMessage: "The page image could not be encoded")
-          }
-          let file = try FileManager.default.newRenderFile(pathExtension: isJpeg ? "jpg" : "png")
-          try data.write(to: file)
-          promise.resolve(withResult: PdfPageImage(
-            uri: file.absoluteString,
-            width: Double(image.size.width),
-            height: Double(image.size.height)
-          ))
+          promise.resolve(withResult: try request.render(from: renderDocument))
         } catch {
           promise.reject(withError: error)
         }
@@ -369,8 +350,6 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     }
     return promise
   }
-
-  private static let maxRenderWidth: Double = 4096
 
   func print(jobName: String) throws -> Promise<PdfPrintResult> {
     let promise = Promise<PdfPrintResult>()

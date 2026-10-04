@@ -3,6 +3,7 @@ package com.margelo.nitro.betterpdf
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.ext.SdkExtensions
+import java.io.IOException
 
 /**
  * An open document: `PdfRenderer`, or on Android 12–14 with the updated PDF
@@ -42,6 +43,37 @@ internal interface DocumentRenderer : AutoCloseable {
     fun open(descriptor: ParcelFileDescriptor, password: String?): DocumentRenderer {
       if (hasPreV) return PreVDocumentRenderer.open(descriptor, password)
       return PlatformDocumentRenderer.open(descriptor, password)
+    }
+
+    /**
+     * Opens a document as the view and `PdfDocument` report it: like [open],
+     * but failures are [PdfFailure]s with the codes apps match on, and
+     * [descriptor] is closed on failure.
+     */
+    fun openOrFail(descriptor: ParcelFileDescriptor, password: String?): DocumentRenderer {
+      try {
+        return open(descriptor, password)
+      } catch (error: SecurityException) {
+        descriptor.closeQuietly()
+        throw when {
+          !supportsPasswords ->
+            PdfFailure(
+              PdfErrorCode.UNSUPPORTED_PDF,
+              "Password-protected PDFs require Android 15, or Android 12–14 with the updated PDF module (SDK extension 13)",
+              cause = error,
+            )
+          password.isNullOrEmpty() ->
+            PdfFailure(PdfErrorCode.PASSWORD_REQUIRED, "This PDF is password protected", cause = error)
+          else ->
+            PdfFailure(PdfErrorCode.INVALID_PASSWORD, "The password is incorrect", cause = error)
+        }
+      } catch (error: IOException) {
+        descriptor.closeQuietly()
+        throw PdfFailure(PdfErrorCode.INVALID_PDF, "The file is not a readable PDF document", cause = error)
+      } catch (error: IllegalArgumentException) {
+        descriptor.closeQuietly()
+        throw PdfFailure(PdfErrorCode.INVALID_SOURCE, "The PDF source is not seekable", cause = error)
+      }
     }
 
     private const val PRE_V_EXTENSION_VERSION = 13

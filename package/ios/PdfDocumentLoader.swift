@@ -13,10 +13,12 @@ final class PdfDocumentLoader {
 
   /// Loads the document. `progress` (remote downloads only, throttled) and
   /// `completion` are called on the main queue, unless cancelled; the final
-  /// progress update always precedes `completion`.
+  /// progress update always precedes `completion`. `isDisplayed` documents
+  /// can be drawn dark (see `ColorSchemeDocument`); others are plain.
   static func load(
     source: NativePdfSource,
     password: String?,
+    isDisplayed: Bool = true,
     progress: @escaping (_ loadedBytes: Int64, _ totalBytes: Int64?) -> Void,
     completion: @escaping (Result<LoadedDocument, PdfLoadFailure>) -> Void
   ) -> PdfLoadTask {
@@ -50,7 +52,7 @@ final class PdfDocumentLoader {
               if let pin = file.pin { DocumentCache.shared.store.unpin(pin) }
               return
             }
-            switch openDocument(at: file.url, password: password) {
+            switch openDocument(at: file.url, password: password, isDisplayed: isDisplayed) {
             case .failure(let failure):
               if let pin = file.pin { DocumentCache.shared.store.unpin(pin) }
               finish(.failure(failure))
@@ -112,11 +114,12 @@ final class PdfDocumentLoader {
 
   // MARK: - Opening
 
-  private static func openDocument(at url: URL, password: String?) -> Result<PDFDocument, PdfLoadFailure> {
+  private static func openDocument(at url: URL, password: String?, isDisplayed: Bool) -> Result<PDFDocument, PdfLoadFailure> {
     // PDFDocument(url:) parses the cross-reference table synchronously; this
     // is why the whole load runs on `workQueue`.
     // The displayed document draws dark pages (see ColorSchemeDocument).
-    guard let document = ColorSchemeDocument(url: url) else {
+    let opened: PDFDocument? = isDisplayed ? ColorSchemeDocument(url: url) : PDFDocument(url: url)
+    guard let document = opened else {
       return .failure(.invalidPdf(url.path))
     }
     if document.isLocked {

@@ -10,6 +10,8 @@
 // Forward declarations of C++ defined types
 // Forward declaration of `HybridBetterPdfCacheSpec` to properly resolve imports.
 namespace margelo::nitro::betterpdf { class HybridBetterPdfCacheSpec; }
+// Forward declaration of `HybridBetterPdfDocumentSpec` to properly resolve imports.
+namespace margelo::nitro::betterpdf { class HybridBetterPdfDocumentSpec; }
 // Forward declaration of `HybridBetterPdfViewSpec` to properly resolve imports.
 namespace margelo::nitro::betterpdf { class HybridBetterPdfViewSpec; }
 // Forward declaration of `NativePdfSource` to properly resolve imports.
@@ -20,6 +22,8 @@ namespace margelo::nitro::betterpdf { struct PdfCacheEntry; }
 namespace margelo::nitro::betterpdf { enum class PdfCacheMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `PdfDocumentMetadata` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfDocumentMetadata; }
 // Forward declaration of `PdfDownloadResult` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfDownloadResult; }
 // Forward declaration of `PdfErrorCode` to properly resolve imports.
@@ -38,6 +42,10 @@ namespace margelo::nitro::betterpdf { struct PdfLinkPressEvent; }
 namespace margelo::nitro::betterpdf { struct PdfLoadEvent; }
 // Forward declaration of `PdfLoadProgressEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfLoadProgressEvent; }
+// Forward declaration of `PdfOpenResult` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOpenResult; }
+// Forward declaration of `PdfOpenedDocument` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct PdfOpenedDocument; }
 // Forward declaration of `PdfOutlineEntry` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOutlineEntry; }
 // Forward declaration of `PdfPageChangeEvent` to properly resolve imports.
@@ -69,11 +77,13 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 
 // Include C++ defined types
 #include "HybridBetterPdfCacheSpec.hpp"
+#include "HybridBetterPdfDocumentSpec.hpp"
 #include "HybridBetterPdfViewSpec.hpp"
 #include "NativePdfSource.hpp"
 #include "PdfCacheEntry.hpp"
 #include "PdfCacheMode.hpp"
 #include "PdfColorScheme.hpp"
+#include "PdfDocumentMetadata.hpp"
 #include "PdfDownloadResult.hpp"
 #include "PdfError.hpp"
 #include "PdfErrorCode.hpp"
@@ -83,6 +93,8 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "PdfLinkPressEvent.hpp"
 #include "PdfLoadEvent.hpp"
 #include "PdfLoadProgressEvent.hpp"
+#include "PdfOpenResult.hpp"
+#include "PdfOpenedDocument.hpp"
 #include "PdfOutlineEntry.hpp"
 #include "PdfPageChangeEvent.hpp"
 #include "PdfPageImage.hpp"
@@ -119,6 +131,8 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 // Forward declarations of Swift defined types
 // Forward declaration of `HybridBetterPdfCacheSpec_cxx` to properly resolve imports.
 namespace NitroBetterPdf { class HybridBetterPdfCacheSpec_cxx; }
+// Forward declaration of `HybridBetterPdfDocumentSpec_cxx` to properly resolve imports.
+namespace NitroBetterPdf { class HybridBetterPdfDocumentSpec_cxx; }
 // Forward declaration of `HybridBetterPdfViewSpec_cxx` to properly resolve imports.
 namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 

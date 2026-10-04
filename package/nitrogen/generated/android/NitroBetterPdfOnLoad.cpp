@@ -17,6 +17,7 @@
 
 #include "JHybridBetterPdfCacheSpec.hpp"
 #include "JFunc_void_PdfLoadProgressEvent.hpp"
+#include "JHybridBetterPdfDocumentSpec.hpp"
 #include "JHybridBetterPdfViewSpec.hpp"
 #include "JFunc_void_PdfLoadEvent.hpp"
 #include "JFunc_void_PdfError.hpp"
@@ -54,6 +55,14 @@ struct JHybridBetterPdfCacheSpecImpl: public jni::JavaClass<JHybridBetterPdfCach
     return javaPart->getJHybridBetterPdfCacheSpec();
   }
 };
+struct JHybridBetterPdfDocumentSpecImpl: public jni::JavaClass<JHybridBetterPdfDocumentSpecImpl, JHybridBetterPdfDocumentSpec::JavaPart> {
+  static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/betterpdf/HybridBetterPdfDocument;";
+  static std::shared_ptr<JHybridBetterPdfDocumentSpec> create() {
+    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridBetterPdfDocumentSpecImpl::javaobject()>();
+    jni::local_ref<JHybridBetterPdfDocumentSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
+    return javaPart->getJHybridBetterPdfDocumentSpec();
+  }
+};
 
 void registerAllNatives() {
   using namespace margelo::nitro;
@@ -62,6 +71,7 @@ void registerAllNatives() {
   // Register native JNI methods
   margelo::nitro::betterpdf::JHybridBetterPdfCacheSpec::CxxPart::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfLoadProgressEvent_cxx::registerNatives();
+  margelo::nitro::betterpdf::JHybridBetterPdfDocumentSpec::CxxPart::registerNatives();
   margelo::nitro::betterpdf::JHybridBetterPdfViewSpec::CxxPart::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfLoadEvent_cxx::registerNatives();
   margelo::nitro::betterpdf::JFunc_void_PdfError_cxx::registerNatives();
@@ -85,6 +95,12 @@ void registerAllNatives() {
     "BetterPdfCache",
     []() -> std::shared_ptr<HybridObject> {
       return JHybridBetterPdfCacheSpecImpl::create();
+    }
+  );
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "BetterPdfDocument",
+    []() -> std::shared_ptr<HybridObject> {
+      return JHybridBetterPdfDocumentSpecImpl::create();
     }
   );
 }

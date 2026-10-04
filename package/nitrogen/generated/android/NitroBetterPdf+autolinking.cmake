@@ -34,10 +34,12 @@ target_sources(
   ../nitrogen/generated/android/NitroBetterPdfOnLoad.cpp
   # Shared Nitrogen C++ sources
   ../nitrogen/generated/shared/c++/HybridBetterPdfCacheSpec.cpp
+  ../nitrogen/generated/shared/c++/HybridBetterPdfDocumentSpec.cpp
   ../nitrogen/generated/shared/c++/HybridBetterPdfViewSpec.cpp
   ../nitrogen/generated/shared/c++/views/HybridBetterPdfViewComponent.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridBetterPdfCacheSpec.cpp
+  ../nitrogen/generated/android/c++/JHybridBetterPdfDocumentSpec.cpp
   ../nitrogen/generated/android/c++/JHybridBetterPdfViewSpec.cpp
   ../nitrogen/generated/android/c++/views/JHybridBetterPdfViewStateUpdater.cpp
 )

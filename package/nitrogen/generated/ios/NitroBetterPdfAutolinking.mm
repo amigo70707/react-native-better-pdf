@@ -12,6 +12,7 @@
 
 #include "HybridBetterPdfViewSpecSwift.hpp"
 #include "HybridBetterPdfCacheSpecSwift.hpp"
+#include "HybridBetterPdfDocumentSpecSwift.hpp"
 
 @interface NitroBetterPdfAutolinking : NSObject
 @end
@@ -33,6 +34,13 @@
     "BetterPdfCache",
     []() -> std::shared_ptr<HybridObject> {
       std::shared_ptr<HybridBetterPdfCacheSpec> hybridObject = NitroBetterPdf::NitroBetterPdfAutolinking::createBetterPdfCache();
+      return hybridObject;
+    }
+  );
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "BetterPdfDocument",
+    []() -> std::shared_ptr<HybridObject> {
+      std::shared_ptr<HybridBetterPdfDocumentSpec> hybridObject = NitroBetterPdf::NitroBetterPdfAutolinking::createBetterPdfDocument();
       return hybridObject;
     }
   );

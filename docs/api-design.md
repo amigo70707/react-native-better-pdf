@@ -856,8 +856,8 @@ Requested in react-native-pdf as thumbnail export (#998, #43, #457, #811).
   for a 300 px PNG of a one-line text page, file write included (scanned
   or dense pages take longer: their render time).
 - **On the view's ref**, because the view owns the open document (and its
-  password). Rendering without a view is the open question below (a
-  `PdfDocument` Hybrid Object).
+  password). `PdfDocument` renders without a view (see "Documents without
+  a view").
 - **Tested:** `viewer-page-image` on both platforms checks pixel sizes for
   a plain and a rotated page, PNG and JPEG, and the encrypted copy; the
   screenshots were checked for orientation and content against the viewer.
@@ -1133,7 +1133,8 @@ file path), and anchoring the dialog to the viewer on iPad.
 
 - **On the view, not standalone.** It prints the document as loaded —
   unlocked, downloaded — with no second download or password prompt.
-  Printing without a viewer belongs with the `PdfDocument` question below.
+  Printing without a viewer is not part of `PdfDocument` (see "Documents
+  without a view").
 - **Protected documents print from an unlocked copy that never touches
   disk.** iOS: `PDFDocument.dataRepresentation()` of an unlocked document
   writes it without encryption (measured with the `encrypted` fixture:
@@ -1165,8 +1166,103 @@ file path), and anchoring the dialog to the viewer on iPad.
   (checked with PDFKit). Not tested: submitting on iOS (a simulator has no
   printer; Printer Simulator is not installed) and real printers.
 
+## Documents without a view (v0.2)
+
+```ts
+const document = await PdfDocument.open(source, { password?, onProgress?, signal? });
+document.pageCount; // number
+document.filePath;  // string | undefined, as in onLoad
+document.isStale;   // boolean, as in onLoad
+document.getMetadata(): Promise<PdfDocumentMetadata>;
+document.getPageSizes(): Promise<PdfPageSize[]>;
+document.getOutline(): Promise<PdfOutlineItem[]>;
+document.renderPage(page, { width, format?, quality? }): Promise<PdfPageImage>;
+document.close();
+interface PdfDocumentMetadata {
+  title?: string; author?: string; subject?: string; keywords?: string;
+  creator?: string; producer?: string;
+  createdAtMs?: number; modifiedAtMs?: number;
+}
+// open() rejects with a PdfOpenError ({ code, httpStatus?, nativeDescription? }) or an AbortError.
+```
+
+This was the first open question. Uses: a document list with page counts,
+titles and covers; thumbnails without a viewer per page (the example's
+strip mounted twelve `singlePage` viewers); checking a password before
+showing the viewer.
+
+- **A class over an internal Hybrid Object** (`BetterPdfDocument`), like
+  `PdfCache`: opening fails with codes apps act on (`password-required`),
+  but Nitro rejections carry only a message, so failures cross as a result
+  struct and become `PdfOpenError`s; `AbortSignal` needs JS.
+- **Opens like the view.** The same sources, cache options, shared
+  downloads, password handling and error codes. Offline, a remote document
+  opens from its outdated copy and reports `isStale`, as in `onLoad`: a
+  list rendering covers offline should show them. (`PdfCache.download()` is
+  the strict "make sure it is current".)
+- **Reads like the view.** `getPageSizes`, `getOutline` and `renderPage`
+  share the view's code: same validation, image files, limits and platform
+  differences (Android rejects the outline of encrypted documents).
+- **Metadata is the new part**: the document information dictionary
+  (`/Info`). A method, not a field of the result, because Android has no
+  API for it: the bounded parser of "Outline" reads it, so untrusted
+  structure is parsed only when asked and opening costs what the view's
+  does. iOS reads PDFKit's `documentAttributes`. Dates are milliseconds
+  since the epoch, like `validatedAtMs`; a date without a time zone is read
+  as UTC. Absent or empty entries are left out. XMP metadata streams are
+  not read. Android rejects for encrypted documents (the parser has no
+  security handler, and their strings are encrypted), like the outline.
+- **`close()` releases the document now.** A Hybrid Object is released when
+  Hermes collects its JS reference, which can take arbitrarily long (audit
+  C3), while an open document holds a file descriptor (Android) or a parsed
+  `PDFDocument` and a pin of the downloaded copy (iOS). Calls already
+  running finish; later calls reject; `close()` is idempotent. Native
+  `dispose()` and deinit/finalization close too, as a safety net.
+- **Android keeps only the file descriptor.** Each call opens a renderer on
+  a duplicate and closes it (3–27 ms, see `PdfDocumentSession`), so PDFium
+  keeps nothing between calls (audit C1: a renderer retains every page it
+  parsed). One thread per document runs the calls in order, so twelve
+  thumbnail requests hold one page bitmap at a time, not twelve.
+- **iOS keeps its `PDFDocument`**, confined to one serial queue per
+  document, so calls do not re-parse the file. (The view re-opens the file
+  for these reads because its document belongs to `PDFView` on the main
+  thread.)
+- **Not included:** showing a `PdfDocument` in a `PdfView` (the view opens
+  its own; PDFKit documents cannot be shared across threads), printing,
+  search and text extraction without a view.
+- **Measured** (`probe-document-timing`, example's Docs tab, local files,
+  3 runs after a warm-up; JS-side times, reads awaited one after another):
+
+  | | iOS simulator | Android emulator (API 37) |
+  | --- | --- | --- |
+  | `open` (any size, incl. 414 MB) | 1–2 ms | 3–18 ms |
+  | `getMetadata`, `getOutline` (small) | 0–1 ms | 1–38 ms |
+  | `getPageSizes`, 100 / 1000 pages | 1–2 / 52–53 ms | 49–108 / 328–360 ms |
+  | `renderPage` 300 px PNG (cover) | 2–14 ms | 38–152 ms |
+  | 12 × 150 px JPEG at once, text+photo / scan | 51–54 / 81–97 ms | 297–320 / 541–661 ms |
+
+  Android's renderer per call costs its open on every page image; the
+  thumbnail case stays at one bitmap at a time. Native heap with the
+  1000-page scan (414 MB) open after every read and twelve thumbnails:
+  +2.3 MB over the same screen with no document (93.6 → 95.9 MB) — PDFium
+  keeps nothing between calls.
+- **Tested:** `PdfDocument.test.ts` (source forms, typed errors, abort
+  before and during opening, `close()` twice, calls after `close()`); JVM
+  tests for the information dictionary (classic and object-stream files,
+  PDFKit and pypdf producers, no dictionary, encrypted) and PDF dates (every
+  time-zone form, partial and invalid dates — the same 27 cases checked
+  against the Swift port, which shares the regular expression and, like
+  Foundation, the Julian calendar before 1582), and 500 corrupted files
+  through the reader. `pdf-document` on both platforms: the `metadata`
+  fixtures (UTF-16 title, empty and padded values, offset and UTC dates) as
+  file and download, the encrypted copy without, with a wrong and with the
+  right password, rotated and cropped pages, the outline fixture, the
+  bundled asset, a file that is not a PDF, calls after `close()`, and
+  twelve thumbnails requested at once. The view's flows over the shared
+  code (page images, page sizes, outline, passwords, printing, offline,
+  errors) pass on both platforms.
+
 ## Open questions
 
-- A `PdfDocument` Hybrid Object for metadata/page count without mounting a view.
 - Supporting more internal-link forms on Android would need a PDF parser of
   our own (no platform API exposes raw annotations).

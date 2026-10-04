@@ -18,6 +18,8 @@ export const FIXTURES = [
   'annotations',
   'page-boxes',
   'page-boxes-encrypted',
+  'metadata',
+  'metadata-encrypted',
   'encrypted',
   'malformed-not-a-pdf',
   'malformed-empty',

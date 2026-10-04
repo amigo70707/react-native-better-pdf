@@ -27,7 +27,7 @@ corrupt xref).
 
 ## Harness
 
-The example app's **Benchmark** tab runs the same scenario for either
+The example app's **Bench** tab runs the same scenario for either
 library (`example/bench/scenario.ts`). Both viewers are configured as
 equivalently as their APIs allow: vertical continuous scroll, fit width,
 `minScale 1`, `maxScale 4`, 8 pt spacing; react-native-pdf with

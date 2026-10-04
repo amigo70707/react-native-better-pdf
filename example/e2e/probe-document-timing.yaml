@@ -1,0 +1,48 @@
+# Timing probe (not part of the regression set): PdfDocument.open and the
+# reads on `metadata` (2 pages), `medium` (100 pages) and `extreme` (1000
+# scanned pages, 414 MB), three opens each after a warm-up (the first copies
+# the fixture onto the device), and twelve thumbnails. Values go to the
+# Maestro log ("timing …" lines).
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Docs"
+- repeat:
+    times: 3
+    commands:
+      - tapOn: "metadata"
+      - extendedWaitUntil: { visible: "reads: .*", timeout: 15000 }
+      - tapOn: "medium"
+      - extendedWaitUntil: { visible: "reads: .*", timeout: 120000 }
+      - tapOn: "extreme"
+      - extendedWaitUntil: { visible: "reads: .*", timeout: 600000 }
+- repeat:
+    times: 3
+    commands:
+      - tapOn: "metadata"
+      - extendedWaitUntil: { visible: "reads: .*", timeout: 15000 }
+      - copyTextFrom: { id: "doc-status" }
+      - evalScript: ${console.log('timing metadata ' + maestro.copiedText)}
+      - copyTextFrom: { text: "reads: .*" }
+      - evalScript: ${console.log('timing metadata ' + maestro.copiedText)}
+      - tapOn: "medium"
+      - extendedWaitUntil: { visible: "reads: .*", timeout: 15000 }
+      - copyTextFrom: { id: "doc-status" }
+      - evalScript: ${console.log('timing medium ' + maestro.copiedText)}
+      - copyTextFrom: { text: "reads: .*" }
+      - evalScript: ${console.log('timing medium ' + maestro.copiedText)}
+      - tapOn: "Thumbnails"
+      - extendedWaitUntil: { visible: "thumbnails: 12 in .*", timeout: 30000 }
+      - copyTextFrom: { text: "thumbnails: 12 in .*" }
+      - evalScript: ${console.log('timing medium ' + maestro.copiedText)}
+      - tapOn: "extreme"
+      - extendedWaitUntil: { visible: "reads: .*", timeout: 60000 }
+      - copyTextFrom: { id: "doc-status" }
+      - evalScript: ${console.log('timing extreme ' + maestro.copiedText)}
+      - copyTextFrom: { text: "reads: .*" }
+      - evalScript: ${console.log('timing extreme ' + maestro.copiedText)}
+      - tapOn: "Thumbnails"
+      - extendedWaitUntil: { visible: "thumbnails: 12 in .*", timeout: 60000 }
+      - copyTextFrom: { text: "thumbnails: 12 in .*" }
+      - evalScript: ${console.log('timing extreme ' + maestro.copiedText)}

@@ -5,12 +5,13 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Library } from './bench/BenchViewer';
 import { BENCHMARK_FIXTURES, type FixtureName } from './documents';
 import { BenchmarkScreen, type BenchRequest } from './screens/BenchmarkScreen';
+import { DocumentsScreen } from './screens/DocumentsScreen';
 import { EmbeddedScreen } from './screens/EmbeddedScreen';
 import { OfflineScreen } from './screens/OfflineScreen';
 import { ViewerScreen } from './screens/ViewerScreen';
 import { Button, colors } from './ui';
 
-type Tab = 'viewer' | 'embedded' | 'offline' | 'benchmark';
+type Tab = 'viewer' | 'embedded' | 'offline' | 'documents' | 'benchmark';
 
 /**
  * `betterpdfexample://bench?library=better&fixture=large&run=3[&scrollSeconds=300][&source=remote]`
@@ -81,7 +82,13 @@ export default function App() {
             onPress={() => setTab('offline')}
           />
           <Button
-            title="Benchmark"
+            title="Docs"
+            selected={tab === 'documents'}
+            onPress={() => setTab('documents')}
+          />
+          {/* Short labels: five tabs fit one row on a phone. */}
+          <Button
+            title="Bench"
             selected={tab === 'benchmark'}
             onPress={() => setTab('benchmark')}
           />
@@ -89,6 +96,7 @@ export default function App() {
         {tab === 'viewer' && <ViewerScreen />}
         {tab === 'embedded' && <EmbeddedScreen />}
         {tab === 'offline' && <OfflineScreen />}
+        {tab === 'documents' && <DocumentsScreen />}
         {tab === 'benchmark' && <BenchmarkScreen autoRun={autoRun} />}
       </SafeAreaView>
     </SafeAreaProvider>

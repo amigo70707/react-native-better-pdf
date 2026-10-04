@@ -1,7 +1,6 @@
 package com.margelo.nitro.betterpdf
 
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.print.PrintJob
@@ -11,9 +10,7 @@ import android.view.View
 import androidx.annotation.Keep
 import com.facebook.proguard.annotations.DoNotStrip
 import com.facebook.react.uimanager.ThemedReactContext
-import com.margelo.nitro.betterpdf.outline.PdfFormatException
 import com.margelo.nitro.core.Promise
-import kotlin.math.roundToInt
 
 /**
  * Android implementation of `BetterPdfView`.
@@ -237,46 +234,23 @@ class HybridBetterPdfView(
 
   override fun getOutline(): Promise<Array<PdfOutlineEntry>> {
     val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
-    return Promise.parallel {
-      try {
-        session.readOutline().map { it.toPdfOutlineEntry() }.toTypedArray()
-      } catch (error: PdfFormatException) {
-        throw IllegalStateException("The outline could not be read: ${error.message}", error)
-      }
-    }
+    return Promise.parallel { session.reads.readOutlineEntries() }
   }
 
   override fun getPageSizes(): Promise<Array<PdfPageSize>> {
     val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     val pageCount = documentView.pageCount
-    return Promise.parallel {
-      session.readPageSizes(pageCount)
-        .map { PdfPageSize(it.widthPoints.toDouble(), it.heightPoints.toDouble()) }
-        .toTypedArray()
-    }
+    return Promise.parallel { session.reads.readPdfPageSizes(pageCount) }
   }
 
   override fun renderPage(page: Double, options: PdfRenderPageOptions): Promise<PdfPageImage> {
     val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
-    val pageCount = documentView.pageCount
-    if (!page.isFinite() || page != Math.floor(page) || page < 0 || page >= pageCount) {
-      return Promise.rejected(IllegalArgumentException("Page $page is outside the document (0–${pageCount - 1})"))
+    val request = try {
+      PageImageRequest.of(page, documentView.pageCount, options)
+    } catch (error: IllegalArgumentException) {
+      return Promise.rejected(error)
     }
-    val width = options.width
-    if (!width.isFinite() || width < 1 || width > MAX_RENDER_WIDTH) {
-      return Promise.rejected(IllegalArgumentException("width must be 1–$MAX_RENDER_WIDTH pixels, got $width"))
-    }
-    val format = options.format ?: PdfImageFormat.PNG
-    val quality = options.quality?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0) ?: DEFAULT_JPEG_QUALITY
-    return Promise.parallel {
-      val bitmap = session.renderPageImage(page.toInt(), width.roundToInt())
-      try {
-        val file = bitmap.writeToCache(context, format, quality)
-        PdfPageImage(Uri.fromFile(file).toString(), bitmap.width.toDouble(), bitmap.height.toDouble())
-      } finally {
-        bitmap.recycle()
-      }
-    }
+    return Promise.parallel { request.render(session.reads, context) }
   }
 
   override fun print(jobName: String): Promise<PdfPrintResult> {
@@ -457,8 +431,6 @@ class HybridBetterPdfView(
   // endregion
 
   private companion object {
-    const val MAX_RENDER_WIDTH = 4096.0
-    const val DEFAULT_JPEG_QUALITY = 0.9
     const val PRINT_SETTLE_INTERVAL_MS = 50L
 
     /** 2 s in all. */

@@ -1,0 +1,142 @@
+package com.margelo.nitro.betterpdf
+
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Matrix
+import android.os.ParcelFileDescriptor
+import com.margelo.nitro.betterpdf.outline.FileChannelByteSource
+import com.margelo.nitro.betterpdf.outline.OutlineEntry
+import com.margelo.nitro.betterpdf.outline.PdfDocumentReader
+import com.margelo.nitro.betterpdf.outline.PdfFormatException
+import com.margelo.nitro.betterpdf.outline.PdfInfo
+import com.margelo.nitro.betterpdf.outline.PdfInfoReader
+import com.margelo.nitro.betterpdf.outline.PdfOutlineReader
+import com.margelo.nitro.betterpdf.outline.PdfPageSizeReader
+import kotlin.math.max
+import kotlin.math.roundToInt
+
+/**
+ * Reads of an open document besides displaying it — outline, metadata,
+ * page sizes, page images — shared by the view's [PdfDocumentSession] and
+ * `PdfDocument`. Each read works on its own duplicate of the document's
+ * descriptor ([duplicateDescriptor]), with positional reads or a renderer
+ * that is closed afterwards, so it never blocks rendering and PDFium keeps
+ * nothing once it returns. Blocking: call off the main thread. The outline,
+ * metadata and page sizes are cached.
+ *
+ * @param duplicateDescriptor a duplicate of the open document's descriptor,
+ *   the caller's to close; throws [IllegalStateException] once the document
+ *   is closed.
+ */
+internal class DocumentReads(
+  private val password: String?,
+  private val duplicateDescriptor: () -> ParcelFileDescriptor,
+) {
+  @Volatile private var outline: List<OutlineEntry>? = null
+  @Volatile private var info: PdfInfo? = null
+  @Volatile private var pageSizes: List<PdfDocumentLayout.PageSize>? = null
+
+  /**
+   * The document outline, parsed from the file.
+   *
+   * @throws PdfFormatException when the file cannot be parsed (or is encrypted).
+   */
+  fun readOutline(): List<OutlineEntry> {
+    outline?.let { return it }
+    val entries = parse { PdfOutlineReader(it).read() }
+    outline = entries
+    return entries
+  }
+
+  /**
+   * The information dictionary, parsed from the file.
+   *
+   * @throws PdfFormatException when the file cannot be parsed (or is encrypted).
+   */
+  fun readInfo(): PdfInfo {
+    info?.let { return it }
+    val read = parse { PdfInfoReader(it).read() }
+    info = read
+    return read
+  }
+
+  /**
+   * Every page's displayed size (see [PdfPageSizeReader]), [pageCount] of
+   * them. Read from the page tree, so no page is opened and PDFium caches
+   * nothing; documents the parser cannot read (encrypted, or a page tree
+   * that disagrees with the renderer) are measured by opening each page on
+   * a separate renderer, recycled like the render thread's.
+   */
+  fun readPageSizes(pageCount: Int): List<PdfDocumentLayout.PageSize> {
+    pageSizes?.let { return it }
+    val sizes = readPageSizesFromTree()?.takeIf { it.size == pageCount } ?: measurePageSizes(pageCount)
+    pageSizes = sizes
+    return sizes
+  }
+
+  /**
+   * Renders [page] [width] pixels wide, the height following the page's
+   * aspect ratio, on white like the view, with a renderer of its own.
+   *
+   * @throws IllegalArgumentException when the image would exceed
+   *   [MAX_IMAGE_PIXELS] (e.g. a very tall page at a large width).
+   */
+  fun renderPageImage(page: Int, width: Int): Bitmap {
+    // The renderer owns (and closes) the duplicate.
+    DocumentRenderer.open(duplicateDescriptor(), password).use { renderer ->
+      renderer.openPage(page).use { pdfPage ->
+        val height = max(1, (width.toDouble() * pdfPage.height / pdfPage.width).roundToInt())
+        require(width.toLong() * height <= MAX_IMAGE_PIXELS) {
+          "A ${width}×$height image exceeds the limit of $MAX_IMAGE_PIXELS pixels; use a smaller width"
+        }
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(Color.WHITE)
+        val matrix = Matrix().apply { setScale(width / pdfPage.width.toFloat(), height / pdfPage.height.toFloat()) }
+        pdfPage.renderForDisplay(bitmap, null, matrix)
+        return bitmap
+      }
+    }
+  }
+
+  private fun <T> parse(read: (PdfDocumentReader) -> T): T =
+    ParcelFileDescriptor.AutoCloseInputStream(duplicateDescriptor()).channel.use { channel ->
+      read(PdfDocumentReader(FileChannelByteSource(channel)))
+    }
+
+  private fun readPageSizesFromTree(): List<PdfDocumentLayout.PageSize>? =
+    try {
+      parse { PdfPageSizeReader(it).read() }
+    } catch (_: PdfFormatException) {
+      // Encrypted, or not readable as PDF syntax.
+      null
+    } catch (_: RuntimeException) {
+      // A structure the parser does not expect; the renderer decides.
+      null
+    }
+
+  private fun measurePageSizes(pageCount: Int): List<PdfDocumentLayout.PageSize> {
+    val descriptor = duplicateDescriptor()
+    try {
+      // Renderers own (and close) the descriptor they get; keep ours for recycling.
+      var renderer = DocumentRenderer.open(descriptor.dup(), password)
+      try {
+        return List(pageCount) { index ->
+          if (index > 0 && index % PdfDocumentSession.RECYCLE_AFTER_PAGES == 0) {
+            renderer.close()
+            renderer = DocumentRenderer.open(descriptor.dup(), password)
+          }
+          renderer.openPage(index).use { PdfDocumentLayout.PageSize(it.width.toFloat(), it.height.toFloat()) }
+        }
+      } finally {
+        renderer.close()
+      }
+    } finally {
+      descriptor.closeQuietly()
+    }
+  }
+
+  companion object {
+    /** 4096 × 4096: 64 MB as ARGB, the most [renderPageImage] allocates. */
+    const val MAX_IMAGE_PIXELS = 4096L * 4096L
+  }
+}

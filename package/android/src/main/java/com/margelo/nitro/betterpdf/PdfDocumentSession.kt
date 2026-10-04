@@ -11,12 +11,6 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.os.Trace
-import com.margelo.nitro.betterpdf.outline.FileChannelByteSource
-import com.margelo.nitro.betterpdf.outline.OutlineEntry
-import com.margelo.nitro.betterpdf.outline.PdfDocumentReader
-import com.margelo.nitro.betterpdf.outline.PdfFormatException
-import com.margelo.nitro.betterpdf.outline.PdfOutlineReader
-import com.margelo.nitro.betterpdf.outline.PdfPageSizeReader
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.channels.Channels
@@ -115,102 +109,8 @@ class PdfDocumentSession(
    */
   fun selectText(query: TextSelectionQuery) = queue.submitUrgent(query)
 
-  /**
-   * The document outline, parsed from a duplicate of the file descriptor so
-   * rendering is never blocked. Blocking: call off the main thread. Cached.
-   *
-   * @throws IllegalStateException when the document is not open.
-   * @throws com.margelo.nitro.betterpdf.outline.PdfFormatException when the
-   *   file cannot be parsed (or is encrypted).
-   */
-  fun readOutline(): List<OutlineEntry> {
-    outline?.let { return it }
-    val descriptor = duplicateDescriptor()
-    val entries = ParcelFileDescriptor.AutoCloseInputStream(descriptor).channel.use { channel ->
-      PdfOutlineReader(PdfDocumentReader(FileChannelByteSource(channel))).read()
-    }
-    outline = entries
-    return entries
-  }
-
-  /**
-   * Every page's displayed size (see [PdfPageSizeReader]), [pageCount] of
-   * them. Read from the page tree, so no page is opened and PDFium caches
-   * nothing; documents the parser cannot read (encrypted, or a page tree
-   * that disagrees with the renderer) are measured by opening each page on
-   * a separate renderer, recycled like the render thread's. Blocking: call
-   * off the main thread. Cached.
-   *
-   * @throws IllegalStateException when the document is not open.
-   */
-  fun readPageSizes(pageCount: Int): List<PdfDocumentLayout.PageSize> {
-    pageSizes?.let { return it }
-    val sizes = readPageSizesFromTree()?.takeIf { it.size == pageCount } ?: measurePageSizes(pageCount)
-    pageSizes = sizes
-    return sizes
-  }
-
-  private fun readPageSizesFromTree(): List<PdfDocumentLayout.PageSize>? {
-    val descriptor = duplicateDescriptor()
-    return try {
-      ParcelFileDescriptor.AutoCloseInputStream(descriptor).channel.use { channel ->
-        PdfPageSizeReader(PdfDocumentReader(FileChannelByteSource(channel))).read()
-      }
-    } catch (_: PdfFormatException) {
-      // Encrypted, or not readable as PDF syntax.
-      null
-    } catch (_: RuntimeException) {
-      // A structure the parser does not expect; the renderer decides.
-      null
-    }
-  }
-
-  private fun measurePageSizes(pageCount: Int): List<PdfDocumentLayout.PageSize> {
-    val descriptor = duplicateDescriptor()
-    try {
-      // Renderers own (and close) the descriptor they get; keep ours for recycling.
-      var renderer = DocumentRenderer.open(descriptor.dup(), password)
-      try {
-        return List(pageCount) { index ->
-          if (index > 0 && index % RECYCLE_AFTER_PAGES == 0) {
-            renderer.close()
-            renderer = DocumentRenderer.open(descriptor.dup(), password)
-          }
-          renderer.openPage(index).use { PdfDocumentLayout.PageSize(it.width.toFloat(), it.height.toFloat()) }
-        }
-      } finally {
-        renderer.close()
-      }
-    } finally {
-      descriptor.closeQuietly()
-    }
-  }
-
-  /**
-   * Renders [page] [width] pixels wide, the height following the page's
-   * aspect ratio, on white like the view. Uses a separate renderer that is
-   * closed afterwards, so the render thread, its cache and PDFium's cached
-   * pages are untouched. Blocking: call off the main thread.
-   *
-   * @throws IllegalArgumentException when the image would exceed
-   *   [MAX_IMAGE_PIXELS] (e.g. a very tall page at a large width).
-   */
-  fun renderPageImage(page: Int, width: Int): Bitmap {
-    // The renderer owns (and closes) the duplicate.
-    DocumentRenderer.open(duplicateDescriptor(), password).use { renderer ->
-      renderer.openPage(page).use { pdfPage ->
-        val height = max(1, (width.toDouble() * pdfPage.height / pdfPage.width).roundToInt())
-        require(width.toLong() * height <= MAX_IMAGE_PIXELS) {
-          "A ${width}×$height image exceeds the limit of $MAX_IMAGE_PIXELS pixels; use a smaller width"
-        }
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        bitmap.eraseColor(Color.WHITE)
-        val matrix = Matrix().apply { setScale(width / pdfPage.width.toFloat(), height / pdfPage.height.toFloat()) }
-        pdfPage.renderForDisplay(bitmap, null, matrix)
-        return bitmap
-      }
-    }
-  }
+  /** Outline, metadata, page sizes and page images, each on its own duplicate of the descriptor. */
+  internal val reads = DocumentReads(password, ::duplicateDescriptor)
 
   /**
    * Writes the document to [destination] for printing: the file as it is,
@@ -278,10 +178,8 @@ class PdfDocumentSession(
    *   no retained memory) because it does not touch pages.
    */
   private var master: ParcelFileDescriptor? = null
-  /** Guards [master] against [readOutline] duplicating it while it closes. */
+  /** Guards [master] against [reads] duplicating it while it closes. */
   private val descriptorLock = Any()
-  @Volatile private var outline: List<OutlineEntry>? = null
-  @Volatile private var pageSizes: List<PdfDocumentLayout.PageSize>? = null
   private var renderer: DocumentRenderer? = null
   private var pagesOpenedByRenderer = 0
   private var filePath: String? = null
@@ -348,31 +246,8 @@ class PdfDocumentSession(
     return firstPage
   }
 
-  private fun createRenderer(descriptor: ParcelFileDescriptor): DocumentRenderer {
-    try {
-      return DocumentRenderer.open(descriptor, password)
-    } catch (error: SecurityException) {
-      descriptor.closeQuietly()
-      throw when {
-        !DocumentRenderer.supportsPasswords ->
-          PdfFailure(
-            PdfErrorCode.UNSUPPORTED_PDF,
-            "Password-protected PDFs require Android 15, or Android 12–14 with the updated PDF module (SDK extension 13)",
-            cause = error,
-          )
-        password.isNullOrEmpty() ->
-          PdfFailure(PdfErrorCode.PASSWORD_REQUIRED, "This PDF is password protected", cause = error)
-        else ->
-          PdfFailure(PdfErrorCode.INVALID_PASSWORD, "The password is incorrect", cause = error)
-      }
-    } catch (error: IOException) {
-      descriptor.closeQuietly()
-      throw PdfFailure(PdfErrorCode.INVALID_PDF, "The file is not a readable PDF document", cause = error)
-    } catch (error: IllegalArgumentException) {
-      descriptor.closeQuietly()
-      throw PdfFailure(PdfErrorCode.INVALID_SOURCE, "The PDF source is not seekable", cause = error)
-    }
-  }
+  private fun createRenderer(descriptor: ParcelFileDescriptor): DocumentRenderer =
+    DocumentRenderer.openOrFail(descriptor, password)
 
   /** The renderer to open the next page with, re-created when PDFium's cache has grown. */
   private fun rendererForNextPage(): DocumentRenderer {
@@ -545,7 +420,7 @@ class PdfDocumentSession(
 
   // endregion
 
-  private companion object {
+  internal companion object {
     /**
      * Page opens per renderer before it is re-created. Bounds PDFium's
      * per-document object cache to roughly this many pages' worth of parsed
@@ -553,7 +428,5 @@ class PdfDocumentSession(
      * a 5-minute scroll soak) is verified in docs/performance/results.md.
      */
     const val RECYCLE_AFTER_PAGES = 48
-    /** 4096 × 4096: 64 MB as ARGB, the most `renderPageImage` allocates. */
-    const val MAX_IMAGE_PIXELS = 4096L * 4096L
   }
 }

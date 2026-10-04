@@ -15,4 +15,6 @@ python3 benchmarks/outline-fixtures/pypdf-outline.py
 `/tmp/pdfkit-outline file.pdf …` prints each file's outline as PDFKit reads
 it (depth, page, title) — the reference the expected values in
 `PdfOutlineReaderTest` were checked against. Copies of the small files live
-in `package/android/src/test/resources/outline/`.
+in `package/android/src/test/resources/outline/`, with the `page-boxes*` and
+`metadata*` files from `generate-fixtures.mjs` (`PdfPageSizeReaderTest`,
+`PdfInfoReaderTest`).

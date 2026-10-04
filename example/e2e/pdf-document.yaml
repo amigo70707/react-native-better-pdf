@@ -1,0 +1,86 @@
+# PdfDocument, without a view (Docs tab). The `metadata` fixture (METADATA
+# in benchmarks/generate-fixtures.mjs): a UTF-16 title, an empty subject
+# left out, a creator padded with spaces trimmed, dates with an offset and in
+# UTC; page sizes, outline and a cover; twelve thumbnails requested at once;
+# calls after close(). Then the remote copy, the encrypted copy (without, with
+# a wrong and with the right password; Android cannot read the metadata of
+# encrypted documents), rotated and cropped pages (`page-boxes`, as in
+# viewer-page-sizes), the outline fixture, the bundled asset and a file that
+# is not a PDF. Screenshots show the cover and thumbnails.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Docs"
+- tapOn: "metadata"
+- extendedWaitUntil: { visible: "opened in .* ms", timeout: 15000 }
+- assertVisible: "pages 2, stale no, file yes"
+- assertVisible: "title: Raport kwartalny — żółć"
+- assertVisible: "author: Better PDF fixtures"
+- assertVisible: "subject: -"
+- assertVisible: "keywords: pdf, metadata, fixture"
+- assertVisible: "creator: generate-fixtures.mjs"
+- assertVisible: "producer: react-native-better-pdf"
+- assertVisible: "created: 2026-03-15T07:30:00.000Z"
+- assertVisible: "modified: 2026-09-30T12:00:00.000Z"
+- assertVisible: "sizes: 595x842 595x842"
+- assertVisible: "outline: 0 top-level, 0 in all"
+- assertVisible: "cover: 300x425"
+- assertVisible: { id: "doc-cover-image" }
+- takeScreenshot: pdf-document-metadata
+- tapOn: "Thumbnails"
+- extendedWaitUntil: { visible: "thumbnails: 2 in .* ms", timeout: 10000 }
+- tapOn: "Close"
+- extendedWaitUntil: { visible: "after close: The document is closed", timeout: 5000 }
+
+# Downloaded like a PdfView source.
+- tapOn: "metadata \\(remote\\)"
+- extendedWaitUntil: { visible: "opened in .* ms", timeout: 15000 }
+- assertVisible: "pages 2, stale no, file yes"
+- assertVisible: "title: Raport kwartalny — żółć"
+- assertVisible: "cover: 300x425"
+
+- tapOn: "metadata-encrypted"
+- extendedWaitUntil: { visible: "error: password-required", timeout: 15000 }
+- tapOn: "Wrong password"
+- extendedWaitUntil: { visible: "error: invalid-password", timeout: 15000 }
+- tapOn: "Password"
+- extendedWaitUntil: { visible: "opened in .* ms", timeout: 15000 }
+- assertVisible: "pages 2, stale no, file yes"
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - assertVisible: "title: Raport kwartalny — żółć"
+      - assertVisible: "created: 2026-03-15T07:30:00.000Z"
+- runFlow:
+    when: { platform: Android }
+    commands:
+      - assertVisible: "metadata failed: .*Encrypted documents are not supported.*"
+- assertVisible: "sizes: 595x842 595x842"
+- assertVisible: "cover: 300x425"
+
+- tapOn: "page-boxes"
+- extendedWaitUntil: { visible: "opened in .* ms", timeout: 15000 }
+- assertVisible: "pages 7, stale no, file yes"
+- assertVisible: "title: -"
+- assertVisible: "created: -"
+- assertVisible: "sizes: 612x792 842x595 500x600 792x400 300x400 595x842 500x300"
+- assertVisible: "cover: 300x388"
+- tapOn: "Thumbnails"
+- extendedWaitUntil: { visible: "thumbnails: 7 in .* ms", timeout: 15000 }
+- takeScreenshot: pdf-document-thumbnails
+
+- tapOn: "outline"
+- extendedWaitUntil: { visible: "opened in .* ms", timeout: 15000 }
+- assertVisible: "pages 12, stale no, file yes"
+- assertVisible: "outline: 6 top-level, 10 in all"
+- tapOn: "Thumbnails"
+- extendedWaitUntil: { visible: "thumbnails: 12 in .* ms", timeout: 15000 }
+
+- tapOn: "sample"
+- extendedWaitUntil: { visible: "opened in .* ms", timeout: 15000 }
+- assertVisible: "pages 3, stale no, file yes"
+- assertVisible: "sizes: 595x842 595x842 595x842"
+
+- tapOn: "malformed-not-a-pdf"
+- extendedWaitUntil: { visible: "error: invalid-pdf", timeout: 15000 }

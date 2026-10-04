@@ -1,4 +1,5 @@
 import { NitroModules } from 'react-native-nitro-modules';
+import { abortReason } from './abortReason';
 import { PdfDownloadError } from './PdfDownloadError';
 import type { PdfDownloadOptions } from './types/PdfDownloadOptions';
 import { normalizeUriSource, type PdfUriSource } from './source';
@@ -15,14 +16,6 @@ function getNativeCache(): BetterPdfCache {
       NitroModules.createHybridObject<BetterPdfCache>('BetterPdfCache');
   }
   return nativeCache;
-}
-
-function abortReason(signal: AbortSignal): unknown {
-  // React Native's AbortSignal (types and polyfill) has no `reason`.
-  if ('reason' in signal && signal.reason !== undefined) return signal.reason;
-  const error = new Error('The download was aborted');
-  error.name = 'AbortError';
-  return error;
 }
 
 function unwrap(result: PdfDownloadResult): PdfCacheEntry {

@@ -1,8 +1,9 @@
 # Architecture
 
 `react-native-better-pdf` is one Nitro Hybrid View (`BetterPdfView`) with a
-thin React wrapper (`PdfView`), plus a Hybrid Object for the download cache
-(`BetterPdfCache`, wrapped by `PdfCache`). Everything that happens per frame (scrolling,
+thin React wrapper (`PdfView`), plus Hybrid Objects for the download cache
+(`BetterPdfCache`, wrapped by `PdfCache`) and for documents opened without a
+view (`BetterPdfDocument`, wrapped by `PdfDocument`). Everything that happens per frame (scrolling,
 zooming, rendering, caching, prefetching) happens natively. JS sends
 configuration and commands and receives three kinds of events.
 
@@ -37,8 +38,10 @@ package/
   src/
     specs/BetterPdfView.nitro.ts   Nitro spec: props, methods, event/error types
     specs/BetterPdfCache.nitro.ts  Nitro spec of the download cache (internal)
+    specs/BetterPdfDocument.nitro.ts  Nitro spec of a document without a view (internal)
     PdfView.tsx                    public component (wrapper over the host component)
     PdfCache.ts                    public cache API: AbortSignal, PdfDownloadError
+    PdfDocument.ts                 public document API: open (AbortSignal, PdfOpenError), close
     source.ts                      PdfSource union → native { uri, headers, cache options }
   nitrogen/generated/              Nitrogen output (committed; regenerate with `bun run specs`)
   ios/
@@ -52,6 +55,9 @@ package/
     DocumentCacheStore.swift       copies on disk: session/persistent dirs, metadata, pins
     SharedDownload.swift           one URLSession request per copy, conditional with a copy
     HybridBetterPdfCache.swift     BetterPdfCache: PdfCache's native side
+    HybridBetterPdfDocument.swift  BetterPdfDocument: a PDFDocument confined to one serial queue
+    PageImageRequest.swift         renderPage validation, render and file write (view and document)
+    PDFDocument+metadata.swift     information dictionary from CGPDFDocument, PdfDate
   android/src/main/java/com/margelo/nitro/betterpdf/
     HybridBetterPdfView.kt         props/methods/events, session lifecycle
     PdfDocumentSession.kt          PdfRenderer + FD owner, render thread, renderer recycling
@@ -72,6 +78,11 @@ package/
     DocumentCacheStore.kt          copies on disk: session/persistent dirs, metadata
     SharedDownload.kt              one HttpURLConnection request per copy, conditional with a copy
     HybridBetterPdfCache.kt        BetterPdfCache: PdfCache's native side
+    HybridBetterPdfDocument.kt     BetterPdfDocument: the FD and one worker thread, no open renderer
+    DocumentReads.kt               outline, metadata, page sizes, page images on duplicated FDs
+                                   (view session and document)
+    PageImageRequest.kt            renderPage validation and file write (view and document)
+    outline/                       bounded PDF parser: outline, page tree, /Info (PdfDate)
 ```
 
 No hand-written C++: the only consumer of shared logic would be Android
@@ -92,6 +103,8 @@ per-frame path without a second caller. See the research notes.
 | Remote download (`DocumentCache`)           | lookup on `com.betterpdf.cache`; transfer and store on the `URLSession` delegate queue | lookup and transfer on `BetterPdf-download` threads (`HttpURLConnection`); the document worker waits |
 | Download progress (throttle ≤ 10/s)         | throttled on the delegate queue → main | throttled on the download thread → main         |
 | `PdfCache` (`getEntry`, `remove`, `clear`, `getByteSize`) | `com.betterpdf.cache.api` queue, disk only | `Promise.parallel` thread, disk only |
+| `PdfDocument.open`                          | as the view's open (`PdfDocumentLoader`), plain `PDFDocument` | `BetterPdf-document` thread: source, then a renderer to count pages (closed) |
+| `PdfDocument` reads (in call order)         | the document's `com.betterpdf.document` serial queue, its own `PDFDocument` | the document's `BetterPdf-document` thread (exits when idle), `DocumentReads` on duplicated FDs |
 | Open + parse document                       | concurrent background queue          | document worker thread                           |
 | Page size measurement                       | PDFKit (lazy, internal)              | lazily, render thread, when a page is first opened |
 | Scroll, fling, pinch, double-tap            | main (UIScrollView inside PDFView)   | main (`OverScroller`, gesture detectors)         |

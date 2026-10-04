@@ -120,8 +120,8 @@ class PdfWriter {
     return number;
   }
 
-  build({ root, password, objectStreams = false }) {
-    if (objectStreams) return this.buildWithObjectStreams({ root });
+  build({ root, password, objectStreams = false, info }) {
+    if (objectStreams) return this.buildWithObjectStreams({ root, info });
     const fileId = createHash('md5')
       .update(String(this.objects.length))
       .digest();
@@ -129,6 +129,14 @@ class PdfWriter {
       ? standardSecurity(password, `${password}-owner`, fileId)
       : null;
     const encryptNumber = security ? this.add(security.dictionary) : null;
+    // Strings outside streams are encrypted too, with the object's key.
+    const infoNumber = info ? this.reserve() : null;
+    if (info) {
+      this.set(
+        infoNumber,
+        infoDictionary(info, (bytes) => security?.encrypt(infoNumber, bytes)),
+      );
+    }
 
     const chunks = [Buffer.from('%PDF-1.7\n%\xe2\xe3\xcf\xd3\n', 'latin1')];
     let offset = chunks[0].length;
@@ -168,6 +176,7 @@ class PdfWriter {
     xref.push(
       `trailer\n<< /Size ${this.objects.length + 1} /Root ${root} 0 R` +
         (encryptNumber ? ` /Encrypt ${encryptNumber} 0 R` : '') +
+        (infoNumber ? ` /Info ${infoNumber} 0 R` : '') +
         ` /ID [<${id}> <${id}>] >>\nstartxref\n${offset}\n%%EOF\n`,
     );
     chunks.push(Buffer.from(xref.join(''), 'latin1'));
@@ -180,7 +189,8 @@ class PdfWriter {
  * one object stream, and a cross-reference *stream* (Flate, PNG "Up"
  * predictor) instead of a classic xref table.
  */
-PdfWriter.prototype.buildWithObjectStreams = function ({ root }) {
+PdfWriter.prototype.buildWithObjectStreams = function ({ root, info }) {
+  const infoNumber = info ? this.add(infoDictionary(info)) : null;
   const fileId = createHash('md5').update(String(this.objects.length)).digest();
   const packed = [];
   const header = [];
@@ -250,6 +260,7 @@ PdfWriter.prototype.buildWithObjectStreams = function ({ root }) {
   push(Buffer.concat([
     Buffer.from(
       `${xrefNumber} 0 obj\n<< /Type /XRef /Size ${size} /W [${widths.join(' ')}] /Root ${root} 0 R ` +
+        (infoNumber ? `/Info ${infoNumber} 0 R ` : '') +
         `/ID [<${id}> <${id}>] /Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns ${rowLength} >> ` +
         `/Length ${xrefData.length} >>\nstream\n`,
       'latin1',
@@ -278,6 +289,8 @@ function buildDocument({
   // leave the box to inheritance; `pagesEntries` goes into the /Pages node.
   pageBoxes,
   pagesEntries = '',
+  // The trailer's /Info dictionary: `{ Title: 'text', ... }`.
+  info,
 }) {
   const writer = new PdfWriter();
   const catalog = writer.reserve();
@@ -332,7 +345,7 @@ function buildDocument({
     );
   }
   writer.set(catalog, `<< /Type /Catalog /Pages ${pages} 0 R${extra} >>`);
-  return writer.build({ root: catalog, password, objectStreams });
+  return writer.build({ root: catalog, password, objectStreams, info });
 }
 
 /** Bézier approximation of an ellipse inscribed in [2, 2, w - 2, h - 2]. */
@@ -358,6 +371,30 @@ function pdfText(text) {
   }
   const utf16 = Buffer.from(text, 'utf16le').swap16();
   return `<FEFF${utf16.toString('hex').toUpperCase()}>`;
+}
+
+/**
+ * An information dictionary from `{ key: text }`. Text that is not
+ * printable ASCII is written as UTF-16BE; `encrypt(bytes)`, when it returns
+ * bytes, encrypts each string (as hex).
+ */
+function infoDictionary(info, encrypt = () => undefined) {
+  const entries = Object.entries(info).map(([key, text]) => {
+    const bytes = /^[\x20-\x7e]*$/.test(text)
+      ? Buffer.from(text, 'latin1')
+      : Buffer.concat([
+          Buffer.from([0xfe, 0xff]),
+          Buffer.from(text, 'utf16le').swap16(),
+        ]);
+    const encrypted = encrypt(bytes);
+    const value = encrypted
+      ? `<${encrypted.toString('hex')}>`
+      : bytes[0] === 0xfe
+        ? `<${bytes.toString('hex').toUpperCase()}>`
+        : pdfText(text);
+    return `/${key} ${value}`;
+  });
+  return `<< ${entries.join(' ')} >>`;
 }
 
 /**
@@ -705,6 +742,12 @@ const FIXTURES = {
   'page-boxes-compressed': () => pageBoxesDocument({ objectStreams: true }),
   'page-boxes-encrypted': () => pageBoxesDocument({ password: 'secret' }),
 
+  // Document information: a UTF-16 title, a padded and an empty value, dates
+  // with a time-zone offset and in UTC.
+  metadata: () => metadataDocument(),
+  'metadata-compressed': () => metadataDocument({ objectStreams: true }),
+  'metadata-encrypted': () => metadataDocument({ password: 'secret' }),
+
   'mixed-sizes': () => {
     // Portrait, landscape, a very tall "receipt" and a square page: exercises
     // layout and the base bitmap pixel cap.
@@ -757,6 +800,26 @@ function pageBoxesDocument(options = {}) {
     pageContent: (i) => ({
       content: `BT /F1 14 Tf 20 60 Td (Page ${i + 1}: ${pages[i].expect}) Tj ET`,
     }),
+  });
+}
+
+const METADATA = {
+  Title: 'Raport kwartalny — żółć',
+  Author: 'Better PDF fixtures',
+  Subject: '',
+  Keywords: 'pdf, metadata, fixture',
+  Creator: '  generate-fixtures.mjs  ',
+  Producer: 'react-native-better-pdf',
+  CreationDate: "D:20260315093000+02'00'",
+  ModDate: 'D:20260930120000Z',
+};
+
+function metadataDocument(options = {}) {
+  return buildDocument({
+    ...options,
+    pageCount: 2,
+    info: METADATA,
+    pageContent: (i) => ({ content: textPage(i, { fontSize: 10 }) }),
   });
 }
 
