@@ -16,8 +16,8 @@ internal sealed interface FormWork : DocumentWork {
   /** `setFormFieldValues`: [done] on the main thread, with the error that stopped it. */
   class SetValues(val values: List<NativePdfFormValue>, val done: (Throwable?) -> Unit) : FormWork
 
-  /** [done] on the main thread once earlier form work is done. */
-  class Barrier(val done: () -> Unit) : FormWork
+  /** [done] on the main thread once earlier form work is done; with an error when it will not be. */
+  class Barrier(val done: (Throwable?) -> Unit) : FormWork
 
   /** Fails [this] work that will not run (the document closed). Main thread. */
   fun fail(error: Throwable) {
@@ -25,7 +25,7 @@ internal sealed interface FormWork : DocumentWork {
       is ReaderEdit -> Unit
       is ReadFields -> done(Result.failure(error))
       is SetValues -> done(error)
-      is Barrier -> done()
+      is Barrier -> done(error)
     }
   }
 }

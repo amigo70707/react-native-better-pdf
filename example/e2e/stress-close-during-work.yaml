@@ -1,0 +1,72 @@
+# Closing documents while their work is in flight — the "Already closed"
+# crash class reported against react-native-pdf (#830, #882, #976, #959,
+# #989, #987, #1041). Each step starts work and leaves at once: renders
+# (a fling through the 1000-page scan), a search, a page image, a download,
+# a form edit and export, the outline, and PdfDocument's page images. The
+# app must survive every round; watch for crashes in logcat / the iOS
+# crash logs while it runs (see CONTRIBUTING).
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- repeat:
+    times: 5
+    commands:
+      # Entries mid-list are centred: one cut off at an edge takes no tap.
+      # Renders in flight.
+      - scrollUntilVisible: { element: "extreme.*", centerElement: true }
+      - tapOn: "extreme.*"
+      - extendedWaitUntil: { visible: "1 / 1000", timeout: 120000 }
+      - swipe: { start: "50%, 85%", end: "50%, 15%", duration: 80 }
+      - swipe: { start: "50%, 85%", end: "50%, 15%", duration: 80 }
+      - tapOn: "‹ Back"
+      # A search in flight.
+      - scrollUntilVisible: { element: "large.*", centerElement: true }
+      - tapOn: "large.*"
+      - extendedWaitUntil: { visible: "1 / 500", timeout: 120000 }
+      - tapOn: "Find"
+      - tapOn: { id: "search-input" }
+      - inputText: "lorem"
+      - tapOn: "‹ Back"
+      # A page image in flight.
+      - scrollUntilVisible: { element: "medium.*", centerElement: true }
+      - tapOn: "medium.*"
+      - extendedWaitUntil: { visible: "1 / 100", timeout: 60000 }
+      - tapOn: "Image"
+      - tapOn: "‹ Back"
+      # A download in flight.
+      - scrollUntilVisible: { element: "Remote \\(slow\\).*", direction: UP }
+      - tapOn: "Remote \\(slow\\).*"
+      - tapOn: "‹ Back"
+      # The outline of 1,000 entries being read.
+      - scrollUntilVisible: { element: "outline-large.*", centerElement: true }
+      - tapOn: "outline-large.*"
+      - extendedWaitUntil: { visible: "1 / 1000", timeout: 60000 }
+      - tapOn: "TOC"
+      - tapOn: "‹ Back"
+      # A form edit, a fill and an export in flight.
+      # iOS labels the entry "forms, Fixture copied to the device".
+      - scrollUntilVisible: { element: "forms(, .*)?", centerElement: true }
+      - tapOn: "forms(, .*)?"
+      - extendedWaitUntil: { visible: "1 / 2", timeout: 30000 }
+      - tapOn: "Fill"
+      - tapOn: "Export"
+      - tapOn: "‹ Back"
+      - scrollUntilVisible: { element: "Bundled sample.*", direction: UP }
+# PdfDocument (no view): closed while it renders page images.
+- tapOn: "Docs"
+- repeat:
+    times: 3
+    commands:
+      - scrollUntilVisible: { element: "extreme" }
+      - tapOn: "extreme"
+      - extendedWaitUntil: { visible: "opened in .* ms", timeout: 120000 }
+      - tapOn: "Thumbnails"
+      - tapOn: "Close"
+      - extendedWaitUntil: { visible: "after close: The document is closed", timeout: 30000 }
+# Still alive.
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "Bundled sample.*", direction: UP }
+- tapOn: "Bundled sample.*"
+- extendedWaitUntil: { visible: "1 / 3", timeout: 15000 }

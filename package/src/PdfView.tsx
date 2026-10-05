@@ -155,9 +155,9 @@ export interface PdfViewRef {
   ): Promise<void>;
   /**
    * Writes the document as shown — its form filled in — to a new PDF file,
-   * e.g. to share or upload it; the source file is never changed. Keeps the
-   * document's password protection. Rejects before
-   * {@linkcode PdfViewProps.onLoad}.
+   * e.g. to share or upload it; the source file is never changed (a
+   * `filePath` naming it is rejected). Keeps the document's password
+   * protection. Rejects before {@linkcode PdfViewProps.onLoad}.
    */
   exportDocument(options?: PdfExportOptions): Promise<PdfExportResult>;
   /**

@@ -150,17 +150,20 @@ internal class DocumentReads(
     val descriptor = duplicateDescriptor()
     try {
       // Renderers own (and close) the descriptor they get; keep ours for recycling.
-      var renderer = DocumentRenderer.open(descriptor.dup(), password)
+      var renderer: DocumentRenderer? = DocumentRenderer.open(descriptor.dup(), password)
       try {
         return List(pageCount) { index ->
           if (index > 0 && index % PdfDocumentSession.RECYCLE_AFTER_PAGES == 0) {
-            renderer.close()
+            renderer?.close()
+            // A failed reopen must not close the closed renderer again in
+            // `finally`: "Document already closed" would hide its error.
+            renderer = null
             renderer = DocumentRenderer.open(descriptor.dup(), password)
           }
-          renderer.openPage(index).use { PdfDocumentLayout.PageSize(it.width.toFloat(), it.height.toFloat()) }
+          renderer!!.openPage(index).use { PdfDocumentLayout.PageSize(it.width.toFloat(), it.height.toFloat()) }
         }
       } finally {
-        renderer.close()
+        renderer?.close()
       }
     } finally {
       descriptor.closeQuietly()

@@ -5,18 +5,22 @@ import { Button } from '../ui';
 
 /**
  * Form filling: "Fill" sets values from code, "Fields" lists the current
- * values on the event line, "Bad" tries a read-only field, "Touch" turns
- * filling by touch on and off, "Export" writes the filled-in document and
- * "Open" shows that copy.
+ * values on the event line, "Bad" tries a read-only field and an export
+ * over the displayed file (both rejected), "Touch" turns filling by touch
+ * on and off, "Export" writes the filled-in document and "Open" shows that
+ * copy.
  */
 export function FormBar({
   pdf,
+  sourcePath,
   isFillingEnabled,
   onToggleFilling,
   onEvent,
   onOpen,
 }: {
   pdf: PdfViewRef | null;
+  /** The displayed file (`onLoad`'s `filePath`). */
+  sourcePath: string | undefined;
   isFillingEnabled: boolean;
   onToggleFilling: () => void;
   onEvent: (text: string) => void;
@@ -61,10 +65,15 @@ export function FormBar({
       <Button
         title="Bad"
         onPress={() => {
-          pdf
-            ?.setFormFieldValues({ name: 'Never', id: 'B-1' })
-            .then(() => onEvent('bad: accepted'))
-            .catch(fail('bad'));
+          const message = (error: unknown) => String(error).split('\n')[0];
+          void Promise.all([
+            pdf
+              ?.setFormFieldValues({ name: 'Never', id: 'B-1' })
+              .then(() => 'accepted', message),
+            pdf
+              ?.exportDocument({ filePath: sourcePath })
+              .then(() => 'exported over the source', message),
+          ]).then((results) => onEvent(`bad: ${results.join(' | ')}`));
         }}
       />
       <Button

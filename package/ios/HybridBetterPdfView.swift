@@ -493,6 +493,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         promise.reject(withError: error)
         return
       }
+      // The displayed file is read while the copy is written, and is never
+      // changed (a copy of an unchanged form would delete it first).
+      if destination.standardizedFileURL.resolvingSymlinksInPath() == url.standardizedFileURL.resolvingSymlinksInPath() {
+        promise.reject(withError: RuntimeError.error(withMessage: "The export cannot replace the displayed document's file"))
+        return
+      }
       let password = self.password
       let isEncrypted = document.isEncrypted
       let filledForm = self.filledFormSnapshot(of: document)

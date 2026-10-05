@@ -67,6 +67,8 @@ internal class PdfSearchTask(
       }
     } catch (_: Exception) {
       // An unreadable page or document ends the search with what was found.
+    } catch (_: OutOfMemoryError) {
+      // As does running out of memory: this thread must not end the app.
     } finally {
       try {
         renderer?.close()

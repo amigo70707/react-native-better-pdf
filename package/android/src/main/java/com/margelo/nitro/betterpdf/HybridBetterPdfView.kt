@@ -47,13 +47,20 @@ class HybridBetterPdfView(
 
   private val mainHandler = Handler(Looper.getMainLooper())
   private var session: PdfDocumentSession? = null
-  /** The session once its document has loaded; read from the JS thread by [getOutline]. */
-  @Volatile private var loadedSession: PdfDocumentSession? = null
+  /**
+   * The session once its document has loaded, with what JS-thread methods
+   * need of it — together, so a document swapped in meanwhile cannot mix
+   * one session with another's page count.
+   */
+  private class LoadedDocument(val session: PdfDocumentSession, val pageCount: Int, val file: File?) {
+    /** The displayed file's name without extension, for exported copies. */
+    val name: String get() = file?.nameWithoutExtension?.takeIf { it.isNotEmpty() } ?: "document"
+  }
+
+  @Volatile private var loaded: LoadedDocument? = null
   private var needsReload = false
   private var needsScaleUpdate = false
   private var needsLayoutModeUpdate = false
-  /** The displayed file's name without extension, for exported copies. */
-  private var documentFileName = "document"
 
   // region Props
 
@@ -287,7 +294,7 @@ class HybridBetterPdfView(
   }
 
   override fun getFormFields(): Promise<Array<NativePdfFormField>> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val session = loaded?.session ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     val promise = Promise<Array<NativePdfFormField>>()
     mainHandler.post {
       // Text being typed is read too.
@@ -300,7 +307,7 @@ class HybridBetterPdfView(
   }
 
   override fun setFormFieldValues(values: Array<NativePdfFormValue>): Promise<Unit> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val session = loaded?.session ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     val promise = Promise<Unit>()
     mainHandler.post {
       // Text being typed goes first, so it does not overwrite these values.
@@ -311,14 +318,27 @@ class HybridBetterPdfView(
   }
 
   override fun exportDocument(filePath: String): Promise<PdfExportResult> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
-    val name = documentFileName
+    val document = loaded ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val session = document.session
+    val target = if (filePath.isEmpty()) null else File(filePath)
+    // The displayed file is read while the copy is written, and is never changed.
+    if (target != null && document.file != null && target.canonicalFile == document.file.canonicalFile) {
+      return Promise.rejected(IllegalArgumentException("The export cannot replace the displayed document's file"))
+    }
     return afterFormSettles(session) {
-      val file = if (filePath.isEmpty()) newExportFile(name) else File(filePath)
-      ParcelFileDescriptor.open(
-        file,
-        ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE,
-      ).use(session::writeDocument)
+      val file = target ?: newExportFile(document.name)
+      // Written beside the target and renamed over it: a failed write
+      // leaves an existing file as it was.
+      val partial = File(file.absoluteFile.parentFile, ".${file.name}.${UUID.randomUUID()}.partial")
+      try {
+        ParcelFileDescriptor.open(
+          partial,
+          ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE,
+        ).use(session::writeDocument)
+        if (!partial.renameTo(file)) throw IOException("Could not write $file")
+      } finally {
+        partial.delete()
+      }
       PdfExportResult(file.absolutePath)
     }
   }
@@ -338,28 +358,32 @@ class HybridBetterPdfView(
     val promise = Promise<T>()
     mainHandler.post {
       formFiller.commit()
-      session.afterFormWork {
-        Promise.parallel(block).then(promise::resolve).catch(promise::reject)
+      session.afterFormWork { error ->
+        if (error != null) {
+          promise.reject(error)
+        } else {
+          Promise.parallel(block).then(promise::resolve).catch(promise::reject)
+        }
       }
     }
     return promise
   }
 
   override fun getOutline(): Promise<Array<PdfOutlineEntry>> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val session = loaded?.session ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     return Promise.parallel { session.reads.readOutlineEntries() }
   }
 
   override fun getPageSizes(): Promise<Array<PdfPageSize>> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
-    val pageCount = documentView.pageCount
-    return Promise.parallel { session.reads.readPdfPageSizes(pageCount) }
+    val document = loaded ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    return Promise.parallel { document.session.reads.readPdfPageSizes(document.pageCount) }
   }
 
   override fun renderPage(page: Double, options: PdfRenderPageOptions): Promise<PdfPageImage> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val document = loaded ?: return Promise.rejected(IllegalStateException("No document is loaded"))
+    val session = document.session
     val request = try {
-      PageImageRequest.of(page, documentView.pageCount, options)
+      PageImageRequest.of(page, document.pageCount, options)
     } catch (error: IllegalArgumentException) {
       return Promise.rejected(error)
     }
@@ -367,13 +391,19 @@ class HybridBetterPdfView(
   }
 
   override fun print(jobName: String): Promise<PdfPrintResult> {
-    val session = loadedSession ?: return Promise.rejected(IllegalStateException("No document is loaded"))
-    val pageCount = documentView.pageCount
+    val document = loaded ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     val promise = Promise<PdfPrintResult>()
     mainHandler.post {
       // A form prints as filled in, text being typed included.
       formFiller.commit()
-      session.afterFormWork { openPrintDialog(session, jobName, pageCount, promise) }
+      document.session.afterFormWork { error ->
+        when {
+          error != null -> promise.reject(error)
+          // Closed or replaced meanwhile: no dialog over another screen.
+          loaded !== document -> promise.reject(IllegalStateException("The document was closed"))
+          else -> openPrintDialog(document.session, jobName, document.pageCount, promise)
+        }
+      }
     }
     return promise
   }
@@ -454,7 +484,7 @@ class HybridBetterPdfView(
   private fun closeSession() {
     formFiller.cancel()
     searchController.onDocumentChanged(null)
-    loadedSession = null
+    loaded = null
     session?.close()
     session = null
     documentView.clearDocument()
@@ -470,8 +500,7 @@ class HybridBetterPdfView(
     val initial = position?.page?.takeIf { it.isFinite() }?.toInt() ?: 0
     val scale = position?.scale?.takeIf { it.isFinite() && it > 0 }?.toFloat() ?: 1f
     documentView.setDocument(session, pageSizes, initial, scale, position?.pagePoint)
-    loadedSession = session
-    documentFileName = filePath?.let { File(it).nameWithoutExtension }?.takeIf { it.isNotEmpty() } ?: "document"
+    loaded = LoadedDocument(session, pageSizes.size, filePath?.let(::File))
     searchController.onDocumentChanged(session)
     val first = pageSizes.first()
     onLoad?.invoke(

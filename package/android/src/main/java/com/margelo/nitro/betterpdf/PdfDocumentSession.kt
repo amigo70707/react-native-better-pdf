@@ -130,8 +130,11 @@ class PdfDocumentSession(
   /** Sets fields' values (all or none of them); [done] on the main thread. */
   fun setFormValues(values: List<NativePdfFormValue>, done: (Throwable?) -> Unit) = submitForm(FormWork.SetValues(values, done))
 
-  /** [done] on the main thread once earlier form work is done (writes and page images see it). */
-  fun afterFormWork(done: () -> Unit) = submitForm(FormWork.Barrier(done))
+  /**
+   * [done] on the main thread once earlier form work is done (writes and
+   * page images see it), with an error instead when the document closed.
+   */
+  fun afterFormWork(done: (Throwable?) -> Unit) = submitForm(FormWork.Barrier(done))
 
   /** Edits made to the form so far, for renderers of other threads. */
   val formEdits: List<FormEdit> get() = form.edits
@@ -210,7 +213,12 @@ class PdfDocumentSession(
    * [PdfSearchTask]); null when the document is not open. Main thread.
    */
   internal fun startSearch(query: String, pageCount: Int, startPage: Int, listener: PdfSearchTask.Listener): PdfSearchTask? {
-    val descriptor = synchronized(descriptorLock) { master?.dup() } ?: return null
+    // On the main thread: a failed dup (descriptors exhausted) must not throw.
+    val descriptor = try {
+      synchronized(descriptorLock) { master?.dup() }
+    } catch (_: IOException) {
+      null
+    } ?: return null
     return PdfSearchTask(descriptor, password, pageCount, startPage, query, listener).also { it.start() }
   }
 
@@ -218,7 +226,8 @@ class PdfDocumentSession(
     if (closed) return
     val dropped = queue.close()
     resolver.cancel()
-    mainHandler.removeCallbacksAndMessages(null)
+    // Posts already queued stay: `post` drops listener calls once closed and
+    // releases their bitmaps, and form work's results still settle promises.
     dropped.forEach { (it as? FormWork)?.fail(IllegalStateException("The document was closed")) }
   }
 
@@ -271,9 +280,10 @@ class PdfDocumentSession(
       post { listener.onFailed(failure) }
     } catch (error: OutOfMemoryError) {
       post { listener.onFailed(PdfFailure(PdfErrorCode.OUT_OF_MEMORY, "Out of memory while opening the PDF", cause = error)) }
-    } catch (error: RuntimeException) {
+    } catch (error: Exception) {
       // Malformed documents can surface as arbitrary runtime exceptions from
-      // the platform renderer; never let them crash the app.
+      // the platform renderer, and copying a source can fail with I/O errors
+      // (Kotlin does not make anyone catch those); never let them crash the app.
       post { listener.onFailed(PdfFailure(PdfErrorCode.INVALID_PDF, "The PDF could not be opened", cause = error)) }
     } finally {
       closeRenderer()
@@ -373,8 +383,9 @@ class PdfDocumentSession(
         recordLinks(query.page, page)
         page.selectText(query)
       }
-    } catch (_: RuntimeException) {
-      // A page whose text cannot be read has nothing to select.
+    } catch (_: Exception) {
+      // A page whose text cannot be read (or a renderer that could not be
+      // re-created) has nothing to select.
       null
     } finally {
       Trace.endSection()
@@ -388,7 +399,7 @@ class PdfDocumentSession(
         recordSize(query.page, PdfDocumentLayout.PageSize(page.width.toFloat(), page.height.toFloat()))
         page.readText()
       }
-    } catch (_: RuntimeException) {
+    } catch (_: Exception) {
       // A page whose text cannot be read is announced by its label only.
       null
     }
@@ -437,7 +448,9 @@ class PdfDocumentSession(
       }
     } catch (error: OutOfMemoryError) {
       post { listener.onRenderFailed(request, PdfFailure(PdfErrorCode.OUT_OF_MEMORY, "Out of memory rendering page ${request.page}", page = request.page, cause = error)) }
-    } catch (error: RuntimeException) {
+    } catch (error: Exception) {
+      // Also a renderer that could not be re-created (see rendererForNextPage):
+      // this page fails, the next work creates one again.
       post { listener.onRenderFailed(request, PdfFailure(PdfErrorCode.PAGE_RENDER_FAILED, "Rendering page ${request.page} failed", page = request.page, cause = error)) }
     } finally {
       bitmap?.let(bitmapPool::release)
@@ -486,12 +499,14 @@ class PdfDocumentSession(
   private fun doFormWork(work: FormWork) {
     when (work) {
       is FormWork.ReaderEdit -> applyReaderEdit(work.edit)
-      is FormWork.Barrier -> mainHandler.post(work.done)
+      is FormWork.Barrier -> post(onDropped = { work.done(IllegalStateException("The document was closed")) }) { work.done(null) }
       is FormWork.ReadFields -> {
         val result = try {
           Result.success(form.fields())
         } catch (error: Exception) {
           Result.failure(IllegalStateException("The form could not be read", error))
+        } catch (error: OutOfMemoryError) {
+          Result.failure(IllegalStateException("Out of memory while reading the form", error))
         }
         mainHandler.post { work.done(result) }
       }
@@ -501,6 +516,8 @@ class PdfDocumentSession(
           null
         } catch (error: Exception) {
           error
+        } catch (error: OutOfMemoryError) {
+          IllegalStateException("Out of memory while filling the form in", error)
         }
         mainHandler.post { work.done(error) }
       }
@@ -511,7 +528,7 @@ class PdfDocumentSession(
     if (!canFillForm) return
     try {
       applyEdits(listOf(edit))
-    } catch (_: RuntimeException) {
+    } catch (_: Exception) {
       // A widget that does not take the edit (read-only) stays as it is.
       return
     }

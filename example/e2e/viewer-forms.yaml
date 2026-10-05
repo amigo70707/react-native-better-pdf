@@ -82,7 +82,7 @@ env:
     visible: "fields 13: name=Ewa email=jan@example.com notes=First line/Second line agree=on plan=pro country=France colours=Blue id=A-1234 phone= address.city=Kraków postcode=00-950 date= signature=unsigned"
     timeout: 5000
 - tapOn: "Bad"
-- extendedWaitUntil: { visible: "bad: .*read-only.*", timeout: 5000 }
+- extendedWaitUntil: { visible: "bad: .*read-only.* \\| .*cannot replace the displayed.*", timeout: 10000 }
 - tapOn: "Fields"
 - extendedWaitUntil: { visible: "fields 13: name=Ewa .*", timeout: 5000 }
 

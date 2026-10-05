@@ -993,6 +993,55 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
 
+## Closing while work runs (v0.2)
+
+react-native-pdf's most reported Android crash is "Already closed"
+(#830, #882, #976, #959, #989, #987, #1041): a renderer or page used after
+it was closed. This library was audited for that class — anything closed
+or released while another thread, or a callback posted earlier, still
+uses it — and stress-tested.
+
+- **Held by design:** the displayed document's renderer and its pages are
+  opened and closed on the render thread only; `close()` only signals.
+  Every other reader (outline, metadata, page sizes, page images, search,
+  printing, export, the form) works on its own duplicate of the file
+  descriptor, taken under a lock with which the session closes the
+  original, so closing the document never invalidates one in use; a
+  read started after closing rejects. Renderers never have two pages open.
+  Bitmaps are recycled only once no frame can draw them.
+- **Fixed by the audit:**
+  - Exceptions Kotlin does not make anyone catch (`IOException`, the
+    library's own `PdfFailure`) could end the render thread: an I/O error
+    while copying a source crashed the app, and a renderer that could not
+    be re-created after 48 pages ended rendering and left form, export,
+    print and page-image promises pending. The render thread now catches
+    them per work item (that page fails, the next item opens a renderer
+    again) and when opening; the print and search threads catch running
+    out of memory.
+  - `close()` removed results already posted to the main thread, so a
+    form read or export finishing just as the view went away never
+    settled its promise; posts now stay and check whether the document
+    is still open. Waiting for form work reports the closing as an error,
+    and a print dialog opens only for the document still shown.
+  - Exporting over the displayed file (`exportDocument({ filePath })` with
+    `onLoad`'s `filePath`) truncated it while it was read — and on iOS a
+    form as loaded deleted it before copying. Both platforms reject it
+    now; Android writes exports beside the target and renames them over
+    it, so a failed write leaves an existing file as it was.
+  - A choice list open while the document changed applied its pick to the
+    new document; it is closed with the old one.
+  - A renderer that failed to open kept its file descriptor before Android
+    15; it is closed now. Measuring page sizes could close a renderer twice
+    and report "Document already closed" instead of the real error.
+  - JS-thread methods read the session and the page count together, so a
+    document swapped in meanwhile cannot mix them.
+- **Tested:** `stress-close-during-work` on both platforms (5 rounds of
+  leaving documents while renders, a search, a page image, a download, the
+  outline, a form fill and export run, and `PdfDocument` closed while it
+  renders page images: no crash in logcat or the iOS crash reports),
+  `viewer-forms` (an export over the source is rejected), and the full
+  suite on both.
+
 ## Content inset (v0.2)
 
 ```ts

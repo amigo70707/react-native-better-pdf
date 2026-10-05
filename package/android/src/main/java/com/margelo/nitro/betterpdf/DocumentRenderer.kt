@@ -56,10 +56,15 @@ internal interface DocumentRenderer : AutoCloseable {
      *   the document is encrypted and passwords are unsupported here).
      * @throws java.io.IOException when the file is not a PDF.
      */
-    fun open(descriptor: ParcelFileDescriptor, password: String?): DocumentRenderer {
-      if (hasPreV) return PreVDocumentRenderer.open(descriptor, password)
-      return PlatformDocumentRenderer.open(descriptor, password)
-    }
+    fun open(descriptor: ParcelFileDescriptor, password: String?): DocumentRenderer =
+      try {
+        if (hasPreV) PreVDocumentRenderer.open(descriptor, password) else PlatformDocumentRenderer.open(descriptor, password)
+      } catch (error: Throwable) {
+        // API 35+ renderers close it themselves when they fail; older ones
+        // keep it open, one descriptor leaked per failure.
+        descriptor.closeQuietly()
+        throw error
+      }
 
     /**
      * Opens a document as the view and `PdfDocument` report it: like [open],

@@ -31,7 +31,7 @@ Also: base64 (#739, #705, #835, #199; omitted by design), custom certs/pinning (
 - react-native-blob-util — 11 issues, 96 r / 82 c: #605, #624, #575, #796 (cancel crash, 35c), #773, #728, #1018; PR #870 unmerged.
 - Release cadence — 6 issues, 70 r / 42 c: #963, #967, #991, #1026, #585, #590.
 - Contributions rarely land: open PRs #1044, #1040, #1039, #1033; closed unmerged #618, #993, #1042, #870, #1010.
-- Android "Already closed" crash — 6 issues, 48 r / 119 c: #830, #882, #976, #959, #989, #987, #1041 (partly fixed in 7.0.5).
+- Android "Already closed" crash — 6 issues, 48 r / 119 c: #830, #882, #976, #959, #989, #987, #1041 (partly fixed in 7.0.5). better-pdf: audited and stress-tested, see api-design "Closing while work runs".
 - SIGSEGV in libpdfium — #847, #1024, #1041, #979; PR #1033.
 - iOS blank after RN/Expo upgrade — 5 issues, 32 r / 51 c: #958, #969, #919, #966, #988.
 - Expo — #834, #716, #856, #977.

@@ -103,6 +103,8 @@ export function ViewerScreen() {
   const [doubleTapZoom, setDoubleTapZoom] = useState(true);
   const [textSelection, setTextSelection] = useState(true);
   const [formFilling, setFormFilling] = useState(true);
+  /** The displayed file, from onLoad. */
+  const [loadedFilePath, setLoadedFilePath] = useState<string>();
   /** Counts onTextSelectionChange events: one per settled selection. */
   const selectionEvents = useRef(0);
   /** Counts onScaleChange events: one per settled zoom, never per frame. */
@@ -319,6 +321,7 @@ export function ViewerScreen() {
       {entry.form === true && (
         <FormBar
           pdf={ref.current}
+          sourcePath={loadedFilePath}
           isFillingEnabled={formFilling}
           onToggleFilling={() => setFormFilling((value) => !value)}
           onEvent={setLastEvent}
@@ -394,6 +397,7 @@ export function ViewerScreen() {
             }}
             onLoad={(event) => {
               setState({ kind: 'loaded', source, pageCount: event.pageCount });
+              setLoadedFilePath(event.filePath);
               // The local file behind the document, e.g. for sharing.
               setLastEvent(
                 `file: ${event.filePath?.split('/').slice(-2).join('/') ?? 'none'}`,

@@ -61,6 +61,9 @@ internal class PdfPrintAdapter(
         null
       } catch (error: Exception) {
         error
+      } catch (error: OutOfMemoryError) {
+        // A raw executor thread: an error escaping it would end the app.
+        error
       }
       mainHandler.post {
         when {

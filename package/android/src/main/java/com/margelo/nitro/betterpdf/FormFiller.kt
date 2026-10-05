@@ -37,6 +37,8 @@ internal class FormFiller(
 ) {
   private var editing: Pair<Int, FormWidget>? = null
   private var field: EditText? = null
+  /** The open choice list; its pick must not reach another document. */
+  private var dialog: AlertDialog? = null
   private val rect = RectF()
   private val location = IntArray(2)
 
@@ -71,8 +73,10 @@ internal class FormFiller(
     if (text != widget.textValue.withLineFeeds()) documentView.editForm(FormEdit.SetText(page, widget.index, text))
   }
 
-  /** Closes the editor without applying its text (the document is going away). */
+  /** Closes the editor without applying its text, and any choice list (the document is going away). */
   fun cancel() {
+    dialog?.dismiss()
+    dialog = null
     val editText = field ?: return
     editing = null
     field = null
@@ -176,7 +180,8 @@ internal class FormFiller(
         if (which != selected) documentView.editForm(FormEdit.SetIndices(page, widget.index, intArrayOf(which)))
       }
     }
-    builder.show()
+    dialog?.dismiss()
+    dialog = builder.setOnDismissListener { dialog = null }.show()
   }
 
   private val inputMethodManager: InputMethodManager?
