@@ -130,6 +130,15 @@ class HybridBetterPdfView(
       pageOverlays.placements = value ?: emptyArray()
       layoutOverlaysSoon()
     }
+  override var contentInset: NativeContentInset? = null
+    set(value) {
+      field = value
+      val density = context.resources.displayMetrics.density
+      documentView.setContentInset(
+        ((value?.top ?: 0.0).coerceAtLeast(0.0) * density).toFloat(),
+        ((value?.bottom ?: 0.0).coerceAtLeast(0.0) * density).toFloat(),
+      )
+    }
   override var enableFormFilling: Boolean? = null
     set(value) {
       field = value

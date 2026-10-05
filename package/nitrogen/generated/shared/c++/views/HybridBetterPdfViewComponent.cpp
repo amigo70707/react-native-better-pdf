@@ -33,6 +33,7 @@ namespace margelo::nitro::betterpdf::views {
     fitPolicy(nitro::ReactProp<std::optional<PdfFitPolicy>>::fromRawValue("BetterPdfView", "fitPolicy", rawProps, sourceProps.fitPolicy)),
     spreadMode(nitro::ReactProp<std::optional<PdfSpreadMode>>::fromRawValue("BetterPdfView", "spreadMode", rawProps, sourceProps.spreadMode)),
     colorScheme(nitro::ReactProp<std::optional<PdfColorScheme>>::fromRawValue("BetterPdfView", "colorScheme", rawProps, sourceProps.colorScheme)),
+    contentInset(nitro::ReactProp<std::optional<NativeContentInset>>::fromRawValue("BetterPdfView", "contentInset", rawProps, sourceProps.contentInset)),
     overlayLayerId(nitro::ReactProp<std::optional<std::string>>::fromRawValue("BetterPdfView", "overlayLayerId", rawProps, sourceProps.overlayLayerId)),
     overlays(nitro::ReactProp<std::optional<std::vector<PdfOverlayPlacement>>>::fromRawValue("BetterPdfView", "overlays", rawProps, sourceProps.overlays)),
     enableDoubleTapZoom(nitro::ReactProp<std::optional<bool>>::fromRawValue("BetterPdfView", "enableDoubleTapZoom", rawProps, sourceProps.enableDoubleTapZoom)),
@@ -72,6 +73,7 @@ namespace margelo::nitro::betterpdf::views {
       case hashString("fitPolicy"): return true;
       case hashString("spreadMode"): return true;
       case hashString("colorScheme"): return true;
+      case hashString("contentInset"): return true;
       case hashString("overlayLayerId"): return true;
       case hashString("overlays"): return true;
       case hashString("enableDoubleTapZoom"): return true;

@@ -144,6 +144,7 @@ re-renders never reload the document.
 | `fitPolicy` | `'width' \| 'height' \| 'page'` | `'width'`, or `'page'` with `horizontal` / `enablePaging` | how pages are scaled at zoom 1 |
 | `spreadMode` | `'none' \| 'pairs' \| 'book'` | `'none'` | facing pages side by side in the vertical continuous layout; see [Facing pages](#facing-pages) |
 | `colorScheme` | `'light' \| 'dark'` (or `useColorScheme()`'s value) | `'light'` | `'dark'` shows pages with lightness inverted and hues kept; see [Dark pages](#dark-pages) |
+| `contentInset` | `{ top?, bottom? }` | none | dp / pt that pages scroll under, e.g. a translucent header; see [Translucent bars](#translucent-bars) |
 | `children` | `PdfPageOverlay` elements | | React views placed on pages, moving with them; see [Page overlays](#page-overlays) |
 | `searchHighlightColor` | `ColorValue` | `'rgba(255, 214, 0, 0.4)'` | background of search matches; use a translucent colour |
 | `searchCurrentHighlightColor` | `ColorValue` | `'rgba(255, 140, 0, 0.6)'` | background of the current match |
@@ -202,6 +203,8 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 - Vertical continuous scrolling, fling, platform scroll indicators
 - Card layouts: `borderRadius` clips the document; a short document starts
   at the top on both platforms
+- Translucent bars: `contentInset` lets pages scroll under a header or
+  toolbar while the first page starts below it
 - Facing pages (two-page spreads) for tablets, with or without a cover page
 - Dark pages for reading at night, colours' hues kept
 - Page overlays: React views (form fields, signatures, markers) attached
@@ -422,6 +425,31 @@ const { width, height } = useWindowDimensions();
 - Vertical continuous layouts only: ignored with `horizontal`,
   `enablePaging` and `singlePage` (iOS's PDFKit lays out facing pages only
   there). Facing pages run left to right.
+
+## Translucent bars
+
+```tsx
+<View style={{ flex: 1 }}>
+  <PdfView
+    source={source}
+    style={{ flex: 1 }}
+    contentInset={{ top: headerHeight, bottom: toolbarHeight }}
+  />
+  <View style={[StyleSheet.absoluteFill, { bottom: undefined, height: headerHeight, backgroundColor: 'rgba(255, 255, 255, 0.85)' }]} />
+</View>
+```
+
+- Pages scroll under the bars, but the first page starts below `top` and
+  the document ends above `bottom`, as with a `ScrollView`'s
+  `contentInset`. Values are dp / pt and do not scale with zoom.
+- Everything that names a position refers to the area between the bars:
+  `goToPage` puts the page's top below the header, `initialViewport`,
+  `goToViewport` and `onViewportChange` use its top-left corner, the
+  current page is the one at its centre, `isAtEnd` means the last page's
+  bottom is above the toolbar, search results scroll into it, and
+  `fitPolicy` `'height'` / `'page'` fit pages between the bars.
+- Vertical continuous layouts only (facing pages included); horizontal,
+  paged and single-page layouts ignore it, like `spreadMode`.
 
 ## Dark pages
 

@@ -119,6 +119,11 @@ void JHybridBetterPdfViewStateUpdater::updateViewProps(jni::alias_ref<jni::JClas
     hybridView->setColorScheme(newProps->colorScheme.get());
   }
   if (oldProps == nullptr
+        ? newProps->contentInset.isProvided()
+        : !newProps->contentInset.hasSameValue(oldProps->contentInset)) {
+    hybridView->setContentInset(newProps->contentInset.get());
+  }
+  if (oldProps == nullptr
         ? newProps->overlayLayerId.isProvided()
         : !newProps->overlayLayerId.hasSameValue(oldProps->overlayLayerId)) {
     hybridView->setOverlayLayerId(newProps->overlayLayerId.get());

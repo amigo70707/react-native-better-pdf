@@ -150,7 +150,7 @@ internal class FormFiller(
     if (keyboard <= 0) return
     container.getLocationInWindow(location)
     val windowHeight = container.rootView.height
-    val visibleBottom = min(container.height, windowHeight - keyboard - location[1])
+    val visibleBottom = min(container.height - documentView.bottomClearance.roundToInt(), windowHeight - keyboard - location[1])
     val margin = 16 * container.resources.displayMetrics.density
     val overlap = editText.bottom + margin - visibleBottom
     if (overlap > 0) documentView.panBy(0f, overlap)

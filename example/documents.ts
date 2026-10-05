@@ -49,6 +49,8 @@ export interface DocumentEntry {
   overlays?: boolean;
   /** Shows the form buttons (fill, read, export). */
   form?: boolean;
+  /** Translucent bars over the viewer, which pages scroll under (`contentInset`). */
+  contentInset?: { top: number; bottom: number };
 }
 
 const fixtureDirectory = () => {
@@ -106,6 +108,13 @@ export const DOCUMENTS: DocumentEntry[] = [
     resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
     initialPage: 4,
     initialScale: 2,
+  },
+  {
+    id: 'medium-inset',
+    title: 'Inset',
+    subtitle: 'contentInset under translucent bars',
+    resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
+    contentInset: { top: 80, bottom: 60 },
   },
   {
     id: 'medium-overlays',

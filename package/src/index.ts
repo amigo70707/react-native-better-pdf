@@ -11,6 +11,7 @@ export type { PdfSource, PdfUriSource } from './source';
 export type { PdfCacheEntry } from './types/PdfCacheEntry';
 export type { PdfCacheMode } from './types/PdfCacheMode';
 export type { PdfColorScheme } from './types/PdfColorScheme';
+export type { PdfContentInset } from './types/PdfContentInset';
 export type { PdfDocumentMetadata } from './types/PdfDocumentMetadata';
 export type { PdfError } from './types/PdfError';
 export type { PdfErrorCode } from './types/PdfErrorCode';

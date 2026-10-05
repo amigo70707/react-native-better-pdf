@@ -40,6 +40,8 @@ namespace margelo::nitro::betterpdf {
       prototype.registerHybridSetter("spreadMode", &HybridBetterPdfViewSpec::setSpreadMode);
       prototype.registerHybridGetter("colorScheme", &HybridBetterPdfViewSpec::getColorScheme);
       prototype.registerHybridSetter("colorScheme", &HybridBetterPdfViewSpec::setColorScheme);
+      prototype.registerHybridGetter("contentInset", &HybridBetterPdfViewSpec::getContentInset);
+      prototype.registerHybridSetter("contentInset", &HybridBetterPdfViewSpec::setContentInset);
       prototype.registerHybridGetter("overlayLayerId", &HybridBetterPdfViewSpec::getOverlayLayerId);
       prototype.registerHybridSetter("overlayLayerId", &HybridBetterPdfViewSpec::setOverlayLayerId);
       prototype.registerHybridGetter("overlays", &HybridBetterPdfViewSpec::getOverlays);

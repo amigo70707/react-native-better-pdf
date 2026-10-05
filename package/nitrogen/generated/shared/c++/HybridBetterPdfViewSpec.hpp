@@ -23,6 +23,8 @@ namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `NativeContentInset` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativeContentInset; }
 // Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -75,6 +77,7 @@ namespace margelo::nitro::betterpdf { struct PdfExportResult; }
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
+#include "NativeContentInset.hpp"
 #include "PdfOverlayPlacement.hpp"
 #include <vector>
 #include "PdfLoadEvent.hpp"
@@ -154,6 +157,8 @@ namespace margelo::nitro::betterpdf {
       virtual void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) = 0;
       virtual std::optional<PdfColorScheme> getColorScheme() = 0;
       virtual void setColorScheme(std::optional<PdfColorScheme> colorScheme) = 0;
+      virtual std::optional<NativeContentInset> getContentInset() = 0;
+      virtual void setContentInset(const std::optional<NativeContentInset>& contentInset) = 0;
       virtual std::optional<std::string> getOverlayLayerId() = 0;
       virtual void setOverlayLayerId(const std::optional<std::string>& overlayLayerId) = 0;
       virtual std::optional<std::vector<PdfOverlayPlacement>> getOverlays() = 0;

@@ -398,6 +398,23 @@ open class HybridBetterPdfViewSpec_cxx {
     }
   }
   
+  public final var contentInset: bridge.std__optional_NativeContentInset_ {
+    @inline(__always)
+    get {
+      return { () -> bridge.std__optional_NativeContentInset_ in
+        if let __unwrappedValue = self.__implementation.contentInset {
+          return bridge.create_std__optional_NativeContentInset_(__unwrappedValue)
+        } else {
+          return .init()
+        }
+      }()
+    }
+    @inline(__always)
+    set {
+      self.__implementation.contentInset = newValue.value
+    }
+  }
+  
   public final var overlayLayerId: bridge.std__optional_std__string_ {
     @inline(__always)
     get {

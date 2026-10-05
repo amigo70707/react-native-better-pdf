@@ -14,6 +14,8 @@ namespace margelo::nitro::betterpdf { class HybridBetterPdfCacheSpec; }
 namespace margelo::nitro::betterpdf { class HybridBetterPdfDocumentSpec; }
 // Forward declaration of `HybridBetterPdfViewSpec` to properly resolve imports.
 namespace margelo::nitro::betterpdf { class HybridBetterPdfViewSpec; }
+// Forward declaration of `NativeContentInset` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativeContentInset; }
 // Forward declaration of `NativePdfFormChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfFormChangeEvent; }
 // Forward declaration of `NativePdfFormField` to properly resolve imports.
@@ -99,6 +101,7 @@ namespace NitroBetterPdf { class HybridBetterPdfViewSpec_cxx; }
 #include "HybridBetterPdfCacheSpec.hpp"
 #include "HybridBetterPdfDocumentSpec.hpp"
 #include "HybridBetterPdfViewSpec.hpp"
+#include "NativeContentInset.hpp"
 #include "NativePdfFormChangeEvent.hpp"
 #include "NativePdfFormField.hpp"
 #include "NativePdfFormValue.hpp"
@@ -928,6 +931,21 @@ namespace margelo::nitro::betterpdf::bridge::swift {
     return optional.has_value();
   }
   inline PdfColorScheme get_std__optional_PdfColorScheme_(const std::optional<PdfColorScheme>& optional) noexcept {
+    return optional.value();
+  }
+  
+  // pragma MARK: std::optional<NativeContentInset>
+  /**
+   * Specialized version of `std::optional<NativeContentInset>`.
+   */
+  using std__optional_NativeContentInset_ = std::optional<NativeContentInset>;
+  inline std::optional<NativeContentInset> create_std__optional_NativeContentInset_(const NativeContentInset& value) noexcept {
+    return std::optional<NativeContentInset>(value);
+  }
+  inline bool has_value_std__optional_NativeContentInset_(const std::optional<NativeContentInset>& optional) noexcept {
+    return optional.has_value();
+  }
+  inline NativeContentInset get_std__optional_NativeContentInset_(const std::optional<NativeContentInset>& optional) noexcept {
     return optional.value();
   }
   

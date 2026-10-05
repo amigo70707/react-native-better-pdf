@@ -19,6 +19,8 @@ namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `NativeContentInset` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativeContentInset; }
 // Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -87,6 +89,8 @@ namespace margelo::nitro::betterpdf { struct NativePdfFormValue; }
 #include "JPdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
 #include "JPdfColorScheme.hpp"
+#include "NativeContentInset.hpp"
+#include "JNativeContentInset.hpp"
 #include "PdfOverlayPlacement.hpp"
 #include <vector>
 #include "JPdfOverlayPlacement.hpp"
@@ -303,6 +307,15 @@ namespace margelo::nitro::betterpdf {
   void JHybridBetterPdfViewSpec::setColorScheme(std::optional<PdfColorScheme> colorScheme) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JPdfColorScheme> /* colorScheme */)>("setColorScheme");
     method(_javaPart, colorScheme.has_value() ? JPdfColorScheme::fromCpp(colorScheme.value()) : nullptr);
+  }
+  std::optional<NativeContentInset> JHybridBetterPdfViewSpec::getContentInset() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JNativeContentInset>()>("getContentInset");
+    auto __result = method(_javaPart);
+    return __result != nullptr ? std::make_optional(__result->toCpp()) : std::nullopt;
+  }
+  void JHybridBetterPdfViewSpec::setContentInset(const std::optional<NativeContentInset>& contentInset) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<JNativeContentInset> /* contentInset */)>("setContentInset");
+    method(_javaPart, contentInset.has_value() ? JNativeContentInset::fromCpp(contentInset.value()) : nullptr);
   }
   std::optional<std::string> JHybridBetterPdfViewSpec::getOverlayLayerId() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JString>()>("getOverlayLayerId");

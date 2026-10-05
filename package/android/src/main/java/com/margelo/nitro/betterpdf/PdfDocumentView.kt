@@ -164,6 +164,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   private var scale = 1f
   private var offsetX = 0f
   private var offsetY = 0f
+  /** `contentInset` in view pixels, as set; applied through [clearTop] / [clearBottom]. */
+  private var contentInsetTop = 0f
+  private var contentInsetBottom = 0f
   private var minScale = 1f
   private var maxScale = 4f
   private var spacingPx = 8f * resources.displayMetrics.density
@@ -515,13 +518,29 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     onPagesMoved?.invoke()
   }
 
+  /**
+   * Space in view pixels (not zoomed) pages scroll under, top and bottom —
+   * e.g. a translucent header. Positions, the current page and the end
+   * refer to the area between; vertical continuous layouts only.
+   */
+  fun setContentInset(topPx: Float, bottomPx: Float) {
+    if (topPx == contentInsetTop && bottomPx == contentInsetBottom) return
+    contentInsetTop = topPx
+    contentInsetBottom = bottomPx
+    // Keeps the reader's place at the top of the area, and fits pages into it.
+    rebuildLayout()
+  }
+
+  /** The space kept clear at the bottom now, in view pixels. */
+  val bottomClearance: Float get() = clearBottom
+
   fun setScaleLimits(min: Double?, max: Double?) {
     val newMin = min?.toFloat()?.takeIf { it.isFinite() && it > 0f } ?: 1f
     val newMax = (max?.toFloat()?.takeIf { it.isFinite() } ?: 4f).coerceAtLeast(newMin)
     if (newMin == minScale && newMax == maxScale) return
     minScale = newMin
     maxScale = newMax
-    zoomAround(scale, width / 2f, height / 2f)
+    zoomAround(scale, width / 2f, areaCenterY)
   }
 
   fun setPageSpacing(spacingDp: Double?) {
@@ -581,13 +600,13 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     }
     val mainStart = if (isHorizontal) left else top
     val mainEnd = if (isHorizontal) right else bottom
-    val visibleStart = mainOffset / scale
-    val visibleEnd = (mainOffset + mainViewportLength) / scale
+    val visibleStart = areaStart / scale
+    val visibleEnd = (areaStart + areaLength) / scale
     if (mainStart >= visibleStart && mainEnd <= visibleEnd) {
       scheduleSettle()
       return
     }
-    var target = mainStart - mainViewportLength / scale * SEARCH_REVEAL_FRACTION
+    var target = mainStart - areaLength / scale * SEARCH_REVEAL_FRACTION
     if (isPaged && !isZoomedIn) target = target.coerceIn(pageScrollStart(match.page), pageScrollEnd(match.page))
     scrollToMain(target, animated = true)
   }
@@ -612,7 +631,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     if (isSinglePage) shownPage = page
     readingPage = page
     val target = if (point.page == page) point else PagePoint(page, 0f, 0f)
-    setOffsets(layout.contentX(target) * this.scale, layout.contentY(target) * this.scale)
+    setOffsets(layout.contentX(target) * this.scale, layout.contentY(target) * this.scale - clearTop)
     scheduleSettle()
   }
 
@@ -756,8 +775,8 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       if (target !in 0 until layout.pageCount) return false
       snapToPage(target)
     } else {
-      val delta = mainViewportLength * ACCESSIBILITY_SCROLL_FRACTION * if (forward) 1 else -1
-      scrollToMain((mainOffset + delta) / scale, animated = true)
+      val delta = areaLength * ACCESSIBILITY_SCROLL_FRACTION * if (forward) 1 else -1
+      scrollToMain((areaStart + delta) / scale, animated = true)
     }
     return true
   }
@@ -791,10 +810,10 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     }
   }
 
-  /** Scrolls so unzoomed main-axis [contentPosition] starts the viewport. */
+  /** Scrolls so unzoomed main-axis [contentPosition] starts the area between the clearances. */
   private fun scrollToMain(contentPosition: Float, animated: Boolean, durationMs: Int = 300) {
     scroller.forceFinished(true)
-    val target = clampMain(contentPosition * scale)
+    val target = clampMain(contentPosition * scale - clearTop)
     if (!animated) {
       setMainOffset(target)
       scheduleSettle()
@@ -872,9 +891,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
 
   fun zoomTo(target: Float, animated: Boolean) {
     if (animated) {
-      animateZoom(target, width / 2f, height / 2f)
+      animateZoom(target, width / 2f, areaCenterY)
     } else {
-      zoomAround(target, width / 2f, height / 2f)
+      zoomAround(target, width / 2f, areaCenterY)
       scheduleSettle()
     }
   }
@@ -984,9 +1003,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   }
 
   override fun computeVerticalScrollRange(): Int =
-    if (isSinglePage) height else max(height, ((layout?.contentHeight ?: 0f) * scale).roundToInt())
+    if (isSinglePage) height else max(height, ((layout?.contentHeight ?: 0f) * scale + clearTop + clearBottom).roundToInt())
 
-  override fun computeVerticalScrollOffset(): Int = if (isSinglePage) 0 else offsetY.roundToInt()
+  override fun computeVerticalScrollOffset(): Int = if (isSinglePage) 0 else (offsetY + clearTop).roundToInt()
 
   override fun computeVerticalScrollExtent(): Int = height
 
@@ -1083,11 +1102,13 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       old.isReversed == (isRightToLeft && isHorizontal) &&
       old.spread == (if (axis == PdfDocumentLayout.Axis.VERTICAL && !isPaged) spread else PdfDocumentLayout.Spread.NONE)
     if (old != null && sameMode && old.pageCount == pageSizes.size) {
-      val position = mainOffset / scale
+      val position = areaStart / scale
       anchorPage = old.slotAt(position)
       anchorFraction = (position - old.slotStart(anchorPage)) / (old.slotEnd(anchorPage) - old.slotStart(anchorPage))
     }
-    val newLayout = PdfDocumentLayout(pageSizes, width.toFloat(), spacingPx, height.toFloat(), axis, isPaged, fit, isRightToLeft, spread)
+    // Pages fitting the height fit between the clearances.
+    val fitHeight = height - clearTop - clearBottom
+    val newLayout = PdfDocumentLayout(pageSizes, width.toFloat(), spacingPx, fitHeight, axis, isPaged, fit, isRightToLeft, spread)
     layout = newLayout
     // Tiles are positioned in the old layout's coordinates.
     clearTiles()
@@ -1103,14 +1124,14 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       scale = scale.coerceIn(minScale, maxScale)
       // Clamped by clampAndRefresh below.
       offsetX = newLayout.contentX(initialPoint) * scale
-      offsetY = newLayout.contentY(initialPoint) * scale
+      offsetY = newLayout.contentY(initialPoint) * scale - clearTop
     } else if (initial != null) {
       pendingInitialPage = null
       pendingInitialPoint = null
       shownPage = initial.coerceIn(0, newLayout.pageCount - 1)
       readingPage = shownPage
       scale = scale.coerceIn(minScale, maxScale)
-      setMainOffsetRaw(clampMain(newLayout.slotStart(initial.coerceIn(0, newLayout.pageCount - 1)) * scale))
+      setMainOffsetRaw(clampMain(newLayout.slotStart(initial.coerceIn(0, newLayout.pageCount - 1)) * scale - clearTop))
       // Content wider than the view (pages of different widths) starts centred.
       val crossContent = (if (isHorizontal) newLayout.contentHeight else newLayout.contentWidth) * scale
       val crossViewport = (if (isHorizontal) height else width).toFloat()
@@ -1118,7 +1139,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
       if (isHorizontal) offsetY = crossOffset else offsetX = crossOffset
     } else if (anchorPage >= 0) {
       val slotLength = newLayout.slotEnd(anchorPage) - newLayout.slotStart(anchorPage)
-      setMainOffsetRaw(clampMain((newLayout.slotStart(anchorPage) + anchorFraction * slotLength) * scale))
+      setMainOffsetRaw(clampMain((newLayout.slotStart(anchorPage) + anchorFraction * slotLength) * scale - clearTop))
     }
     clampAndRefresh()
     // Tiles were dropped and the position may have moved (rotation, first layout).
@@ -1142,6 +1163,22 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
 
   private val mainViewportLength: Float get() = (if (isHorizontal) width else height).toFloat()
 
+  /** `contentInset` applies to vertical continuous layouts only. */
+  private val hasClearance: Boolean get() = !isHorizontal && !isPaged && !isSinglePage
+
+  /** Space at the top pages scroll under, in view pixels (not zoomed). */
+  private val clearTop: Float get() = if (hasClearance) contentInsetTop else 0f
+
+  private val clearBottom: Float get() = if (hasClearance) contentInsetBottom else 0f
+
+  /** Main-axis start of the area between the clearances, in zoomed content pixels. */
+  private val areaStart: Float get() = mainOffset + clearTop
+
+  private val areaLength: Float get() = max(1f, mainViewportLength - clearTop - clearBottom)
+
+  /** The vertical centre of the area between the clearances, in view pixels. */
+  private val areaCenterY: Float get() = clearTop + (height - clearTop - clearBottom) / 2f
+
   private val isZoomedIn: Boolean get() = scale > minScale * 1.01f
 
   private val minimumPagingFlingVelocity: Float = ViewConfiguration.get(context).scaledMinimumFlingVelocity * 4f
@@ -1154,8 +1191,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     // document, which starts at the top.
     val minX = if (contentWidth < width) -(width - contentWidth) / 2f else 0f
     val maxX = if (contentWidth < width) minX else contentWidth - width
-    val minY = if (contentHeight < height && isHorizontal) -(height - contentHeight) / 2f else 0f
-    val maxY = if (contentHeight < height) minY else contentHeight - height
+    // A vertical document may scroll its clearances' height past each end.
+    val minY = if (contentHeight < height && isHorizontal) -(height - contentHeight) / 2f else -clearTop
+    val maxY = if (contentHeight + clearTop + clearBottom < height) minY else contentHeight - height + clearBottom
     if (isSinglePage && shownPage < layout.pageCount) {
       // Vertical, paged layout: scrolling is confined to the shown page's slot.
       val start = layout.slotStart(shownPage) * scale
@@ -1273,15 +1311,15 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     val lastPageEdgeReached = if (layout.isReversed) {
       mainOffset <= mainStart + 1f && mainEnd > mainStart
     } else {
-      mainOffset >= mainEnd - 1f && mainOffset > 0f
+      mainOffset >= mainEnd - 1f && mainOffset > mainStart
     }
     val page = when {
       isSinglePage -> shownPage
       lastPageEdgeReached -> layout.pageCount - 1
-      else -> layout.pageAt((mainOffset + mainViewportLength / 2f) / scale)
+      else -> layout.pageAt((areaStart + areaLength / 2f) / scale)
     }
     val keepsReadingPage = layout.spread != PdfDocumentLayout.Spread.NONE &&
-      readingPage in layout.visibleRange(mainOffset / scale, (mainOffset + mainViewportLength) / scale)
+      readingPage in layout.visibleRange(areaStart / scale, (areaStart + areaLength) / scale)
     if (page >= 0 && !keepsReadingPage) readingPage = page
     if (page >= 0 && page != currentPage) {
       currentPage = page
@@ -1332,13 +1370,13 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   private fun currentViewport(): DocumentViewport? {
     val layout = layout ?: return null
     if (width <= 0 || height <= 0) return null
-    val anchor = layout.pagePointNear(offsetX / scale, offsetY / scale) ?: return null
+    val anchor = layout.pagePointNear(offsetX / scale, (offsetY + clearTop) / scale) ?: return null
     val visible = visiblePages()
     if (visible.isEmpty()) return null
     val isAtEnd = if (isSinglePage) {
       shownPage == layout.pageCount - 1
     } else {
-      layout.isEndVisible(mainOffset / scale, (mainOffset + mainViewportLength) / scale)
+      layout.isEndVisible(areaStart / scale, (areaStart + areaLength) / scale)
     }
     return DocumentViewport(anchor, scale, visible, isAtEnd)
   }
@@ -1348,7 +1386,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     val layout = layout ?: return
     if (!isAttachedToWindow || width <= 0 || height <= 0) return
     val visible = visiblePages()
-    val center = layout.pageAt((mainOffset + mainViewportLength / 2f) / scale)
+    val center = layout.pageAt((areaStart + areaLength / 2f) / scale)
     // A single page never shows its neighbours; don't spend memory on them.
     val planned = if (isSinglePage) visible.toList() else PrefetchPlanner.plan(visible, center, layout.pageCount, direction)
 

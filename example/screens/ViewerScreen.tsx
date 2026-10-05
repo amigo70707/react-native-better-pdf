@@ -380,6 +380,7 @@ export function ViewerScreen() {
             enableDoubleTapZoom={doubleTapZoom}
             enableTextSelection={textSelection}
             enableFormFilling={formFilling}
+            contentInset={entry.contentInset}
             onFormChange={(event) =>
               setLastEvent(`form: ${describeField(event.field)}`)
             }
@@ -435,6 +436,28 @@ export function ViewerScreen() {
               />
             )}
           </PdfView>
+        )}
+        {entry.contentInset != null && (
+          <>
+            <View
+              pointerEvents="none"
+              style={[
+                styles.insetBar,
+                { top: 0, height: entry.contentInset.top },
+              ]}
+            >
+              <Text style={styles.insetText}>Header</Text>
+            </View>
+            <View
+              pointerEvents="none"
+              style={[
+                styles.insetBar,
+                { bottom: 0, height: entry.contentInset.bottom },
+              ]}
+            >
+              <Text style={styles.insetText}>Toolbar</Text>
+            </View>
+          </>
         )}
         {pageImage != null && (
           <Pressable
@@ -637,6 +660,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37, 99, 235, 0.12)',
   },
   overlayText: { color: colors.accent, fontSize: 16, fontWeight: '600' },
+  insetBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(37, 99, 235, 0.35)',
+  },
+  insetText: { color: '#FFFFFF', fontWeight: '600' },
   overlayPin: {
     flex: 1,
     borderRadius: 14,

@@ -694,6 +694,39 @@ describe('PdfView', () => {
     }
   });
 
+  test('sends contentInset as concrete, non-negative values, stable while unchanged', () => {
+    const renderer = render(<PdfView source={{ uri: 'x' }} />);
+    expect(lastHost().contentInset).toEqual({ top: 0, bottom: 0 });
+    act(() =>
+      renderer.update(
+        <PdfView
+          source={{ uri: 'x' }}
+          contentInset={{ top: 80, bottom: 60 }}
+        />,
+      ),
+    );
+    const inset = lastHost().contentInset;
+    expect(inset).toEqual({ top: 80, bottom: 60 });
+    act(() =>
+      renderer.update(
+        <PdfView
+          source={{ uri: 'x' }}
+          contentInset={{ top: 80, bottom: 60 }}
+        />,
+      ),
+    );
+    expect(lastHost().contentInset).toBe(inset);
+    act(() =>
+      renderer.update(
+        <PdfView
+          source={{ uri: 'x' }}
+          contentInset={{ top: -5, bottom: NaN }}
+        />,
+      ),
+    );
+    expect(lastHost().contentInset).toEqual({ top: 0, bottom: 0 });
+  });
+
   test('form methods reject before mount and convert at the boundary after', async () => {
     const ref = createRef<PdfViewRef>();
     render(<PdfView ref={ref} source={{ uri: 'x' }} />);

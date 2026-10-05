@@ -60,6 +60,14 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   var colorScheme: PdfColorScheme? {
     didSet { if colorScheme != oldValue { applyColorScheme() } }
   }
+  var contentInset: NativeContentInset? {
+    didSet {
+      guard contentInset?.top != oldValue?.top || contentInset?.bottom != oldValue?.bottom else { return }
+      applyScrollInsets()
+      // Fitting a page's height depends on the space between the insets.
+      container.setNeedsLayout()
+    }
+  }
   var overlayLayerId: String? {
     didSet {
       pageOverlays.layerId = overlayLayerId
@@ -170,7 +178,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// `onPageChange` with the same rule as Android (see `reportCurrentPage`).
   private var offsetObservation: NSKeyValueObservation?
   /// Content-size observation of the same scroll view; keeps a short
-  /// document at the top while it is zoomed (see `applyTopAlignment`).
+  /// document at the top while it is zoomed (see `applyScrollInsets`).
   private var contentSizeObservation: NSKeyValueObservation?
   /// The other scroll views in the PDF view: in paged layouts every page of
   /// the page view controller zooms and pans in its own. Overlays follow
@@ -196,6 +204,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       self?.onTextSelectionChange?(PdfTextSelectionChangeEvent(text: text))
     }
     _ = formInteraction
+    searchController.clearance = { [weak self] in self?.clearance ?? (0, 0) }
     // Posted for every frame of a pinch; reported once the zoom settles.
     scaleObserver = NotificationCenter.default.addObserver(
       forName: .PDFViewScaleChanged, object: container.pdfView, queue: .main
@@ -747,7 +756,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       pendingInitialPoint = nil
       pdfView.layoutIfNeeded()
       if let point, !isPagedLayout, !isSinglePage, let scrollView, let pdfPage = pdfView.document?.page(at: page) {
-        pdfView.scroll(scrollView, topLeftTo: point, on: pdfPage)
+        pdfView.scroll(scrollView, topLeftTo: point, on: pdfPage, topClearance: clearance.top)
       } else {
         scrollToPage(page, animated: false, centeredHorizontally: true)
       }
@@ -764,10 +773,10 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       if isSpreadLayout {
         scrollToPage(pageToKeep, animated: false)
       } else {
-        pdfView.go(to: page)
+        goToTop(of: page)
       }
     }
-    applyTopAlignment()
+    applyScrollInsets()
     layoutOverlays()
     // The first layout and rotations move the viewport without scrolling.
     settle.noteMotion()
@@ -795,7 +804,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     pdfView.layoutIfNeeded()
     if let scrollView {
       // A page outside the document is shown from its top.
-      pdfView.scroll(scrollView, topLeftTo: clamped == index ? point : .zero, on: page)
+      pdfView.scroll(scrollView, topLeftTo: clamped == index ? point : .zero, on: page, topClearance: clearance.top)
     }
     settle.noteMotion()
   }
@@ -864,13 +873,13 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
 
   private func reportViewport() {
     guard let pdfView, let document = pdfView.document, fitScale > 0,
-          let scale = relativeScale(pdfView), let anchor = pdfView.topLeftAnchor() else { return }
+          let scale = relativeScale(pdfView), let anchor = pdfView.topLeftAnchor(topClearance: clearance.top) else { return }
     let page = document.index(for: anchor.page)
     let visible = pdfView.visiblePages.map { document.index(for: $0) }.filter { $0 != NSNotFound }
     guard page != NSNotFound, let first = visible.min(), let last = visible.max() else { return }
     let isAtEnd = isPagedLayout || isSinglePage
       ? last == document.pageCount - 1 && pdfView.isDocumentEndVisible()
-      : pdfView.isDocumentEndVisible()
+      : pdfView.isDocumentEndVisible(topClearance: clearance.top, bottomClearance: clearance.bottom)
     let event = PdfViewportChangeEvent(
       viewport: PdfViewport(page: Double(page), x: Double(anchor.point.x), y: Double(anchor.point.y), scale: scale),
       firstVisiblePage: Double(first),
@@ -894,7 +903,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     if policy == .width && !horizontal {
       return pdfView.scaleFactorForSizeToFit
     }
-    return pdfView.scaleFactorToFit(policy, columns: isSpreadLayout ? 2 : 1)
+    return pdfView.scaleFactorToFit(policy, columns: isSpreadLayout ? 2 : 1, clearance: clearance.top + clearance.bottom)
   }
 
   private var resolvedMinScale: Double {
@@ -936,10 +945,34 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     }
     let destination = PDFDestination(page: page, at: CGPoint(x: x, y: bounds.maxY))
     if animated {
-      UIView.animate(withDuration: 0.3) { pdfView.go(to: destination) }
+      UIView.animate(withDuration: 0.3) {
+        pdfView.go(to: destination)
+        self.alignTopBelowClearance(page)
+      }
     } else {
       pdfView.go(to: destination)
+      alignTopBelowClearance(page)
     }
+  }
+
+  /// `go(to:)` for a page the reader keeps: its top below the clearance.
+  private func goToTop(of page: PDFPage) {
+    pdfView?.go(to: page)
+    alignTopBelowClearance(page)
+  }
+
+  /// PDFKit's `go(to:)` puts a page at the view's top, under `contentInset`.
+  private func alignTopBelowClearance(_ page: PDFPage) {
+    guard let pdfView, let scrollView, clearance.top > 0 else { return }
+    pdfView.alignTop(of: page, in: scrollView, topClearance: clearance.top)
+  }
+
+  /// `contentInset`, in vertical continuous layouts only: the space pages
+  /// scroll under, which positions, the current page and the end refer
+  /// past.
+  private var clearance: (top: CGFloat, bottom: CGFloat) {
+    guard !isHorizontalLayout, !isPagedLayout, !isSinglePage, let contentInset else { return (0, 0) }
+    return (CGFloat(max(contentInset.top, 0)), CGFloat(max(contentInset.bottom, 0)))
   }
 
   /// The page under the viewport's vertical center, or the last page once
@@ -1027,7 +1060,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
             let lastPage = document.page(at: document.pageCount - 1) else { return false }
       return pdfView.isPageFullyVisible(lastPage)
     }
-    return scrollView.isScrolledToEnd(horizontal: isHorizontalLayout)
+    return scrollView.isScrolledToEnd(horizontal: isHorizontalLayout, bottomClearance: clearance.bottom)
   }
 
   /// `pageAccessibilityLabel` with `{page}` (1-based) and `{pageCount}` filled in.
@@ -1047,7 +1080,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     } else if let scrollView, isLastPageEdgeReached(scrollView) {
       index = document.pageCount - 1
     } else {
-      let center = CGPoint(x: pdfView.bounds.midX, y: pdfView.bounds.midY)
+      // The centre of the area between the clearances.
+      let clearance = self.clearance
+      let center = CGPoint(x: pdfView.bounds.midX, y: (pdfView.bounds.minY + clearance.top + pdfView.bounds.maxY - clearance.bottom) / 2)
       guard let page = pdfView.page(for: center, nearest: true) else { return nil }
       // Facing pages meet at the centre: report the spread's first page.
       index = spreadStart(of: document.index(for: page))
@@ -1084,9 +1119,9 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       self?.settle.noteMotion()
     }
     contentSizeObservation = scrollView?.observe(\.contentSize, options: []) { [weak self] _, _ in
-      self?.applyTopAlignment()
+      self?.applyScrollInsets()
     }
-    applyTopAlignment()
+    applyScrollInsets()
     observeOverlayScrollViews()
   }
 
@@ -1117,12 +1152,25 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   /// nothing to centre. Horizontal layouts keep pages centred across and a
   /// single page stays centred, as on Android. Paged layouts (the page view
   /// controller's scroll view, not PDFKit's) centre each page in its slot.
-  private func applyTopAlignment() {
+  /// The only writer of the scroll view's insets: the app's clearance
+  /// (`contentInset`), and below it the free height of a short document,
+  /// which keeps it at the top — PDFKit centres a document shorter than its
+  /// view within the content insets (measured), so a bottom inset as tall
+  /// as the free space leaves nothing to centre.
+  private func applyScrollInsets() {
     guard let scrollView, !isPagedLayout else { return }
     let isVerticalContinuous = !isHorizontalLayout && !isSinglePage
-    let freeHeight = isVerticalContinuous ? max(0, scrollView.bounds.height - scrollView.contentSize.height) : 0
-    if abs(scrollView.contentInset.bottom - freeHeight) > 0.5 {
-      scrollView.contentInset.bottom = freeHeight
+    let clearance = self.clearance
+    let freeHeight = isVerticalContinuous
+      ? max(0, scrollView.bounds.height - clearance.top - clearance.bottom - scrollView.contentSize.height)
+      : 0
+    let insets = UIEdgeInsets(top: clearance.top, left: 0, bottom: clearance.bottom + freeHeight, right: 0)
+    if abs(scrollView.contentInset.top - insets.top) > 0.5 || abs(scrollView.contentInset.bottom - insets.bottom) > 0.5 {
+      scrollView.contentInset = insets
+    }
+    let indicators = UIEdgeInsets(top: clearance.top, left: 0, bottom: clearance.bottom, right: 0)
+    if scrollView.verticalScrollIndicatorInsets != indicators {
+      scrollView.verticalScrollIndicatorInsets = indicators
     }
     // A document that fits has one valid offset, its top. Going to a page
     // while PDFKit still centred the document left the offset below it,
@@ -1186,7 +1234,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       if isSpreadLayout, let document = pdfView.document {
         scrollToPage(document.index(for: currentPage), animated: false)
       } else {
-        pdfView.go(to: currentPage)
+        goToTop(of: currentPage)
       }
     }
   }

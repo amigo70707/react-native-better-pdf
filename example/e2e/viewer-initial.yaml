@@ -25,7 +25,8 @@ appId: software.gmi.betterpdf.example
 - tapOn: "Remote \\(HTTP\\).*"
 - extendedWaitUntil: { visible: "file: session/[0-9a-f]+\\.pdf", timeout: 60000 }
 - tapOn: "‹ Back"
-- scrollUntilVisible: { element: "Bundled sample.*", direction: UP, centerElement: true }
+# The list's first entry cannot be centred.
+- scrollUntilVisible: { element: "Bundled sample.*", direction: UP }
 - tapOn: "Bundled sample.*"
 - extendedWaitUntil: { visible: "file: .*\\.pdf", timeout: 15000 }
 - tapOn: "‹ Back"

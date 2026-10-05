@@ -1,0 +1,76 @@
+# contentInset on the `Inset` entry: translucent bars over the 100-page
+# `medium` (80 dp / pt at the top, 60 at the bottom) that pages scroll
+# under. The viewport status reports the page point at the top-left of the
+# area between the bars, so a page's top there reads as y within one digit
+# of 0 (the page margin).
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "Inset.*" }
+- tapOn: "Inset.*"
+- extendedWaitUntil: { visible: "1 / 100", timeout: 15000 }
+- waitForAnimationToEnd
+# The first page starts below the header.
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · y -?[0-9] · 1.00x" }
+    timeout: 5000
+- takeScreenshot: inset-start
+
+# goToPage puts the page's top below the header too; zooming back keeps it.
+- tapOn: "+10"
+- extendedWaitUntil: { visible: "11 / 100", timeout: 5000 }
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 11 · y -?[0-9] · 1.00x" }
+    timeout: 5000
+- tapOn: "2.5×"
+- waitForAnimationToEnd
+- tapOn: "1×"
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 11 · y -?[0-9] · 1.00x" }
+    timeout: 5000
+
+# The end is the last page's bottom above the toolbar.
+- tapOn: "Last"
+- extendedWaitUntil: { visible: "100 / 100", timeout: 5000 }
+- repeat:
+    times: 3
+    commands:
+      - swipe: { start: "50%, 75%", end: "50%, 45%", duration: 400 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 100 · .* · end" }
+    timeout: 5000
+- takeScreenshot: inset-end
+
+# Facing pages scroll under the bars the same way.
+- tapOn: "First"
+- waitForAnimationToEnd
+- tapOn: "Vertical"
+- tapOn: "Horizontal"
+- tapOn: "Paged"
+- tapOn: "Paged H"
+- tapOn: "RTL"
+- tapOn: "Paged RTL"
+- extendedWaitUntil: { visible: "Pairs", timeout: 5000 }
+- waitForAnimationToEnd
+# Rows of facing pages have their own margin (two digits on Android).
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · y -?[0-9]{1,2} · 1.00x" }
+    timeout: 5000
+- tapOn: "Pairs"
+- tapOn: "Book"
+- extendedWaitUntil: { visible: "Vertical", timeout: 5000 }
+- waitForAnimationToEnd
+
+# A fitted page's height fits between the bars (screenshot for review).
+- tapOn: "Fit auto"
+- tapOn: "Fit W"
+- extendedWaitUntil: { visible: "Fit H", timeout: 5000 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 1 · y -?[0-9]{1,2} · 1.00x" }
+    timeout: 5000
+- takeScreenshot: inset-fit-height
+- tapOn: "‹ Back"

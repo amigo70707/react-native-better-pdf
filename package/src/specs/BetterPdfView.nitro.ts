@@ -6,6 +6,7 @@ import type {
 import type { NativePdfFormChangeEvent } from '../types/NativePdfFormChangeEvent';
 import type { NativePdfFormField } from '../types/NativePdfFormField';
 import type { NativePdfFormValue } from '../types/NativePdfFormValue';
+import type { NativeContentInset } from '../types/NativeContentInset';
 import type { NativePdfSource } from '../types/NativePdfSource';
 import type { PdfColorScheme } from '../types/PdfColorScheme';
 import type { PdfError } from '../types/PdfError';
@@ -60,6 +61,8 @@ export interface PdfViewProps extends HybridViewProps {
   spreadMode?: PdfSpreadMode;
   /** 'dark' shows pages with lightness inverted and hues kept. Default 'light'. */
   colorScheme?: PdfColorScheme;
+  /** Space in dp / pt pages scroll under, top and bottom; vertical continuous layouts only. */
+  contentInset?: NativeContentInset;
   /** `nativeID` of the React view holding `PdfPageOverlay`s, a sibling above this view. */
   overlayLayerId?: string;
   /** Overlay views in that layer, placed on their pages natively every frame. */

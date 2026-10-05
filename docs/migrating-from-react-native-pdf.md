@@ -100,6 +100,7 @@ users see.
 | `renderActivityIndicator`, `progressContainerStyle` | — | Render your own; see `onLoadProgress`. |
 | `style` and other `View` props | same | |
 | — | `ref.print()` | New: the system print dialog for the loaded document, protected documents included. |
+| — | `contentInset={{ top, bottom }}` | New: pages scroll under a translucent header or toolbar (PR #993 in react-native-pdf, unmerged). |
 | — | `<PdfPageOverlay page x y width height>` children | New: React views on pages that follow scrolling and zoom, placed natively (#350, #254, #449, #484). |
 | — | `enableFormFilling`, `onFormChange`, `ref.getFormFields()`, `ref.setFormFieldValues()`, `ref.exportDocument()` | New: AcroForm filling by touch and from code, and the filled-in PDF as a file. |
 

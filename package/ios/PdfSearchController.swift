@@ -27,6 +27,8 @@ final class PdfSearchController {
     didSet { recolorVisibleMatches() }
   }
   private static let emitInterval: TimeInterval = 0.1
+  /// Height kept clear at the top and bottom of the view (`contentInset`).
+  var clearance: () -> (top: CGFloat, bottom: CGFloat) = { (0, 0) }
 
   init(pdfView: PDFView?, emit: @escaping (PdfSearchChangeEvent) -> Void) {
     self.pdfView = pdfView
@@ -112,9 +114,24 @@ final class PdfSearchController {
     refreshHighlights(isRecolored: true)
     let selection = matches[index]
     if let pdfView, let page = selection.pages.first {
-      pdfView.go(to: selection.bounds(for: page), on: page)
+      let rect = selection.bounds(for: page)
+      pdfView.go(to: rect, on: page)
+      keepClear(pdfView.convert(rect, from: page), in: pdfView)
     }
     emitNow()
+  }
+
+  /// Scrolls a match PDFKit brought on screen out from under the clearance.
+  private func keepClear(_ rect: CGRect, in pdfView: PDFView) {
+    let clearance = clearance()
+    guard clearance.top > 0 || clearance.bottom > 0, let scrollView = pdfView.firstDescendantScrollView() else { return }
+    let top = pdfView.bounds.minY + clearance.top
+    let bottom = pdfView.bounds.maxY - clearance.bottom
+    let delta: CGFloat = rect.minY < top ? rect.minY - top : (rect.maxY > bottom ? min(rect.maxY - bottom, rect.minY - top) : 0)
+    guard delta != 0 else { return }
+    let inset = scrollView.adjustedContentInset
+    let maxY = max(-inset.top, scrollView.contentSize.height + inset.bottom - scrollView.bounds.height)
+    scrollView.contentOffset.y = min(max(scrollView.contentOffset.y + delta, -inset.top), maxY)
   }
 
   /// PDFKit draws `highlightedSelections` in each selection's colour. It

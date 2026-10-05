@@ -34,9 +34,11 @@ import type {
   PdfViewMethods,
   PdfViewProps as NativeProps,
 } from './specs/BetterPdfView.nitro';
+import type { NativeContentInset } from './types/NativeContentInset';
 import type { NativePdfFormChangeEvent } from './types/NativePdfFormChangeEvent';
 import type { NativePdfSource } from './types/NativePdfSource';
 import type { PdfColorScheme } from './types/PdfColorScheme';
+import type { PdfContentInset } from './types/PdfContentInset';
 import type { PdfError } from './types/PdfError';
 import type { PdfExportOptions } from './types/PdfExportOptions';
 import type { PdfExportResult } from './types/PdfExportResult';
@@ -277,6 +279,19 @@ export interface PdfViewProps extends ViewProps {
    */
   colorScheme?: PdfColorScheme | 'unspecified' | null;
   /**
+   * Space in dp / pt kept clear at the top and bottom, e.g. for a
+   * translucent header or toolbar over the viewer: pages scroll under it,
+   * but at rest the first page starts below `top` and the document ends
+   * above `bottom`. Pages, positions (`goToPage`, `initialViewport`,
+   * {@linkcode PdfViewProps.onViewportChange}), the current page and the
+   * end of the document all refer to the area between the insets, and
+   * `fitPolicy` `'height'` / `'page'` fit pages into it. Not scaled by zoom.
+   * Vertical continuous layouts only (facing pages included): ignored with
+   * {@linkcode PdfViewProps.horizontal}, {@linkcode PdfViewProps.enablePaging}
+   * and {@linkcode PdfViewProps.singlePage}. Default none.
+   */
+  contentInset?: PdfContentInset;
+  /**
    * Double tap toggles zoom (Android: fitted page ↔ 2×; iOS: PDFKit's own
    * zoom step, e.g. 1.7× for an A4 page on an iPhone). When `false`,
    * double taps do nothing and {@linkcode PdfViewProps.onPageTap} fires
@@ -479,6 +494,7 @@ export function PdfView({
   fitPolicy,
   spreadMode,
   colorScheme,
+  contentInset,
   enableDoubleTapZoom,
   scrollEnabled,
   pageAccessibilityLabel,
@@ -505,6 +521,7 @@ export function PdfView({
   ...viewProps
 }: PdfViewProps) {
   const nativeSource = useStableSource(source);
+  const nativeContentInset = useContentInset(contentInset);
   const { overlays, overlayRegistry } = useOverlays();
   const overlayLayerId = `pdf-overlays${useId()}`;
   // For print's default job name; read when called, like the handlers.
@@ -692,6 +709,7 @@ export function PdfView({
         }
         spreadMode={spreadMode ?? 'none'}
         colorScheme={colorScheme === 'dark' ? 'dark' : 'light'}
+        contentInset={nativeContentInset}
         enableDoubleTapZoom={enableDoubleTapZoom ?? true}
         scrollEnabled={scrollEnabled ?? true}
         pageAccessibilityLabel={
@@ -740,6 +758,23 @@ export function PdfView({
       )}
     </View>
   );
+}
+
+/**
+ * The native content inset: concrete, non-negative values (Fabric sends
+ * `null` for a removed prop, which Nitro rejects), stable while they are
+ * unchanged (Nitro diffs props by identity).
+ */
+function useContentInset(
+  inset: PdfContentInset | undefined,
+): NativeContentInset {
+  const top = clearance(inset?.top);
+  const bottom = clearance(inset?.bottom);
+  return useMemo(() => ({ top, bottom }), [top, bottom]);
+}
+
+function clearance(value: number | undefined): number {
+  return value != null && Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 /** The placements of the `PdfPageOverlay`s rendered inside a `PdfView`. */

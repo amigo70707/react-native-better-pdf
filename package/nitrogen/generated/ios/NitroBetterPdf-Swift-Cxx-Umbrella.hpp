@@ -14,6 +14,8 @@ namespace margelo::nitro::betterpdf { class HybridBetterPdfCacheSpec; }
 namespace margelo::nitro::betterpdf { class HybridBetterPdfDocumentSpec; }
 // Forward declaration of `HybridBetterPdfViewSpec` to properly resolve imports.
 namespace margelo::nitro::betterpdf { class HybridBetterPdfViewSpec; }
+// Forward declaration of `NativeContentInset` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativeContentInset; }
 // Forward declaration of `NativePdfFormChangeEvent` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct NativePdfFormChangeEvent; }
 // Forward declaration of `NativePdfFormField` to properly resolve imports.
@@ -93,6 +95,7 @@ namespace margelo::nitro::betterpdf { struct PdfViewport; }
 #include "HybridBetterPdfCacheSpec.hpp"
 #include "HybridBetterPdfDocumentSpec.hpp"
 #include "HybridBetterPdfViewSpec.hpp"
+#include "NativeContentInset.hpp"
 #include "NativePdfFormChangeEvent.hpp"
 #include "NativePdfFormField.hpp"
 #include "NativePdfFormValue.hpp"

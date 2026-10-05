@@ -986,16 +986,53 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   it (as reported for react-native-pdf; not reproduced here, the example
   has no full-screen viewer). `.never` matches React Native's `ScrollView`
   default and Android.
-- **Not included:** `contentInset` (scrolling padding, e.g. under a
-  translucent header). Feasible in continuous layouts on iOS — PDFKit
-  keeps insets set on its scroll view and centres within them (measured)
-  — but page navigation, the viewport events and Android's layout all
-  have to honour it, and paged layouts use a page view controller; a
-  separate change. Rounded corners on every page: not requested.
+- **Not included:** rounded corners on every page (not requested).
+  Scrolling padding came later; see "Content inset".
 - **Tested:** `viewer-short-document` on both platforms (the view's top
   within 9 PDF points of the page, also after zooming in and out), the
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
+
+## Content inset (v0.2)
+
+```ts
+contentInset?: { top?: number; bottom?: number }; // dp / pt, default none
+```
+
+Requested in react-native-pdf as padding pages scroll under (#520, PR
+#993 unmerged) and the first page starting below a bar (#513, #994).
+
+- **`ScrollView`'s semantics and name**: space the content may scroll
+  into at each end, not padding inside it; not scaled by zoom. Top and
+  bottom only — the requests are bars above and below; left and right can
+  be added without breaking the type. Negative and non-finite values are
+  0; `PdfView` sends concrete values (Fabric's null-prop rule), stable
+  while unchanged.
+- **Vertical continuous layouts only** (facing pages included), like
+  `spreadMode`: paged layouts use a page view controller on iOS, and bars
+  over a horizontal document would need the cross axis fitted instead.
+- **Positions refer to the area between the insets**: `goToPage`, the
+  initial position, `goToViewport` and `onViewportChange` use its top-left
+  corner; the current page is the one at its centre; `isAtEnd` is the
+  last page's bottom above the bottom inset; search results scroll into
+  it; zoom buttons zoom around its centre; `fitPolicy` `'height'` /
+  `'page'` fit pages into its height. One place per platform defines it
+  (`clearance` on iOS, `clearTop` / `clearBottom` on Android, zero outside
+  vertical continuous layouts) and every geometry helper goes through it.
+- **iOS**: the scroll view's `contentInset` — PDFKit lays pages out and
+  zooms with it set (measured with 120 pt: no drift after 2.5× and back),
+  one function owning it together with the free height that keeps a short
+  document at the top. `go(to:)` ignores content insets (measured: the
+  page's top lands at the view's top, exactly the inset under the bar), so
+  page navigation moves the page below the inset afterwards, as far as the
+  scrollable area allows (a short last page stays at the end). The scroll
+  indicator keeps between the bars.
+- **Android**: the scroll bounds extend past each end by the inset (view
+  pixels, so zoom does not scale it); the layout is untouched except for
+  the height it fits pages into. The scroll bar counts the insets. The
+  form editor is kept above the bottom inset too.
+- **Tested:** `viewer-inset` on both platforms (the `Inset` entry: 80 /
+  60 dp bars), a unit test for the prop, and the full suite on both.
 
 ## Forms (v0.2)
 

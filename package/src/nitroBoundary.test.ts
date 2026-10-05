@@ -33,6 +33,7 @@ describe('Nitro boundary', () => {
     expect(attributes).toEqual(
       [
         'colorScheme',
+        'contentInset',
         'enableDoubleTapZoom',
         'enableFormFilling',
         'enableTextSelection',

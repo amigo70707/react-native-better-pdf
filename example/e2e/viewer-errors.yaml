@@ -9,22 +9,24 @@ appId: software.gmi.betterpdf.example
 - tapOn: "Remote 404.*"
 - extendedWaitUntil: { visible: "http-error", timeout: 15000 }
 - tapOn: "‹ Back"
-- scrollUntilVisible: { element: "malformed-not-a-pdf.*", centerElement: true }
+# Not centred: the malformed fixtures end the list, which may not scroll
+# far enough to centre them.
+- scrollUntilVisible: { element: "malformed-not-a-pdf.*" }
 - tapOn: "malformed-not-a-pdf.*"
 - extendedWaitUntil: { visible: "invalid-pdf", timeout: 15000 }
 - tapOn: "‹ Back"
-- scrollUntilVisible: { element: "malformed-empty.*", centerElement: true }
+- scrollUntilVisible: { element: "malformed-empty.*" }
 - tapOn: "malformed-empty.*"
 - extendedWaitUntil: { visible: "invalid-pdf", timeout: 15000 }
 - tapOn: "‹ Back"
-- scrollUntilVisible: { element: "malformed-truncated.*", centerElement: true }
+- scrollUntilVisible: { element: "malformed-truncated.*" }
 - tapOn: "malformed-truncated.*"
 # Truncated files are either rejected or partially recovered, never a crash.
 - extendedWaitUntil:
     visible: "invalid-pdf|1 / .*"
     timeout: 15000
 - tapOn: "‹ Back"
-- scrollUntilVisible: { element: "malformed-garbage-xref.*", centerElement: true }
+- scrollUntilVisible: { element: "malformed-garbage-xref.*" }
 - tapOn: "malformed-garbage-xref.*"
 - extendedWaitUntil:
     visible: "invalid-pdf|1 / 3"

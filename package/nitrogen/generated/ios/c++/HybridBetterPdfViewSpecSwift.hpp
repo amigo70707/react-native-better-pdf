@@ -24,6 +24,8 @@ namespace margelo::nitro::betterpdf { enum class PdfFitPolicy; }
 namespace margelo::nitro::betterpdf { enum class PdfSpreadMode; }
 // Forward declaration of `PdfColorScheme` to properly resolve imports.
 namespace margelo::nitro::betterpdf { enum class PdfColorScheme; }
+// Forward declaration of `NativeContentInset` to properly resolve imports.
+namespace margelo::nitro::betterpdf { struct NativeContentInset; }
 // Forward declaration of `PdfOverlayPlacement` to properly resolve imports.
 namespace margelo::nitro::betterpdf { struct PdfOverlayPlacement; }
 // Forward declaration of `PdfLoadEvent` to properly resolve imports.
@@ -86,6 +88,7 @@ namespace margelo::nitro::betterpdf { struct PdfExportResult; }
 #include "PdfFitPolicy.hpp"
 #include "PdfSpreadMode.hpp"
 #include "PdfColorScheme.hpp"
+#include "NativeContentInset.hpp"
 #include "PdfOverlayPlacement.hpp"
 #include <vector>
 #include "PdfLoadEvent.hpp"
@@ -252,6 +255,13 @@ namespace margelo::nitro::betterpdf {
     }
     inline void setColorScheme(std::optional<PdfColorScheme> colorScheme) noexcept override {
       _swiftPart.setColorScheme(colorScheme);
+    }
+    inline std::optional<NativeContentInset> getContentInset() noexcept override {
+      auto __result = _swiftPart.getContentInset();
+      return __result;
+    }
+    inline void setContentInset(const std::optional<NativeContentInset>& contentInset) noexcept override {
+      _swiftPart.setContentInset(contentInset);
     }
     inline std::optional<std::string> getOverlayLayerId() noexcept override {
       auto __result = _swiftPart.getOverlayLayerId();

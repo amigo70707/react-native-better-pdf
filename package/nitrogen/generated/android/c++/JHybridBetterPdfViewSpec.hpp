@@ -76,6 +76,8 @@ namespace margelo::nitro::betterpdf {
     void setSpreadMode(std::optional<PdfSpreadMode> spreadMode) override;
     std::optional<PdfColorScheme> getColorScheme() override;
     void setColorScheme(std::optional<PdfColorScheme> colorScheme) override;
+    std::optional<NativeContentInset> getContentInset() override;
+    void setContentInset(const std::optional<NativeContentInset>& contentInset) override;
     std::optional<std::string> getOverlayLayerId() override;
     void setOverlayLayerId(const std::optional<std::string>& overlayLayerId) override;
     std::optional<std::vector<PdfOverlayPlacement>> getOverlays() override;
