@@ -316,7 +316,7 @@ PdfWriter.prototype.buildWithObjectStreams = function ({ root, info }) {
 
 /**
  * Builds a document. `pageContent(index)` returns
- * `{ content: string, images?: { name, jpeg, width, height, gray }[] }`.
+ * `{ content: string, images?: { name, jpeg, width, height }[] }`.
  */
 function buildDocument({
   pageCount,
@@ -350,7 +350,11 @@ function buildDocument({
     const xobjects = images.map((image) => {
       const number = writer.add(
         `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} ` +
-          `/ColorSpace /${image.gray ? 'DeviceGray' : 'DeviceRGB'} /BitsPerComponent 8 /Filter /DCTDecode >>`,
+          // jpeg-js writes three-component (YCbCr) JPEGs only, gray pixels
+          // included: declared as DeviceRGB to match. DeviceGray drew
+          // nothing on iOS (CoreGraphics checks the component count; PDFium
+          // does not).
+          '/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode >>',
         image.jpeg,
       );
       return `/${image.name} ${number} 0 R`;
@@ -630,7 +634,6 @@ const FIXTURES = {
             jpeg: photos[i % photos.length],
             width: 900,
             height: 600,
-            gray: false,
           },
         ],
       }),
@@ -1014,7 +1017,6 @@ function scanned(pageCount, image) {
           jpeg: scans[i % scans.length],
           width: image.width,
           height: image.height,
-          gray: image.gray,
         },
       ],
     }),

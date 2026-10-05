@@ -216,6 +216,10 @@ of the larger plan (§5).
 
 ## 9. iOS (simulator)
 
+> **Correction (2026-10-04):** every iOS row for `large` before §12 measured
+> blank pages: the fixture declared its scans as DeviceGray while their
+> JPEGs have three components, which PDFKit does not draw. See §12.
+
 **Caveat**: iOS Simulator on an Apple Silicon Mac. Memory is the host
 process's physical footprint (`footprint -p`) of the simulated app — useful
 for relative comparisons and leak detection, not a device number. One run per
@@ -296,7 +300,8 @@ selection (render queue with an urgent slot, selection controller) and
   1–4, page jumps 1–5 vs 1–6 — equal. While scrolling, Better PDF dropped
   11–17 vs 8–12 JS frames, with equal JS-thread CPU (1.8–1.9%).
 
-**iOS simulator** (one run per cell; `ios-sim-20260930T144205.txt`):
+**iOS simulator** (one run per cell; `ios-sim-20260930T144205.txt`; the
+`large` rows measured blank pages, see §12):
 
 | Fixture | Library | Load (ms) | Peak footprint (MB) | Footprint after run (MB) | JS callbacks while scrolling |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -314,7 +319,8 @@ is opened from `http://localhost:8090` with a fresh URL per run, so the time
 to load includes each library's download; react-native-pdf with
 `cache: false`):
 
-iOS simulator (`ios-sim-20260930T145031.txt`, one run per cell):
+iOS simulator (`ios-sim-20260930T145031.txt`, one run per cell; the `large`
+row measured blank pages, see §12):
 
 | Fixture | Library | Load incl. download (ms) | Peak footprint (MB) |
 | --- | --- | ---: | ---: |
@@ -353,3 +359,43 @@ opens; react-native-pdf downloads through react-native-blob-util, whose
 completion reaches JS, which then mounts the native view with the path.
 Janky frames were equal in this run (1.9–2.7% vs 1.8–2.1%), which supports
 reading the local run's difference as emulator noise.
+
+## 12. iOS `large` re-measured (2026-10-04)
+
+`large` (500 pages, 230 MB of grayscale-looking scans) drew as blank pages
+on iOS: `benchmarks/generate-fixtures.mjs` declared its images
+`/ColorSpace /DeviceGray`, but `jpeg-js` writes three-component (YCbCr)
+JPEGs only. PDFium (Android) decodes them anyway; CoreGraphics (iOS, macOS)
+checks the component count and draws nothing. Found while measuring PDFKit
+writing a filled-in form, which dropped those pages' images (now kept,
+compared pixel for pixel). The generator now declares the scans as
+DeviceRGB; the pixels are the same gray, so Android's numbers stand (its
+renderer drew the images before and after). Only `large.pdf` changes;
+`medium`, `extreme` and the other fixtures were already DeviceRGB.
+
+iOS simulator, Release build, one run per cell (`ios-sim-20261004T213423.txt`;
+all four fixtures re-run together for comparison):
+
+| Fixture | Library | Load (ms) | Peak footprint (MB) | Footprint after run (MB) | JS callbacks while scrolling |
+| --- | --- | ---: | ---: | ---: | ---: |
+| small | better | 48 | 283 | 204 | 7 |
+| small | react-native-pdf | 30 | 345 | 284 | 4 |
+| medium | better | 59 | 320 | 153 | 22 |
+| medium | react-native-pdf | 115 | 365 | 281 | 9 |
+| large | better | 56 | 197 | 67 | 21 |
+| large | react-native-pdf | 48 | 207 | 68 | 9 |
+| extreme | better | 197 | 204 | 67 | 21 |
+| extreme | react-native-pdf | 234 | 210 | 68 | 9 |
+
+Remote (`SOURCE=remote`, `ios-sim-20261004T214249.txt`): `large` better
+280 ms / 189 MB peak, react-native-pdf 246 ms / 207 MB.
+
+- With its images drawn, `large` peaks ~20–30 MB higher than measured
+  before (174 → 197 MB, react-native-pdf 176 → 207 MB) and loads in the
+  same time for both libraries (56 vs 48 ms; the earlier 40 vs 125 ms was
+  blank pages and one run's noise). Both use PDFKit, as for the other
+  fixtures.
+- The other fixtures are within one run's noise of §9 and §11.
+- The `stress-open-close` flow, which opens `large` and `extreme`
+  repeatedly, passes on iOS with the images drawn.
+

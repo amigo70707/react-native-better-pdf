@@ -1075,15 +1075,21 @@ on iOS; Android showed them read-only.
   with PDFKit (`dataRepresentation`, the document's password as user and
   owner password), which rewrites the whole document: PDF 1.3, nested
   fields flattened into dotted names, the `/Fields` order changed, and
-  content PDFKit cannot read dropped (all measured; the `large` fixture's
-  JPEGs, which PDFKit cannot decode, came out as empty pages). Default
-  file: `<caches>/BetterPdfExports/<uuid>/<document name>.pdf`.
+  content PDFKit cannot read dropped (all measured; an image whose JPEG
+  did not match its declared colour space, which PDFKit does not draw
+  either, came out as an empty page — a fixture bug, since fixed, that
+  showed it). Pages it can read come out identical (the 500-page scan,
+  compared pixel for pixel). Default file:
+  `<caches>/BetterPdfExports/<uuid>/<document name>.pdf`.
 - **Line breaks** are `\n` on both platforms (PDFium reports `\r\n`).
 - **Cost:** Android `applyEdit` 0.1–2 ms and writing the 2-page fixture
   3 ms (emulator). iOS writing with PDFKit runs on the main thread: 30 ms
-  for the fixture, 354 ms for the 100-page, 19.5 MB `medium` (macOS
-  PDFKit, M5 Pro) — paid by `exportDocument` and, once a form changed, by
-  `print` and `renderPage`, which read the displayed document then.
+  for the fixture, 354 ms for the 100-page, 19.5 MB `medium` and 5.7 s for
+  the 500-page, 230 MB scan `large` (macOS PDFKit, M5 Pro) — paid by
+  `exportDocument` and, once a form changed, by `print` and `renderPage`,
+  which read the displayed document then. Writing a separate instance off
+  the main thread, with the values copied over, would avoid the freeze on
+  long documents (not done).
 - **Not included:** form JavaScript (calculations, validation,
   formatting), signing, XFA, flattening, resetting a form; on Android
   typing a choice's custom text by touch and screen-reader access to
