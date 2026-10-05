@@ -1071,7 +1071,8 @@ on iOS; Android showed them read-only.
   not).
 - **Exports keep the password.** Android writes with
   `removePasswordProtection = false`, keeping the original encryption,
-  and keeps the file's field order (measured on the fixture). iOS writes
+  and keeps the file's field order (measured on the fixture). On iOS a
+  form as loaded exports as a copy of the file; a changed one is written
   with PDFKit (`dataRepresentation`, the document's password as user and
   owner password), which rewrites the whole document: PDF 1.3, nested
   fields flattened into dotted names, the `/Fields` order changed, and
@@ -1082,14 +1083,19 @@ on iOS; Android showed them read-only.
   compared pixel for pixel). Default file:
   `<caches>/BetterPdfExports/<uuid>/<document name>.pdf`.
 - **Line breaks** are `\n` on both platforms (PDFium reports `\r\n`).
-- **Cost:** Android `applyEdit` 0.1–2 ms and writing the 2-page fixture
-  3 ms (emulator). iOS writing with PDFKit runs on the main thread: 30 ms
-  for the fixture, 354 ms for the 100-page, 19.5 MB `medium` and 5.7 s for
-  the 500-page, 230 MB scan `large` (macOS PDFKit, M5 Pro) — paid by
-  `exportDocument` and, once a form changed, by `print` and `renderPage`,
-  which read the displayed document then. Writing a separate instance off
-  the main thread, with the values copied over, would avoid the freeze on
-  long documents (not done).
+- **iOS writes off the main thread.** PDFKit writes a long document in
+  seconds (30 ms for the fixture, 354 ms for the 100-page `medium`, 5.7 s
+  for the 500-page scan `large`; macOS PDFKit, M5 Pro), and its objects
+  are not thread-safe, so the displayed document cannot be written in the
+  background. Instead the main thread reads the widgets' values (a
+  `FormSnapshot`) and a separate instance of the file, filled in with
+  them, is written on a queue of its own — for exports, and for printing
+  and page images once the form changed. Measured on a 502-page form (the
+  fixture's pages and `large`'s scans): the main thread 1.3 ms, the write
+  3.9 s in the background while the document kept scrolling (it took the
+  main thread for the whole write before).
+- **Cost (Android):** `applyEdit` 0.1–2 ms and writing the 2-page fixture
+  3 ms (emulator).
 - **Not included:** form JavaScript (calculations, validation,
   formatting), signing, XFA, flattening, resetting a form; on Android
   typing a choice's custom text by touch and screen-reader access to

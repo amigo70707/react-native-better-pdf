@@ -40,6 +40,11 @@ final class DocumentForm {
     return names.map { ($0, byName[$0] ?? []) }
   }
 
+  /// The pages with widgets, by index.
+  var pagesWithWidgets: [(index: Int, page: PDFPage)] {
+    widgetPages.compactMap { index in document.page(at: index).map { (index, $0) } }
+  }
+
   /// The widgets of the field named `name`.
   func widgets(named name: String) -> [FormWidgetAnnotation] {
     widgetPages.flatMap { index -> [FormWidgetAnnotation] in

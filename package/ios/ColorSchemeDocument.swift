@@ -42,9 +42,9 @@ final class ColorSchemeDocument: PDFDocument, PDFDocumentDelegate {
     formChangeCount += 1
   }
 
-  /// Runs `body` without reporting widget changes: code setting values, and
-  /// writing the document, where PDFKit sets buttons' states again
-  /// (measured: a radio group reported a change on every write).
+  /// Runs `body` — code setting values — without reporting widget changes.
+  /// (Writing this document would report too: PDFKit sets buttons' states
+  /// again, measured; exports write a separate instance instead.)
   func withoutReportingChanges<T>(countingAsChange: Bool = false, _ body: () throws -> T) rethrows -> T {
     isQuiet = true
     defer {

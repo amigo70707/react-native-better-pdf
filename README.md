@@ -532,8 +532,8 @@ const { filePath } = await pdf.current!.exportDocument(); // share or upload it
   does not take.
 - `exportDocument()` writes the document as shown to a new file (the
   cache directory by default, or `{ filePath }`), keeping its password
-  protection; the source file is never changed. Printing and `renderPage`
-  show the form as filled in too.
+  protection, off the main thread; the source file is never changed.
+  Printing and `renderPage` show the form as filled in too.
 - `getFormFields`, `setFormFieldValues`, `exportDocument`, `print` and
   `renderPage` first end text editing, so what the reader is typing counts.
 - Edits live with the open document: reopening the source shows it as
@@ -621,9 +621,10 @@ Screen readers get the document's text and position:
   [Dark pages](#dark-pages)).
 - **Forms**: JavaScript actions and calculations in a form do not run;
   signature fields cannot be signed (their places are reported); XFA forms
-  are not supported. iOS writes exports anew with PDFKit (field hierarchy
-  flattened into dotted names, field order may change; content PDFKit
-  cannot read is not kept) and keeps one selected option per list box.
+  are not supported. iOS writes exports of a changed form anew with PDFKit
+  (field hierarchy flattened into dotted names, field order may change;
+  content PDFKit cannot read is not kept; seconds for long documents, in
+  the background) and keeps one selected option per list box.
   Android: filling in needs Android 15+, or 12–14 with SDK extension 13
   (elsewhere fields are read from the file, `setFormFieldValues` rejects
   and `exportDocument` copies the file); a choice's custom text cannot be

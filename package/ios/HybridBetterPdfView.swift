@@ -164,6 +164,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
   private var documentForm: DocumentForm?
   /// Reads separate instances of the displayed file (outline, page sizes).
   private static let readQueue = DispatchQueue(label: "com.betterpdf.read", qos: .userInitiated)
+  /// Writes exports: seconds for long documents, so not on `readQueue`.
+  private static let writeQueue = DispatchQueue(label: "com.betterpdf.write", qos: .userInitiated)
   /// Scroll-offset observation of PDFView's internal scroll view; drives
   /// `onPageChange` with the same rule as Android (see `reportCurrentPage`).
   private var offsetObservation: NSKeyValueObservation?
@@ -364,16 +366,15 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       let password = self.password
       // Commits text being typed, so the image shows it.
       self.container.endEditing(true)
-      let filledForm = self.filledFormData(of: document)
+      let filledForm = self.filledFormSnapshot(of: document)
       // A separate instance of the file, like getOutline: PDFKit objects are
       // not thread-safe and the view draws its own document on main. A
-      // filled-in form is rendered from a copy of the displayed document.
+      // filled-in form is copied over to it.
       Self.readQueue.async {
         do {
-          guard let renderDocument = filledForm.flatMap(PDFDocument.init(data:)) ?? PDFDocument(url: url) else {
+          guard let renderDocument = Self.openCopy(of: url, password: password, filledIn: filledForm) else {
             throw RuntimeError.error(withMessage: "The document could not be opened for rendering")
           }
-          if renderDocument.isLocked { _ = renderDocument.unlock(withPassword: password ?? "") }
           promise.resolve(withResult: try request.render(from: renderDocument))
         } catch {
           promise.reject(withError: error)
@@ -403,25 +404,21 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         return
       }
       self.isPrinting = true
-      // A filled-in form prints as shown, text being typed included: a copy
-      // of the displayed document, unlocked like the one below.
+      // A filled-in form prints as shown, text being typed included.
       self.container.endEditing(true)
-      if let filledForm = self.filledFormData(of: document) {
-        self.presentPrintDialog(printing: filledForm, jobName: jobName, promise: promise)
-        return
-      }
-      guard document.isEncrypted else {
+      let filledForm = self.filledFormSnapshot(of: document)
+      guard document.isEncrypted || filledForm != nil else {
         self.presentPrintDialog(printing: url, jobName: jobName, promise: promise)
         return
       }
       // The print system opens files without a password: print an unlocked
-      // copy, kept in memory. Serialized off the main thread on a separate
-      // instance of the file, like renderPage.
+      // copy, filled in like the displayed document, kept in memory.
+      // Serialized off the main thread on a separate instance of the file,
+      // like renderPage.
       let password = self.password
-      Self.readQueue.async {
-        let copy = PDFDocument(url: url)
-        if copy?.isLocked == true { _ = copy?.unlock(withPassword: password ?? "") }
-        let data = copy.flatMap { $0.isLocked ? nil : $0.dataRepresentation() }
+      Self.writeQueue.async {
+        let copy = Self.openCopy(of: url, password: password, filledIn: filledForm)
+        let data = copy?.dataRepresentation()
         DispatchQueue.main.async { [weak self] in
           guard let self, let data else {
             self?.isPrinting = false
@@ -487,21 +484,34 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         promise.reject(withError: error)
         return
       }
-      // Kept protected: an unlocked document is written without its
-      // encryption unless passwords are given (the print path relies on it).
-      var options: [PDFDocumentWriteOption: Any] = [:]
-      if document.isEncrypted, let password = self.password, !password.isEmpty {
-        options[.userPasswordOption] = password
-        options[.ownerPasswordOption] = password
-      }
-      let write = { document.dataRepresentation(options: options) }
-      guard let data = (document as? ColorSchemeDocument)?.withoutReportingChanges(write) ?? write() else {
-        promise.reject(withError: RuntimeError.error(withMessage: "The document could not be written"))
-        return
-      }
-      Self.readQueue.async {
+      let password = self.password
+      let isEncrypted = document.isEncrypted
+      let filledForm = self.filledFormSnapshot(of: document)
+      // Off the main thread: PDFKit writes a long document in seconds.
+      Self.writeQueue.async {
         do {
-          try data.write(to: destination, options: .atomic)
+          if let filledForm {
+            guard let copy = Self.openCopy(of: url, password: password, filledIn: filledForm) else {
+              throw RuntimeError.error(withMessage: "The document could not be opened for writing")
+            }
+            // Kept protected: an unlocked document is written without its
+            // encryption unless passwords are given (printing relies on it).
+            var options: [PDFDocumentWriteOption: Any] = [:]
+            if isEncrypted, let password, !password.isEmpty {
+              options[.userPasswordOption] = password
+              options[.ownerPasswordOption] = password
+            }
+            guard let data = copy.dataRepresentation(options: options) else {
+              throw RuntimeError.error(withMessage: "The document could not be written")
+            }
+            try data.write(to: destination, options: .atomic)
+          } else {
+            // Nothing changed: the file as it is, its own protection included.
+            if FileManager.default.fileExists(atPath: destination.path) {
+              try FileManager.default.removeItem(at: destination)
+            }
+            try FileManager.default.copyItem(at: url, to: destination)
+          }
           promise.resolve(withResult: PdfExportResult(filePath: destination.path))
         } catch {
           promise.reject(withError: error)
@@ -531,12 +541,22 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     return form
   }
 
-  /// The displayed document as PDF data once its form was filled in, for
-  /// page images and printing (they read separate instances of the file
-  /// otherwise); written unlocked. Nil while the form is as loaded.
-  private func filledFormData(of document: PDFDocument) -> Data? {
-    guard let document = document as? ColorSchemeDocument, document.formChangeCount > 0 else { return nil }
-    return document.withoutReportingChanges { document.dataRepresentation() }
+  /// The form's values once it was filled in, to copy to separate
+  /// instances of the file (exports, page images, printing); nil while it
+  /// is as loaded. Main thread.
+  private func filledFormSnapshot(of document: PDFDocument) -> FormSnapshot? {
+    guard let document = document as? ColorSchemeDocument, document.formChangeCount > 0, let form = form() else { return nil }
+    return FormSnapshot(form: form)
+  }
+
+  /// A separate instance of the displayed file, unlocked and filled in like
+  /// the displayed document; for the calling (background) thread only.
+  private static func openCopy(of url: URL, password: String?, filledIn form: FormSnapshot?) -> PDFDocument? {
+    guard let copy = PDFDocument(url: url) else { return nil }
+    if copy.isLocked { _ = copy.unlock(withPassword: password ?? "") }
+    guard !copy.isLocked else { return nil }
+    form?.apply(to: copy)
+    return copy
   }
 
   private func reportFormChange(_ widget: FormWidgetAnnotation) {
