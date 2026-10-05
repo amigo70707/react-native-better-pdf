@@ -530,6 +530,10 @@ class HybridBetterPdfView(
     documentView.onPageText(page, text)
   }
 
+  override fun onDocumentLinks(links: Map<Int, List<PageLink>>) {
+    documentView.onDocumentLinks(links)
+  }
+
   override fun onPageFormWidgets(page: Int, widgets: List<FormWidget>) {
     documentView.onPageFormWidgets(page, widgets)
   }

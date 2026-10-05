@@ -12,6 +12,7 @@ import com.margelo.nitro.betterpdf.outline.PdfFormReader
 import com.margelo.nitro.betterpdf.outline.PdfFormatException
 import com.margelo.nitro.betterpdf.outline.PdfInfo
 import com.margelo.nitro.betterpdf.outline.PdfInfoReader
+import com.margelo.nitro.betterpdf.outline.PdfLinkReader
 import com.margelo.nitro.betterpdf.outline.PdfOutlineReader
 import com.margelo.nitro.betterpdf.outline.PdfPageSizeReader
 import java.io.File
@@ -49,6 +50,23 @@ internal class DocumentReads(
     val entries = parse { PdfOutlineReader(it).read() }
     outline = entries
     return entries
+  }
+
+  /**
+   * Every page's links, parsed from the file: any Android version and every
+   * form of link (the renderer reports links from Android 15 only, and not
+   * all forms). Pages without links are absent.
+   *
+   * @throws PdfFormatException when the file cannot be parsed (or is
+   *   encrypted), or its page tree does not have the renderer's [pageCount]
+   *   pages (a damaged file the renderer repaired).
+   */
+  fun readLinks(pageCount: Int): Map<Int, List<PageLink>> = parse { document ->
+    val reader = PdfLinkReader(document)
+    if (reader.pageCount != pageCount) {
+      throw PdfFormatException("The page tree has ${reader.pageCount} pages, the renderer $pageCount")
+    }
+    reader.read()
   }
 
   /**

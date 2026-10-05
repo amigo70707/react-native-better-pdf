@@ -370,9 +370,9 @@ export interface PdfViewProps extends ViewProps {
    * are followed natively and not reported here. The viewer never opens URLs
    * itself — without this handler, URL links do nothing.
    *
-   * Android: link detection needs Android 15+, or Android 12–14 with SDK
-   * extension 13; other devices report the tap through
-   * {@linkcode PdfViewProps.onPageTap} instead.
+   * Android: links in password-protected documents need Android 15+, or
+   * Android 12–14 with SDK extension 13; other devices report taps on them
+   * through {@linkcode PdfViewProps.onPageTap} instead.
    */
   onLinkPress?: (event: PdfLinkPressEvent) => void;
   /**

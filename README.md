@@ -30,7 +30,7 @@ typed API. How it compares in practice is measured, not assumed — see
 | React Native | 0.81 | New Architecture (Fabric) required — Nitro Views do not support the legacy renderer |
 | react-native-nitro-modules | 0.37 | peer dependency |
 | iOS | 15.1 | React Native's minimum; PDFKit |
-| Android | API 24 | React Native's minimum; passwords, links, text selection and annotations need Android 15+, or Android 12–14 with SDK extension 13 (the updated system PDF module) |
+| Android | API 24 | React Native's minimum; passwords, text selection and annotations need Android 15+, or Android 12–14 with SDK extension 13 (the updated system PDF module) |
 | Expo | SDK 54+ development builds | **Expo Go is not supported** (it cannot load third-party native code) |
 
 Developed and tested with React Native 0.86.3 / Expo SDK 57, Xcode 27,
@@ -679,10 +679,12 @@ Screen readers get the document's text and position:
     `unsupported-pdf`.
   - Text selection requires Android 15+; other devices ignore long presses.
   - Search requires Android 15+; other devices report `isSupported: false`.
-  - Links require Android 15+. Of the internal-link forms, only
-    GoTo actions with an XYZ destination are reported by `PdfRenderer`
-    (`/Dest` arrays and `/Fit` destinations are not); undetected links behave
-    like the rest of the page and are reported through `onPageTap`.
+  - Links work on every Android version, in every form (read from the
+    file). In password-protected documents they come from `PdfRenderer`
+    instead: Android 15+ (or 12–14 with SDK extension 13), and of the
+    internal links only GoTo actions with an XYZ destination; other links
+    there behave like the rest of the page and are reported through
+    `onPageTap`.
   - `PdfRenderer` renders one page at a time per *process*, so several
     visible viewers share one render pipeline.
   - Page sizes are discovered as pages are first rendered (reading them up

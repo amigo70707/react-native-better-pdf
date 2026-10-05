@@ -176,10 +176,13 @@ viewport change (main)
   pages ahead in the scroll direction → pages behind.
 - **Direction changes** take effect on the next frame; queued work for the old
   direction is discarded.
-- **Links**: read once per page, on the render thread, while the page is
-  open for its first render (`DocumentPage.readLinks`, API 35+ or
-  `PdfRendererPreV`), and
-  kept per page on the UI thread. A confirmed single tap is mapped to page
+- **Links**: read from the file once it opens, by the Kotlin parser on a
+  thread of its own (`PdfLinkReader`: every Android version, every link
+  form), and kept per page on the UI thread. Where the parser cannot read
+  the file (encrypted, or a page tree the renderer disagrees with), each
+  page's links come from the renderer instead, read on the render thread
+  while the page is open for its first render (`DocumentPage.readLinks`,
+  API 35+ or `PdfRendererPreV`). A confirmed single tap is mapped to page
   points (`PdfDocumentLayout.pagePointAt`) and hit-tested against them:
   internal links scroll natively, URL links go to `onLinkPress`, anything
   else to `onPageTap`.

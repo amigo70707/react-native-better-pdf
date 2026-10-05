@@ -366,7 +366,7 @@ file.write(base64, { encoding: 'base64' });
 | --- | --- |
 | Passwords on Android 7–11, and 12–14 without SDK extension 13 | Not possible with the platform renderer |
 | Windows | Not planned |
-| Links on Android < 15 (except 12–14 with SDK extension 13), and internal links other than GoTo actions with XYZ destinations on Android | Platform limitation — see the README |
+| Links in password-protected documents on Android < 15 (except 12–14 with SDK extension 13), and their internal links other than GoTo actions with XYZ destinations | Platform limitation — see the README (links in other documents work on every version) |
 | Text selection on Android < 15 (except 12–14 with SDK extension 13); selections across pages on Android | Platform limitation below 15; cross-page selection not yet — see the README |
 
 If one of these blocks your migration, please open an issue describing the use

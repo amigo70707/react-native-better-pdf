@@ -61,8 +61,11 @@ class PdfDocumentSession(
     /** A page was opened for the first time and its size differs from the estimate. */
     fun onPageMeasured(page: Int, size: PdfDocumentLayout.PageSize)
 
-    /** A page was opened for the first time and has links. */
+    /** A page was opened for the first time and has links (the renderer's, until [onDocumentLinks]). */
     fun onPageLinks(page: Int, links: List<PageLink>)
+
+    /** Every page's links, read from the file; they replace the renderer's. */
+    fun onDocumentLinks(links: Map<Int, List<PageLink>>)
 
     fun onFailed(failure: PdfFailure)
 
@@ -273,6 +276,7 @@ class PdfDocumentSession(
       val path = filePath
       val stale = isStale
       post { listener.onOpened(sizes, path, stale) }
+      readLinksFromFile(sizes.size)
       renderLoop()
     } catch (_: InterruptedException) {
       // Closed while resolving the source.
@@ -466,6 +470,28 @@ class PdfDocumentSession(
     post { listener.onPageMeasured(page, size) }
   }
 
+  /** Set once the file's links are read: the renderer's are not read then. */
+  @Volatile private var hasFileLinks = false
+
+  /**
+   * Reads every page's links from the file, on a thread of its own (its own
+   * duplicate of the descriptor) so the first pages render meanwhile. A file
+   * the parser cannot read (encrypted, malformed) keeps the renderer's links.
+   */
+  private fun readLinksFromFile(pageCount: Int) {
+    Thread({
+      val links = try {
+        reads.readLinks(pageCount)
+      } catch (_: Exception) {
+        return@Thread
+      } catch (_: OutOfMemoryError) {
+        return@Thread
+      }
+      hasFileLinks = true
+      post { listener.onDocumentLinks(links) }
+    }, "BetterPdf-links").apply { isDaemon = true }.start()
+  }
+
   /**
    * Reads a page's links the first time it is opened, while it is open anyway
    * for rendering. A malformed link annotation must not cost the page its
@@ -473,7 +499,7 @@ class PdfDocumentSession(
    * reported as page taps).
    */
   private fun recordLinks(page: Int, openPage: DocumentPage) {
-    if (linksRead[page]) return
+    if (linksRead[page] || hasFileLinks) return
     linksRead[page] = true
     val links = try {
       openPage.readLinks()

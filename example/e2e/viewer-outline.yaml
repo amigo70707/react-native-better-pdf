@@ -49,7 +49,8 @@ appId: software.gmi.betterpdf.example
 - tapOn: "‹ Back"
 
 # Object streams + xref stream: same result.
-- scrollUntilVisible: { element: "outline-compressed.*" }
+# Mid-list, centred: a row cut off at the screen's edge takes no tap.
+- scrollUntilVisible: { element: "outline-compressed.*", centerElement: true }
 - tapOn: "outline-compressed.*"
 - extendedWaitUntil: { visible: "1 / 12", timeout: 15000 }
 - tapOn: "TOC"

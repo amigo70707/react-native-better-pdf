@@ -1,8 +1,9 @@
 package com.margelo.nitro.betterpdf
 
 /**
- * A tappable link area on a page, read from PdfRenderer when the page is
- * first rendered.
+ * A tappable link area on a page: read from the file
+ * (`outline.PdfLinkReader`), or from PdfRenderer when the page is first
+ * rendered where the file cannot be parsed (encrypted).
  */
 sealed interface PageLink {
   /** Areas the link covers; a link spanning several lines has several. */

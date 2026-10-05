@@ -10,7 +10,7 @@ Source: `gh api` on wonday/react-native-pdf (1,814 stars; 821 issues, 383 open; 
 ## Feature requests (ranked by cluster reactions+comments)
 1. Full-text search + highlights — 7 issues, 40 r / 40 c, 2018→2026, 5 open: #555 (31r 21c), #243, #524, #825, #525, #1038. COVERED (`search`, highlights; Android 15+).
 2. Scroll/viewport events, save/restore position, read-to-end — 11 issues, 37 r / 24 c: #492 (8r), #224 (7r), #427, #484, #439, #905, #275, #869. COVERED (`onViewportChange`, `initialViewport`, `goToViewport`, `isAtEnd`).
-3. Working link taps on Android / singlePage — 12 issues, 22 r / 81 c: #983, #464, #384, #533, #594, iOS #841/#877/#839. partly (API 35+).
+3. Working link taps on Android / singlePage — 12 issues, 22 r / 81 c: #983, #464, #384, #533, #594, iOS #841/#877/#839. COVERED (links read from the file on every Android version, every link form; password-protected documents keep the renderer's links: API 35+ or SDK extension 13).
 4. Layout: padding, top alignment, border radius — 6 issues, 21 r / 34 c: #520, #920, #909, #513, #994, PR #993 unmerged. COVERED (top alignment, `borderRadius`, no iOS safe-area offset, `pageSpacing={0}`, `contentInset`; see api-design "Short documents, rounded corners, safe area" and "Content inset").
 5. Scroll indicators — 6 issues, 22 r: #569, #828, #412, #421, #813. covered.
 6. Annotation/signature fidelity on Android; editing — 10 issues, 9 r / 41 c: #848, #975, #930, #863, #862, #687, #314, PR #1042. partly: forms are filled in, read and exported (see api-design "Forms"); annotations are not edited.
@@ -46,5 +46,5 @@ Also: base64 (#739, #705, #835, #199; omitted by design), custom certs/pinning (
 2. onViewportChange + get/restoreViewport (+ page-to-view conversion for overlays). Done: `onViewportChange`, `initialViewport`, `goToViewport`; overlays as `PdfPageOverlay`.
 3. Cache & download control (persistent cache, clearCache, prefetch, POST/body). Done except POST/body (downloads are GET only): source cache options, `PdfCache`.
 4. Two-page spread + dark/inverted mode. Done: `spreadMode` (vertical continuous), `colorScheme`.
-5. Android annotation/link fidelity; PdfRendererPreV (API 31–34 via SDK ext 13) for links/passwords/selection below 15 (to verify). PdfRendererPreV done (links, passwords, selection, search and forms on Android 12–14 with SDK extension 13); fidelity stays the platform renderer's.
+5. Android annotation/link fidelity; PdfRendererPreV (API 31–34 via SDK ext 13) for links/passwords/selection below 15 (to verify). PdfRendererPreV done (passwords, selection, search and forms on Android 12–14 with SDK extension 13; links there only for password-protected documents, other documents' links are read from the file on every version); fidelity stays the platform renderer's.
 Cheap extras: per-page sizes (done: `getPageSizes`), contentInset/top alignment (done: top alignment, `contentInset`), renderThumbnail(page,width)→file (done: `renderPage`), README table mapping rn-pdf pain points to how better-pdf avoids them (open; docs/migrating-from-react-native-pdf.md maps the API).

@@ -100,6 +100,9 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   /** With [pendingInitialPage]: the page point to put at the top-left corner, instead of the page's top. */
   private var pendingInitialPoint: PagePoint? = null
   private val failedPages = HashSet<Int>()
+  /** Set once [onDocumentLinks] arrived for the document. */
+  private var hasFileLinks = false
+
   /** Form widgets of pages rendered so far that have any. */
   private val pageWidgets = HashMap<Int, List<FormWidget>>()
   /** Pages whose form changed since their bitmap was rendered. */
@@ -498,6 +501,7 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
     lastReportedViewport = null
     failedPages.clear()
     pageLinks.clear()
+    hasFileLinks = false
     pageWidgets.clear()
     staleFormPages.clear()
     pageTexts.clear()
@@ -688,7 +692,14 @@ class PdfDocumentView(context: Context) : View(context, null, android.R.attr.scr
   }
 
   fun onPageLinks(page: Int, links: List<PageLink>) {
-    pageLinks[page] = links
+    if (!hasFileLinks) pageLinks[page] = links
+  }
+
+  /** Links read from the file replace the renderer's, which miss some forms and need Android 15. */
+  fun onDocumentLinks(links: Map<Int, List<PageLink>>) {
+    pageLinks.clear()
+    pageLinks.putAll(links)
+    hasFileLinks = true
   }
 
   fun onPageFormWidgets(page: Int, widgets: List<FormWidget>) {

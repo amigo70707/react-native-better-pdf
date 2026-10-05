@@ -70,10 +70,11 @@ class PdfFormReader(private val document: PdfDocumentReader) {
   fun read(): List<FormFieldEntry> {
     val form = document.resolve(catalog["AcroForm"]) as? PdfObject.Dictionary ?: return emptyList()
     val fields = document.resolve(form["Fields"]) as? PdfObject.Array ?: return emptyList()
-    val pages = readPages()
+    val tree = PdfPageTree(document, catalog)
+    val pages = tree.pages
     val pageOfAnnotation = HashMap<Int, Int>()
     pages.forEachIndexed { index, page -> page.annotations.forEach { pageOfAnnotation.putIfAbsent(it, index) } }
-    val pageIndexByObject = pages.withIndex().associate { (index, page) -> page.number to index }
+    val pageIndexByObject = tree.indexByObject
 
     val result = ArrayList<FormFieldEntry>()
     val visited = HashSet<Int>()
@@ -215,8 +216,8 @@ class PdfFormReader(private val document: PdfDocumentReader) {
   private fun appearanceState(widgetNode: PdfObject?): String? =
     ((document.resolve(widgetNode) as? PdfObject.Dictionary)?.get("AS") as? PdfObject.Name)?.value
 
-  private fun widgetEntry(widget: PdfObject.Dictionary, pageIndex: Int, page: PageGeometry): FormWidgetEntry? {
-    val rect = rectangleOf(widget["Rect"]) ?: return null
+  private fun widgetEntry(widget: PdfObject.Dictionary, pageIndex: Int, page: PdfPageGeometry): FormWidgetEntry? {
+    val rect = PdfPageTree.rectangleOf(document, widget["Rect"]) ?: return null
     val normal = ((document.resolve(widget["AP"]) as? PdfObject.Dictionary)?.get("N"))
       .let { document.resolve(it) as? PdfObject.Dictionary }
     val onState = normal?.entries?.keys?.firstOrNull { it != OFF }
@@ -232,73 +233,9 @@ class PdfFormReader(private val document: PdfDocumentReader) {
     )
   }
 
-  /** A page: its object number, displayed box and turns, and its annotations' object numbers. */
-  private class PageGeometry(val number: Int, val box: FloatArray, val quarterTurns: Int, val annotations: List<Int>) {
-    /** A point in PDF page space, from the displayed page's top-left corner. */
-    fun topLeft(x: Float, y: Float): Pair<Float, Float> {
-      val u = x - box[0]
-      val v = box[3] - y
-      val width = box[2] - box[0]
-      val height = box[3] - box[1]
-      return when (quarterTurns) {
-        1 -> (height - v) to u
-        2 -> (width - u) to (height - v)
-        3 -> v to (width - u)
-        else -> u to v
-      }
-    }
-  }
-
-  private fun readPages(): List<PageGeometry> {
-    val pages = ArrayList<PageGeometry>()
-    val visited = HashSet<Int>()
-    fun visit(node: PdfObject?, mediaBox: FloatArray?, cropBox: FloatArray?, rotate: Int, depth: Int) {
-      if (depth > MAX_DEPTH) return
-      val reference = node as? PdfObject.Reference ?: return
-      if (!visited.add(reference.number)) return
-      val dictionary = document.resolve(node) as? PdfObject.Dictionary ?: return
-      val ownMediaBox = rectangleOf(dictionary["MediaBox"]) ?: mediaBox
-      val ownCropBox = rectangleOf(dictionary["CropBox"]) ?: cropBox
-      val ownRotate = (document.resolve(dictionary["Rotate"]) as? PdfObject.Number)?.value?.toInt() ?: rotate
-      val kids = document.resolve(dictionary["Kids"]) as? PdfObject.Array
-      if (kids != null && dictionary["Type"] != PdfObject.Name("Page")) {
-        kids.items.forEach { visit(it, ownMediaBox, ownCropBox, ownRotate, depth + 1) }
-        return
-      }
-      val annotations = (document.resolve(dictionary["Annots"]) as? PdfObject.Array)?.items
-        ?.mapNotNull { (it as? PdfObject.Reference)?.number }.orEmpty()
-      pages += PageGeometry(reference.number, displayedBox(ownMediaBox, ownCropBox), Math.floorMod(ownRotate / 90, 4), annotations)
-    }
-    visit(catalog["Pages"], mediaBox = null, cropBox = null, rotate = 0, depth = 0)
-    return pages
-  }
-
-  /** The crop box clipped to the media box, as `PdfPageSizeReader` and PDFium. */
-  private fun displayedBox(mediaBox: FloatArray?, cropBox: FloatArray?): FloatArray {
-    val media = mediaBox?.takeIf { it[2] > it[0] && it[3] > it[1] } ?: LETTER
-    return cropBox?.let { crop ->
-      floatArrayOf(maxOf(crop[0], media[0]), maxOf(crop[1], media[1]), minOf(crop[2], media[2]), minOf(crop[3], media[3]))
-        .takeIf { it[2] > it[0] && it[3] > it[1] }
-    } ?: media
-  }
-
-  /** `[llx lly urx ury]` normalized; null unless four numbers. */
-  private fun rectangleOf(value: PdfObject?): FloatArray? {
-    val items = (document.resolve(value) as? PdfObject.Array)?.items ?: return null
-    if (items.size != 4) return null
-    val numbers = items.map { (document.resolve(it) as? PdfObject.Number)?.value?.toFloat() ?: return null }
-    return floatArrayOf(
-      minOf(numbers[0], numbers[2]),
-      minOf(numbers[1], numbers[3]),
-      maxOf(numbers[0], numbers[2]),
-      maxOf(numbers[1], numbers[3]),
-    )
-  }
-
   private companion object {
     const val OFF = "Off"
     const val MAX_DEPTH = 32
     const val MAX_FIELDS = 10_000
-    val LETTER = floatArrayOf(0f, 0f, 612f, 792f)
   }
 }

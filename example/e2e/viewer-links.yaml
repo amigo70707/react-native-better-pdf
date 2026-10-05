@@ -1,12 +1,15 @@
 # Link presses and page taps (fixture `links`, page 1: upper-left = URL link,
-# lower-left = link to page 3, right strip = plain page).
-# Android reports links from Android 15 (API 35); the emulator used is API 35.
+# lower-left = link to page 3, right strip = plain page), then the forms of
+# internal links (`links-all`). Android reads links from the file on every
+# version: run this flow on an Android 14 emulator without SDK extension 13
+# (BetterPdf_API34) too.
 appId: software.gmi.betterpdf.example
 ---
 - runFlow: _dismiss-dev-menu.yaml
 - tapOn: "Viewer"
-- scrollUntilVisible: { element: "links.*" }
-- tapOn: "links.*"
+# Not "links-all". iOS labels the entry "links, Fixture copied to the device".
+- scrollUntilVisible: { element: "links(, .*)?" }
+- tapOn: "links(, .*)?"
 - extendedWaitUntil: { visible: "1 / 3", timeout: 15000 }
 # Plain page tap, reported in page points from the top-left corner. 85% of a
 # fit-width A4 page is ~505 pt on every device; pixels or view points would
@@ -33,4 +36,18 @@ appId: software.gmi.betterpdf.example
       - waitForAnimationToEnd
       - assertNotVisible: "tap: .*"
 - takeScreenshot: viewer-links
+- tapOn: "‹ Back"
+# `links-all`, page 1 laid out like `links`: upper-left = a /Dest with /Fit
+# and no action (to page 3), lower-left = a GoTo to a string of the /Dests
+# name tree (to page 4). Android's PdfRenderer reports no /Dest arrays (see
+# docs/api-design.md "Links and taps"); the library reads both from the file.
+- scrollUntilVisible: { element: "links-all.*", centerElement: true }
+- tapOn: "links-all.*"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 15000 }
+- tapOn: { point: "25%, 40%" }
+- extendedWaitUntil: { visible: "3 / 5", timeout: 5000 }
+- tapOn: "First"
+- extendedWaitUntil: { visible: "1 / 5", timeout: 5000 }
+- tapOn: { point: "25%, 72%" }
+- extendedWaitUntil: { visible: "4 / 5", timeout: 5000 }
 - tapOn: "‹ Back"

@@ -211,13 +211,31 @@ Decisions:
 
 Platform limitations (measured, not assumed):
 
-- Android reads links through `PdfRenderer.Page.getLinkContents()` /
-  `getGotoLinks()`, available from Android 15 (API 35) and on Android 12–14
-  with SDK extension 13 (`PdfRendererPreV`). On API 35, only
-  internal links written as a GoTo action with an XYZ destination are
-  reported; `/Dest` arrays and `/Fit` destinations come back empty (probe
-  with four link forms). Undetected links fall back to `onPageTap`.
-- iOS uses PDFKit, which handles every link form.
+- Android reads links from the file with the library's own parser
+  (`PdfLinkReader`), on every Android version: URI actions; GoTo actions
+  and `/Dest` entries with explicit, named (the catalog's `/Dests`) and
+  name-tree destinations, `/Fit` and the rest alike; the Named actions
+  NextPage, PrevPage, FirstPage and LastPage; a link's `/QuadPoints` (one
+  area per line) over its `/Rect`. Other actions (another file, launching
+  an app, JavaScript) are not links; taps on them are page taps. The
+  platform API (`PdfRenderer.Page.getLinkContents()` / `getGotoLinks()`)
+  was not enough: it needs Android 15 (or 12–14 with SDK extension 13),
+  and on API 35 reports only internal links written as a GoTo action with
+  an XYZ destination (`/Dest` arrays and `/Fit` destinations came back
+  empty in a probe with four link forms).
+- The links are read on a thread of their own once the document opens, so
+  the first pages render meanwhile; a tap on a link before they arrive is
+  a page tap. The forms are covered by `PdfLinkReaderTest` (`links`,
+  `links-all`), and `viewer-links` passes on Android 14 without SDK
+  extension 13, on Android 17 and on iOS.
+- The parser does not decrypt. In password-protected documents (and in a
+  damaged file whose page tree the renderer repaired: the parser's pages
+  could differ) links come from `PdfRenderer` as before, page by page.
+- iOS uses PDFKit, which handles every link form; on the `links-all`
+  fixture it follows a Named action (PrevPage) and a page-number
+  destination (`[4 /Fit]`, zero-based like Android) too. One difference: a tap on an
+  annotation with another action (JavaScript, say) is neither followed nor
+  reported on iOS, where Android reports a page tap.
 
 ## Load progress (v0.2)
 
@@ -1548,5 +1566,3 @@ showing the viewer.
 
 ## Open questions
 
-- Supporting more internal-link forms on Android would need a PDF parser of
-  our own (no platform API exposes raw annotations).

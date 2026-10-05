@@ -798,6 +798,11 @@ const FIXTURES = {
             }
           : { content: textPage(i, { fontSize: 10 }) },
     }),
+  // Every form of link (Android reads them from the file, see
+  // PdfLinkReaderTest; PDFKit on iOS). Page 1 for e2e, laid out like
+  // `links`: upper-left = /Dest with /Fit and no action (to page 3),
+  // lower-left = GoTo a string of the /Dests name tree (to page 4).
+  'links-all': () => linksAllDocument(),
 
   'page-boxes': () => pageBoxesDocument(),
   // Same pages: the parser's object-stream path, and the renderer fallback
@@ -961,6 +966,80 @@ function formsDocument(options = {}) {
         `/DR << /Font << /Helv ${helv} 0 R /ZaDb ${zadb} 0 R >> >> /DA (/Helv 12 Tf 0 g) >>`
       );
     },
+  });
+}
+
+function linksAllDocument() {
+  const link = (rect, rest) => `<< /Type /Annot /Subtype /Link /Rect [${rect}] /Border [0 0 0] ${rest} >>`;
+  const label = (y, text) => `BT /F1 12 Tf 44 ${y + 14} Td (${text}) Tj ET`;
+  // Page 2: one row per link, 40 pt tall, from the top.
+  const rows = [
+    // A URL across two lines: an area per line (/QuadPoints), not the /Rect.
+    {
+      rect: '40 700 400 770',
+      rest:
+        '/QuadPoints [40 770 400 770 40 745 400 745 40 725 200 725 40 700 200 700] ' +
+        '/A << /S /URI /URI (https://example.com/two-lines) >>',
+      text: 'URL across two lines',
+    },
+    { rect: '40 620 300 660', rest: '/Dest /chapter2', text: 'Catalog /Dests name: page 2' },
+    { rect: '40 560 300 600', rest: '/Dest (intro)', text: 'Name tree dictionary: page 3' },
+    { rect: '40 500 300 540', rest: '/A << /S /Named /N /NextPage >>', text: 'NextPage' },
+    { rect: '40 440 300 480', rest: '/A << /S /Named /N /PrevPage >>', text: 'PrevPage' },
+    { rect: '40 380 300 420', rest: '/A << /S /Named /N /FirstPage >>', text: 'FirstPage' },
+    { rect: '40 320 300 360', rest: '/A << /S /Named /N /LastPage >>', text: 'LastPage' },
+    { rect: '40 260 300 300', rest: "/A << /S /JavaScript /JS (app.alert\\('hi'\\)) >>", text: 'JavaScript: not a link' },
+    // A page number instead of a page: meant for other files, used locally by some producers.
+    { rect: '40 200 300 240', rest: '/A << /S /GoTo /D [4 /Fit] >>', text: 'Page number 4: page 5' },
+  ];
+  return buildDocument({
+    pageCount: 5,
+    pageBoxes: (i) =>
+      ({
+        // Rotated: areas from the displayed page's top-left.
+        2: '/MediaBox [0 0 595 842] /Rotate 90',
+        // The annotation in /Annots directly, not by reference.
+        3:
+          '/MediaBox [0 0 595 842] /Annots [' +
+          link('40 700 300 740', '/A << /S /Named /N /PrevPage >>') +
+          ']',
+      })[i],
+    pageContent: (i) => {
+      switch (i) {
+        case 0:
+          return {
+            content: [
+              '0.85 0.92 1 rg 0 421 357 421 re f',
+              '0.9 1 0.9 rg 0 0 357 421 re f',
+              '0 g BT /F1 20 Tf 40 620 Td (DEST /FIT: PAGE 3) Tj ET',
+              'BT /F1 20 Tf 40 200 Td (NAME TREE: PAGE 4) Tj ET',
+              'BT /F1 14 Tf 380 420 Td (plain page) Tj ET',
+            ].join('\n'),
+            annotations: (r) => [
+              link('0 421 357 842', `/Dest [${r[2]} 0 R /Fit]`),
+              link('0 0 357 421', '/A << /S /GoTo /D (appendix) >>'),
+            ],
+          };
+        case 1:
+          return {
+            content: rows.map((row) => label(Number(row.rect.split(' ')[1]), row.text)).join('\n'),
+            annotations: () => rows.map((row) => link(row.rect, row.rest)),
+          };
+        case 2:
+          return {
+            content: 'BT /F1 14 Tf 100 712 Td (URL on a rotated page) Tj ET',
+            annotations: () => [link('100 700 300 730', '/A << /S /URI /URI (https://example.com/rotated) >>')],
+          };
+        case 3:
+          return { content: 'BT /F1 14 Tf 44 714 Td (PrevPage, in /Annots directly) Tj ET' };
+        default:
+          return { content: textPage(i, { fontSize: 10 }) };
+      }
+    },
+    catalogEntries: (_, r) =>
+      `/Dests << /chapter2 [${r[1]} 0 R /FitH 842] >> ` +
+      // Name-tree keys sorted; values an array or a dictionary with /D.
+      `/Names << /Dests << /Names [(appendix) [${r[3]} 0 R /XYZ 0 842 0] (intro) << /D [${r[2]} 0 R /Fit] >>] >> >>`,
   });
 }
 

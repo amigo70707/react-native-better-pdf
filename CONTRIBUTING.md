@@ -64,7 +64,7 @@ example/e2e/run.sh <device> stress-open-close stress-rapid        # stress flows
 | `stress-open-close` | 10× open/close of the 1000- and 500-page scans |
 | `stress-close-during-work` | documents closed while their work runs — renders in a fling, a search, a page image, a download, the outline, a form fill and export, `PdfDocument` page images — 5 rounds; watch logcat (`adb logcat -b crash`) and the iOS crash reports while it runs |
 | `stress-rapid` | rapid flings, direction changes, jumps and zooms on 1000 pages |
-| `viewer-links` | page tap coordinates in PDF points, URL link reported (not opened), internal link followed, double tap not reported as a tap |
+| `viewer-links` | page tap coordinates in PDF points, URL link reported (not opened), internal link followed, double tap not reported as a tap; a `/Dest` with `/Fit` and a name-tree destination (`links-all`). Run it on an Android 14 emulator without SDK extension 13 too: links there come from the library's parser alone |
 | `viewer-load-progress` | download progress of a remote document (fixture server throttled via `?bytesPerSecond=`) |
 | `viewer-offline` | `PdfCache` and cache options: persistent vs session copies across an app restart, 304 revalidation, stale copy while the fixture server is "offline" (`/__control/offline`), removal, cancellation, `clear()` |
 | `viewer-print` | print dialog previews the bundled sample and the unlocked protected fixture; closing resolves `isSubmitted: false`; Android saves the protected document as PDF (`isSubmitted: true`) |
