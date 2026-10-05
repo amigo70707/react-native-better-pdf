@@ -70,7 +70,7 @@ users see.
 | react-native-pdf | react-native-better-pdf | Notes |
 | --- | --- | --- |
 | `source={{ uri }}` | `source={{ uri }}` | `http(s)://`, `file://`, `content://` (Android). |
-| `source={require('./x.pdf')}` | `source={require('./x.pdf')}` | Add `pdf` to Metro's `assetExts`. |
+| `source={require('./x.pdf')}` | `source={require('./x.pdf')}` | Same; no Metro config needed. |
 | `source.headers` | `source.headers` | Same. |
 | `source.cache: true` | `source.cache: 'persistent'` | Kept across launches, never purged by the OS. See [Caching](#caching). |
 | `source.cacheFileName` | `source.cacheKey` | Identifies the copy instead of the URL and headers. |

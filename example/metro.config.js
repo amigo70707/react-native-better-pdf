@@ -11,7 +11,5 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules'),
 ];
-// `require('./document.pdf')` support.
-config.resolver.assetExts.push('pdf');
 
 module.exports = config;

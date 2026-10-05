@@ -60,7 +60,7 @@ export interface PdfUriSource {
  *   app's cache), `file://`, or `content://` on Android.
  * - `{ filePath }` — an absolute path on the device.
  * - `number` — a bundled asset, i.e. `require('./document.pdf')`.
- *   Metro must know the `pdf` extension (`resolver.assetExts`).
+ *   `pdf` is one of Metro's default asset extensions, so no config is needed.
  */
 export type PdfSource = PdfUriSource | { filePath: string } | number;
 

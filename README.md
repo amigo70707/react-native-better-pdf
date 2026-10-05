@@ -52,14 +52,6 @@ npx expo prebuild
 npx expo run:ios   # or run:android
 ```
 
-To bundle PDFs with `require('./file.pdf')`, add `pdf` to Metro's asset
-extensions:
-
-```js
-// metro.config.js
-config.resolver.assetExts.push('pdf');
-```
-
 ## Usage
 
 ```tsx
