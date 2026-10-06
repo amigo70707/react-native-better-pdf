@@ -5,6 +5,7 @@
 # (BetterPdf_API34) too.
 appId: software.gmi.betterpdf.example
 ---
+- launchApp: { stopApp: true }
 - runFlow: _dismiss-dev-menu.yaml
 - tapOn: "Viewer"
 # Not "links-all". iOS labels the entry "links, Fixture copied to the device".
@@ -39,11 +40,17 @@ appId: software.gmi.betterpdf.example
 - tapOn: "‹ Back"
 # `links-all`, page 1 laid out like `links`: upper-left = a /Dest with /Fit
 # and no action (to page 3), lower-left = a GoTo to a string of the /Dests
-# name tree (to page 4). Android's PdfRenderer reports no /Dest arrays (see
-# docs/api-design.md "Links and taps"); the library reads both from the file.
+# name tree (to page 4), upper-right = a JavaScript action. Android's
+# PdfRenderer reports no /Dest arrays (see docs/api-design.md "Links and
+# taps"); the library reads both from the file.
 - scrollUntilVisible: { element: "links-all.*", centerElement: true }
 - tapOn: "links-all.*"
 - extendedWaitUntil: { visible: "1 / 5", timeout: 15000 }
+# An action the viewer does not perform: a page tap, inside its area
+# (x 357–595, upper half). Page 3 is landscape, so iOS fits the pages
+# narrower than the screen: 85% would be the page's edge there.
+- tapOn: { point: "75%, 40%" }
+- extendedWaitUntil: { visible: "tap: page 1 at (3[6-9][0-9]|4[0-9][0-9]|5[0-8][0-9]), ([0-9]{1,2}|[1-3][0-9]{2}|4[01][0-9]) pt", timeout: 5000 }
 - tapOn: { point: "25%, 40%" }
 - extendedWaitUntil: { visible: "3 / 5", timeout: 5000 }
 - tapOn: "First"

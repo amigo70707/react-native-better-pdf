@@ -233,9 +233,9 @@ Platform limitations (measured, not assumed):
   could differ) links come from `PdfRenderer` as before, page by page.
 - iOS uses PDFKit, which handles every link form; on the `links-all`
   fixture it follows a Named action (PrevPage) and a page-number
-  destination (`[4 /Fit]`, zero-based like Android) too. One difference: a tap on an
-  annotation with another action (JavaScript, say) is neither followed nor
-  reported on iOS, where Android reports a page tap.
+  destination (`[4 /Fit]`, zero-based like Android) too.
+- On both platforms a tap on an annotation whose action the viewer does
+  not perform (JavaScript, launching an app) is a page tap (`viewer-links`).
 
 ## Load progress (v0.2)
 

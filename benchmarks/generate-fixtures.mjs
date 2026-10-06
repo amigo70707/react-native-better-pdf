@@ -801,7 +801,8 @@ const FIXTURES = {
   // Every form of link (Android reads them from the file, see
   // PdfLinkReaderTest; PDFKit on iOS). Page 1 for e2e, laid out like
   // `links`: upper-left = /Dest with /Fit and no action (to page 3),
-  // lower-left = GoTo a string of the /Dests name tree (to page 4).
+  // lower-left = GoTo a string of the /Dests name tree (to page 4),
+  // upper-right = a JavaScript action (a page tap), lower-right = plain.
   'links-all': () => linksAllDocument(),
 
   'page-boxes': () => pageBoxesDocument(),
@@ -970,6 +971,8 @@ function formsDocument(options = {}) {
 }
 
 function linksAllDocument() {
+  // An action viewers do not perform: not a link, a page tap.
+  const JAVASCRIPT = "/A << /S /JavaScript /JS (app.alert\\('hi'\\)) >>";
   const link = (rect, rest) => `<< /Type /Annot /Subtype /Link /Rect [${rect}] /Border [0 0 0] ${rest} >>`;
   const label = (y, text) => `BT /F1 12 Tf 44 ${y + 14} Td (${text}) Tj ET`;
   // Page 2: one row per link, 40 pt tall, from the top.
@@ -988,7 +991,7 @@ function linksAllDocument() {
     { rect: '40 440 300 480', rest: '/A << /S /Named /N /PrevPage >>', text: 'PrevPage' },
     { rect: '40 380 300 420', rest: '/A << /S /Named /N /FirstPage >>', text: 'FirstPage' },
     { rect: '40 320 300 360', rest: '/A << /S /Named /N /LastPage >>', text: 'LastPage' },
-    { rect: '40 260 300 300', rest: "/A << /S /JavaScript /JS (app.alert\\('hi'\\)) >>", text: 'JavaScript: not a link' },
+    { rect: '40 260 300 300', rest: JAVASCRIPT, text: 'JavaScript: not a link' },
     // A page number instead of a page: meant for other files, used locally by some producers.
     { rect: '40 200 300 240', rest: '/A << /S /GoTo /D [4 /Fit] >>', text: 'Page number 4: page 5' },
   ];
@@ -1013,11 +1016,13 @@ function linksAllDocument() {
               '0.9 1 0.9 rg 0 0 357 421 re f',
               '0 g BT /F1 20 Tf 40 620 Td (DEST /FIT: PAGE 3) Tj ET',
               'BT /F1 20 Tf 40 200 Td (NAME TREE: PAGE 4) Tj ET',
-              'BT /F1 14 Tf 380 420 Td (plain page) Tj ET',
+              'BT /F1 14 Tf 380 620 Td (JAVASCRIPT) Tj ET',
+              'BT /F1 14 Tf 380 200 Td (plain page) Tj ET',
             ].join('\n'),
             annotations: (r) => [
               link('0 421 357 842', `/Dest [${r[2]} 0 R /Fit]`),
               link('0 0 357 421', '/A << /S /GoTo /D (appendix) >>'),
+              link('357 421 595 842', JAVASCRIPT),
             ],
           };
         case 1:

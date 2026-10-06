@@ -34,6 +34,7 @@ class PdfLinkReaderTest {
     )
   }
 
+  /** Page 1's JavaScript action is left out: taps on it are page taps. */
   @Test
   fun `a destination without an action, and a string of the name tree`() {
     assertEquals(
