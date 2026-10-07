@@ -77,11 +77,11 @@ PDFKit on iOS, the platform `PdfRenderer` on Android: no bundled PDFium, no WebV
 Measured on release builds of the same example app, which contains both
 libraries; method and full results in [docs/benchmarks.md](docs/benchmarks.md).
 
-**Size** (Android, one ABI, 2026-10-06):
+**Size** (Android, one ABI, 2026-10-07):
 
 | | react-native-better-pdf | react-native-pdf 7.0.5 |
 | --- | ---: | ---: |
-| Native code and dex | **≈ 3.0 MB** | ≈ 5.3 MB (bundled PDFium, AndroidPdfViewer, Gson, react-native-blob-util) |
+| Native code and dex | **≈ 1.9 MB** | ≈ 5.3 MB (bundled PDFium, AndroidPdfViewer, Gson, react-native-blob-util) |
 
 Plus `react-native-nitro-modules` (≈ 1 MB), shared by every Nitro module in
 an app.

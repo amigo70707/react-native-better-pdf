@@ -112,7 +112,7 @@ Look for `BetterPdf#open`, `BetterPdf#renderPage` and `BetterPdf#recycleRenderer
 
 Measured on release builds of the example app, which contains both
 libraries, by attributing each file and each linked object to its library
-(Android 2026-10-06, the 1.0 release candidate; iOS 2026-09-30, after text
+(Android 2026-10-07, the 1.0 release candidate; iOS 2026-09-30, after text
 selection was added, not measured again since). KB are 1,024 bytes.
 react-native-pdf includes the
 dependencies it requires (AndroidPdfViewer, pdfium-android, Gson,
@@ -125,18 +125,20 @@ download; dex sizes are unminified, the example builds without R8):
 
 | | react-native-better-pdf | react-native-pdf 7.0.5 |
 | --- | ---: | ---: |
-| Native code, per ABI | `libNitroBetterPdf.so` 2,763 KB (gzip 546 KB) | `libpdfium.so` 4,660 KB + `libpdfiumandroid.so` 422 KB = 5,082 KB (gzip 2,546 KB) |
+| Native code, per ABI | `libNitroBetterPdf.so` 1,701 KB (gzip 409 KB) | `libpdfium.so` 4,660 KB + `libpdfiumandroid.so` 422 KB = 5,082 KB (gzip 2,546 KB) |
 | Dex | `com.margelo.nitro.betterpdf` 277 KB | `org.wonday.pdf` 8 KB + AndroidPdfViewer 44 KB + pdfium-android 75 KB + Gson 119 KB + blob-util 51 KB = 297 KB |
-| **Total, one ABI** | **≈ 2.97 MB** | **≈ 5.25 MB** |
+| **Total, one ABI** | **≈ 1.93 MB** | **≈ 5.25 MB** |
 | Shared prerequisite | react-native-nitro-modules: `libNitroModules.so` 958 KB + 14 KB dex | — |
 
 Native code is per ABI: an APK with all four ABIs carries PDFium four times
 (≈ 20 MB); an app bundle delivers one ABI per device. On 2026-09-30
 `libNitroBetterPdf.so` was 1,308 KB; what was added since (reading
 position, page images, `PdfCache`, printing, `PdfDocument`, overlays,
-forms) and its generated bindings doubled it. Of the 2,763 KB, `.dynstr` + `.dynsym`
-+ `.gnu.hash` (4,774 exported symbols) take 921 KB; building with hidden
-visibility could remove most of that (not measured).
+forms) and its generated bindings grew it to 2,763 KB, of which `.dynstr` +
+`.dynsym` + `.gnu.hash` for 4,774 exported symbols took 921 KB. The library
+is now built with hidden visibility (`-fvisibility=hidden`: only
+`JNI_OnLoad` and 78 type-information and vtable symbols from the C++
+standard library and folly headers are exported; everything else is registered by address), which brought it to 1,701 KB.
 
 **iOS** (Release, simulator arm64 slice; linker map of the app binary; both
 libraries render with the system's PDFKit, which costs the app nothing):

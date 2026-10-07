@@ -11,6 +11,11 @@ add_library(${PACKAGE_NAME} SHARED
 
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/NitroBetterPdf+autolinking.cmake)
 
+# Only JNI_OnLoad (JNIEXPORT) is looked up by name; everything else is
+# registered by address (fbjni's registerNatives). Hiding the other symbols
+# keeps their names out of the library.
+target_compile_options(${PACKAGE_NAME} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+
 include_directories(
         "src/main/cpp"
 )
