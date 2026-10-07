@@ -399,3 +399,80 @@ Remote (`SOURCE=remote`, `ios-sim-20261004T214249.txt`): `large` better
 - The `stress-open-close` flow, which opens `large` and `extreme`
   repeatedly, passes on iOS with the images drawn.
 
+
+## 13. Re-run before 1.0 (2026-10-07)
+
+The 1.0 release candidate (forms, overlays, `PdfDocument`, the link parser
+and the library built with hidden symbols since §11) against
+react-native-pdf 7.0.5, unchanged. Same method and fixtures as §11, but the
+API 35 emulator image is gone: `sdk_gphone64_arm64`, **API 37**, 1080×2400,
+release builds, arm64 only, unminified.
+
+**Android** (`android-2026-10-07T07-18-59-703Z.json`, medians of 3):
+
+| Fixture | Library | Load (ms) | Jump (ms) | Peak PSS (MB) | Janky % | p90 frame (ms) | JS thread CPU % | Total CPU % | JS callbacks while scrolling |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| small | better | **55** | 0 | 118 | 51.8 | 19 | 0.7 | **15.1** | 25 |
+| small | react-native-pdf | 82 | 48 | **89.6** | 40.9 | 19 | 0.6 | 22.4 | 27 |
+| medium | better | **64** | 0 | **130.1** | 35.7 | 19 | 0.7 | **24.4** | 44 |
+| medium | react-native-pdf | 198 | 35 | 131.1 | 15.4 | 19 | 0.7 | 49.9 | 43 |
+| large | better | **64** | 0 | **138.4** | 52.4 | 18 | 0.6 | **27.7** | 44 |
+| large | react-native-pdf | 482 | 34 | 551.1 | 0.4 | 18 | 0.9 | 113.1 | 45 |
+| extreme | better | **91** | 0 | **143.7** | 51.8 | 19 | 0.6 | **27.4** | 42 |
+| extreme | react-native-pdf | 746 | 34 | 897 | 0.2 | 18 | 0.7 | 114.2 | 41 |
+
+Remote (`--source remote`, `android-2026-10-07T07-28-20-053Z.json`,
+medians of 3):
+
+| Fixture | Library | Load incl. download (ms) | Peak PSS (MB) | Total CPU % while scrolling |
+| --- | --- | ---: | ---: | ---: |
+| small | better | **72** | 123.4 | **14.1** |
+| small | react-native-pdf | 113 | **104.8** | 23.4 |
+| medium | better | **128** | **139.4** | **20.7** |
+| medium | react-native-pdf | 262 | 146.1 | 61.4 |
+| large | better | **585** | **138.3** | **24** |
+| large | react-native-pdf | 965 | 564.8 | 108 |
+
+- Load, memory, CPU and jump latency keep §11's picture. Loads and HTTP
+  loads are faster for both libraries than on the API 35 image (e.g.
+  react-native-pdf `extreme` 1207 → 746 ms), so compare libraries within a
+  run, not across sections.
+- **Janky frames are not comparable on this image.** Runs split into two
+  modes, for both libraries: ~490 frames with 0.2% janky, or ~310 frames
+  with ~50% janky, at the same frame times (p50 17 ms). `dumpsys gfxinfo`
+  shows the cause: frames miss the FrameTimeline deadline ("Slow issue draw
+  commands") with a GPU p50 of 16 ms for Better PDF and 12–13 ms for
+  react-native-pdf — at the 16.7 ms budget of the emulated GPU; the legacy
+  janky count of the same run is 1.5% (react-native-pdf 7.8%).
+  react-native-pdf draws RGB_565 page parts (half the bytes per pixel, see
+  §6), likely the GPU difference (not measured separately).
+- **Not a regression**: the code §11 measured (`bed0738`), built and run
+  on this emulator, shows the same modes (21–47% janky,
+  `android-2026-10-07T07-41-11-460Z-bed0738.json`), with p99 frame times of
+  48–125 ms and 64–69% CPU on `large` and `extreme`, against 20–32 ms and
+  ~27% now. Frame pacing needs a device to compare (§6).
+
+**iOS simulator** (Release build, one run per cell, two passes:
+`ios-sim-20261007T094433.txt`, `ios-sim-20261007T095306.txt`):
+
+| Fixture | Library | Load (ms), pass 1 / 2 | Peak footprint (MB), pass 1 / 2 | Footprint after run (MB), pass 1 / 2 |
+| --- | --- | ---: | ---: | ---: |
+| small | better | 49 / 28 | 277 / 277 | 166 / 201 |
+| small | react-native-pdf | 83 / 24 | 338 / 347 | 324 / 279 |
+| medium | better | 52 / 57 | 325 / 322 | 159 / 185 |
+| medium | react-native-pdf | 51 / 95 | 359 / 377 | 248 / 240 |
+| large | better | 57 / 54 | 209 / 204 | 67 / 67 |
+| large | react-native-pdf | 65 / 65 | 212 / 236 | 68 / 67 |
+| extreme | better | 216 / 184 | 215 / 198 | 68 / 76 |
+| extreme | react-native-pdf | 249 / 250 | 211 / 214 | 68 / 68 |
+
+Remote (`SOURCE=remote`, `ios-sim-20261007T100126.txt`, one run per cell):
+small 87 vs 93 ms, medium 152 vs 92 ms, large 304 vs 300 ms (better vs
+react-native-pdf; peaks 280 / 325 / 197 vs 351 / 353 / 220 MB).
+
+- Both libraries render with PDFKit, so the numbers are close and single
+  runs are noisy (react-native-pdf `small`: 83 then 24 ms). Better PDF
+  loads local files as fast or faster in most cells and peaks at the same
+  or lower footprint; after a run its footprint is lower for `small` and
+  `medium`. Remote loads are within one run's noise except `medium`, where
+  this run was slower.

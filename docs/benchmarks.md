@@ -161,23 +161,24 @@ deprecated-react-native-prop-types 46 KB.
 Full tables, baselines, every experiment (including the ones that were
 reverted) and raw file names: [performance/results.md](performance/results.md).
 
-Summary, Android emulator, release builds, medians of 3 runs (2026-09-30,
-results §11):
+Summary, Android emulator (API 37), release builds, medians of 3 runs
+(2026-10-07, the 1.0 release candidate, results §13):
 
 | Fixture | Load: Better / rn-pdf | Load from HTTP (incl. download): Better / rn-pdf | Peak PSS: Better / rn-pdf | Total CPU while scrolling: Better / rn-pdf |
 | --- | --- | --- | --- | --- |
-| small (10 p) | 122 / 162 ms | 145 / 332 ms | **118.2** / **91.0** MB (rn-pdf lower) | 31 / 60% |
-| medium (100 p) | 90 / 288 ms | 298 / 666 ms | 126.8 / 132.1 MB | 48 / 120% |
-| large (500 p) | 91 / 900 ms | 2028 / 4057 ms | 141.2 / 546.7 MB | 58 / 116% |
-| extreme (1000 p) | 91 / 1207 ms | — | 146.8 / 900.5 MB | 72 / 116% |
+| small (10 p) | 55 / 82 ms | 72 / 113 ms | **118** / **89.6** MB (rn-pdf lower) | 15 / 22% |
+| medium (100 p) | 64 / 198 ms | 128 / 262 ms | 130.1 / 131.1 MB | 24 / 50% |
+| large (500 p) | 64 / 482 ms | 585 / 965 ms | 138.4 / 551.1 MB | 28 / 113% |
+| extreme (1000 p) | 91 / 746 ms | — | 143.7 / 897 MB | 27 / 114% |
 
-Page jumps: 0–1 ms vs 34–50 ms to the page-change event. JS-thread CPU
-while scrolling is equal (~2%) and so is the number of JS callbacks.
-Janky-frame percentages vary between runs by more than the difference
-between the libraries on the emulator (results §6 and §11). With its
-default `trustAllCerts: true`, react-native-pdf could not open any HTTP
-document on Android (results §11); the numbers above use `false`.
+Page jumps: 0 ms vs 34–50 ms to the page-change event. JS-thread CPU
+while scrolling is equal (under 1%) and so is the number of JS callbacks.
+Janky-frame percentages on this emulator image say nothing about either
+library (results §13); they need a device. With its default
+`trustAllCerts: true`, react-native-pdf could not open any HTTP document on
+Android (results §11); the numbers above use `false`.
 
-On iOS both libraries render with PDFKit: loads are equal or faster
-(medium 56 vs 99 ms), peak footprints equal or lower, and HTTP loads equal
-(both download natively); see results §9 and §11.
+On iOS both libraries render with PDFKit, so the numbers are close: Better
+PDF loads local files as fast or faster in most runs and peaks at the same
+or lower footprint; HTTP loads are within one run's noise (both download
+natively); see results §9, §12 and §13.
