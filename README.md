@@ -1,90 +1,236 @@
+<div align="center">
+
 # react-native-better-pdf
 
-A native, virtualized PDF viewer for React Native, built on
-[Nitro Views](https://nitro.margelo.com/docs/guides/view-components).
+A native, virtualized PDF viewer for React Native, built on [Nitro Views](https://nitro.margelo.com/docs/guides/view-components) and the New Architecture.
 
-- **iOS**: Apple's PDFKit (`PDFView`).
-- **Android**: the platform `PdfRenderer` with a purpose-built native viewer
-  (single canvas view, byte-budgeted page cache, zoom tiles, prefetch).
-- **Zero JS in the hot path**: scrolling, zooming, rendering, caching and
-  prefetching never touch the JS thread. JS sends configuration and commands
-  and receives three events.
-- **No extra native engines**: no bundled PDFium, no WebView, no
-  `react-native-blob-util`. Remote files are downloaded natively.
+[![npm version](https://img.shields.io/npm/v/react-native-better-pdf.svg)](https://www.npmjs.com/package/react-native-better-pdf)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)
+![Expo Development Build](https://img.shields.io/badge/Expo-development%20build-000020.svg)
 
-> Status: **0.1 — MVP**. Viewing only. See [Limitations](#limitations).
+PDFKit on iOS, the platform `PdfRenderer` on Android: no bundled PDFium, no WebView, no JS in the scroll, zoom and render path.
 
-## Why
+[Features](#features) • [Installation](#installation) • [Quick start](#quick-start) • [Capability matrix](#capability-matrix) • [Documentation](#documentation) • [Public API](#public-api)
 
-Existing React Native PDF viewers download and hash files in JS, ship their
-own PDFium build (~5 MB per Android ABI) and push per-gesture events such as
-`onScaleChanged` through JS. This library uses the PDF engines that already
-ship with the OS, keeps every per-frame decision native, and exposes a small,
-typed API. How it compares in practice is measured, not assumed — see
-[docs/benchmarks.md](docs/benchmarks.md).
+**Full documentation** lives in [`docs/`](docs). Start with [Migrating from react-native-pdf](docs/migrating-from-react-native-pdf.md), [Architecture](ARCHITECTURE.md) and [API design](docs/api-design.md).
+
+</div>
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Compared with react-native-pdf](#compared-with-react-native-pdf)
+- [Requirements](#requirements)
+- [Capability matrix](#capability-matrix)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Usage](#usage)
+- [Reading position](#reading-position)
+- [Offline reading and caching](#offline-reading-and-caching)
+- [Page images](#page-images)
+- [Documents without a view](#documents-without-a-view)
+- [Facing pages](#facing-pages)
+- [Translucent bars](#translucent-bars)
+- [Dark pages](#dark-pages)
+- [Page overlays](#page-overlays)
+- [Forms](#forms)
+- [Printing](#printing)
+- [Search](#search)
+- [Accessibility](#accessibility)
+- [Public API](#public-api)
+- [Limitations](#limitations)
+- [Performance philosophy](#performance-philosophy)
+- [Example app](#example-app)
+- [Documentation](#documentation)
+- [Common problems](#common-problems)
+- [Development](#development)
+- [What's next](#whats-next)
+
+## Features
+
+- **Performance first** - Scrolling, zooming, rendering, caching and prefetching never touch the JS thread. JS sends configuration and commands and receives settled events (a page change, a tap, a finished zoom), never per-frame ones.
+- **New Architecture native** - Built on Nitro Views for Fabric.
+- **The OS's own PDF engines** - PDFKit on iOS, `PdfRenderer` on Android with a purpose-built native viewer (single canvas view, byte-budgeted page cache, zoom tiles, prefetch). No bundled PDFium, no WebView, no `react-native-blob-util`.
+- **Any source** - Local files, bundled assets (`require()`), `content://` URIs and remote documents with headers, downloaded natively.
+- **Offline reading** - Downloads kept for the session or across launches, revalidated with `ETag` / `Last-Modified` and shown when the server cannot be reached; `PdfCache` downloads ahead of time with progress and cancellation.
+- **Layouts** - Vertical continuous, horizontal, paged, single page and right to left; fit to width, height or page; facing pages for tablets; `contentInset` for translucent bars; rounded cards.
+- **Reading position** - Settled viewport events, restore on open or on demand, end-of-document detection.
+- **Links and taps** - URL links reported to JS, links to other pages followed natively (every link form, on every Android version), page taps in PDF points.
+- **Search** - Native full-text search with highlighted matches and next/previous navigation.
+- **Text selection** - The platform's handles and Copy / Select all menu.
+- **Forms** - AcroForm fields filled in by touch or from code, read back by name, exported as a filled-in PDF.
+- **Page overlays** - React views (signatures, markers, form controls) attached to points of a page, moved natively while it scrolls and zooms.
+- **Dark pages** - Lightness inverted, hues kept, for reading at night.
+- **Outline, page sizes, page images, printing** - The table of contents, every page's size, PNG / JPEG page images rendered off the main thread, and the system print dialog.
+- **Documents without a view** - `PdfDocument` reads page count, metadata, page sizes, the outline and page images, e.g. for document lists with covers.
+- **Password-protected documents** - With stable `password-required` / `invalid-password` errors.
+- **Accessibility** - VoiceOver and TalkBack read each page's text and position.
+- **Typed errors** - Stable error codes, identical on both platforms.
+- **Memory bounded by the viewport** - Page virtualization, render cache, prefetch and cancellation on Android; pixels released under memory pressure and while a screen is hidden.
+- **Expo friendly** - Works in development builds through autolinking; no config plugin.
+
+## Compared with react-native-pdf
+
+Measured on release builds of the same example app, which contains both
+libraries; method and full results in [docs/benchmarks.md](docs/benchmarks.md).
+
+**Size** (Android, one ABI, 2026-10-06):
+
+| | react-native-better-pdf | react-native-pdf 7.0.5 |
+| --- | ---: | ---: |
+| Native code and dex | **≈ 3.0 MB** | ≈ 5.3 MB (bundled PDFium, AndroidPdfViewer, Gson, react-native-blob-util) |
+
+Plus `react-native-nitro-modules` (≈ 1 MB), shared by every Nitro module in
+an app.
+
+**Speed and memory** (Android emulator, medians of 3 runs, 2026-09-30):
+
+| Document | Load: better-pdf / rn-pdf | Load over HTTP, download included | Peak memory (PSS) | CPU while scrolling |
+| --- | --- | --- | --- | --- |
+| 10 pages, text | 122 / 162 ms | 145 / 332 ms | 118 / 91 MB (rn-pdf lower) | 31 / 60% |
+| 100 pages, images | 90 / 288 ms | 298 / 666 ms | 127 / 132 MB | 48 / 120% |
+| 500 pages, scans | 91 / 900 ms | 2028 / 4057 ms | 141 / 547 MB | 58 / 116% |
+| 1000 pages, scans | 91 / 1207 ms | — | 147 / 901 MB | 72 / 116% |
+
+Page jumps reach the page-change event in 0–1 ms (react-native-pdf: 34–50
+ms). On iOS both libraries render with PDFKit: loads are equal or faster
+and peak memory equal or lower.
+
+**What react-native-pdf users report**, and how this library handles it:
+
+| Reported in react-native-pdf | react-native-better-pdf |
+| --- | --- |
+| Android 16 KB page size ([#960](https://github.com/wonday/react-native-pdf/issues/960) and others) | Native library 16 KB aligned |
+| New Architecture / Fabric ([#878](https://github.com/wonday/react-native-pdf/issues/878) and others) | Built for Fabric on Nitro Views |
+| `react-native-blob-util` crashes and setup ([#796](https://github.com/wonday/react-native-pdf/issues/796) and others) | Not used: downloads are native |
+| Android "Already closed" crashes ([#830](https://github.com/wonday/react-native-pdf/issues/830) and others) | Closing a document while it renders, searches or exports is handled and stress-tested |
+| Link taps on Android ([#983](https://github.com/wonday/react-native-pdf/issues/983) and others) | Every link form on every Android version |
+| Search ([#555](https://github.com/wonday/react-native-pdf/issues/555) and others) | Built in, with highlights (Android: see the [capability matrix](#capability-matrix)) |
+| Viewport events, restoring the position ([#492](https://github.com/wonday/react-native-pdf/issues/492) and others) | `onViewportChange`, `initialViewport`, `goToViewport` |
+| Filling in and saving forms ([#748](https://github.com/wonday/react-native-pdf/issues/748) and others) | Fill, read and export (Android: see the [capability matrix](#capability-matrix)) |
+| Cache control and offline reading ([#952](https://github.com/wonday/react-native-pdf/issues/952) and others) | Cache options on the source, `PdfCache` |
+
+The full list, with reaction counts, is in
+[docs/community-requests.md](docs/community-requests.md); a prop-by-prop
+migration guide is in
+[docs/migrating-from-react-native-pdf.md](docs/migrating-from-react-native-pdf.md).
 
 ## Requirements
 
-| | Minimum | Notes |
-| --- | --- | --- |
-| React Native | 0.81 | New Architecture (Fabric) required — Nitro Views do not support the legacy renderer |
-| react-native-nitro-modules | 0.37 | peer dependency |
-| iOS | 15.1 | React Native's minimum; PDFKit |
-| Android | API 24 | React Native's minimum; passwords, text selection and annotations need Android 15+, or Android 12–14 with SDK extension 13 (the updated system PDF module) |
-| Expo | SDK 54+ development builds | **Expo Go is not supported** (it cannot load third-party native code) |
+| Requirement | Version / note |
+| --- | --- |
+| React Native | `0.81+` |
+| React Native architecture | New Architecture (Fabric); Nitro Views do not support the legacy renderer |
+| Nitro Modules | `react-native-nitro-modules >=0.37.0` |
+| iOS | `15.1+` |
+| Android | `minSdkVersion 24+`; some features need a newer Android, see the [capability matrix](#capability-matrix) |
+| Expo | SDK 54+ with a development build (verified with SDK 57); Expo Go is not supported |
 
 Developed and tested with React Native 0.86.3 / Expo SDK 57, Xcode 27,
 Kotlin 2.1, AGP 8.12 / Gradle 9.3, Node 24.
 
+Not supported:
+
+- Expo Go: it cannot load third-party native code.
+- `data:` / base64 sources, by design: they force the file through the JS heap.
+- Editing annotations; see [What's next](#whats-next).
+
+## Capability matrix
+
+Several Android features come from the platform renderer's newer API: on
+Android 15+, and on Android 12–14 when the device has SDK extension 13 (the
+PDF module updated through Google Play system updates; the library then uses
+`PdfRendererPreV`).
+
+| Capability | iOS | Android 15+, or 12–14 with SDK extension 13 | Other Android versions |
+| --- | --- | --- | --- |
+| Viewing, zoom, layouts, offline, overlays, dark pages | Supported | Supported | Supported |
+| Outline, page sizes, page images, printing, `PdfDocument` | Supported | Supported (password-protected documents: no outline or metadata) | Supported |
+| Links and page taps | Supported | Supported (password-protected documents: URL links and GoTo actions with an XYZ destination) | Supported |
+| Password-protected documents | Supported | Supported | Unsupported: `unsupported-pdf` |
+| Search | Supported | Supported | Unsupported: `isSupported: false` |
+| Text selection | Supported | Supported | Unsupported: long presses are ignored |
+| Forms: fill in, set from code, export | Supported | Supported | Read only: `getFormFields` works, `setFormFieldValues` rejects, `exportDocument` copies the file |
+| Annotations drawn | All | Highlights, notes, free text and form fields; stamps from Android 17; no shapes, ink, underline or strike-out | Form fields |
+| Screen readers read page text | Supported | Supported | The page label only |
+
+Details per feature are in its section below and in
+[Limitations](#limitations).
+
 ## Installation
 
-```sh
-npm install react-native-better-pdf react-native-nitro-modules
-# or: bun add / yarn add
+```bash
+bun add react-native-better-pdf react-native-nitro-modules
 ```
 
-Bare React Native: `cd ios && pod install`.
+```bash
+npm install react-native-better-pdf react-native-nitro-modules
+```
 
-Expo: no config plugin is needed. Rebuild your development build:
+```bash
+yarn add react-native-better-pdf react-native-nitro-modules
+```
 
-```sh
+```bash
+pnpm add react-native-better-pdf react-native-nitro-modules
+```
+
+Bare React Native: `cd ios && pod install`, then rebuild the app.
+
+### Expo
+
+No config plugin is needed. Rebuild your development build:
+
+```bash
 npx expo prebuild
 npx expo run:ios   # or run:android
 ```
 
-## Usage
+## Quick start
 
 ```tsx
-import { useRef } from 'react';
-import { PdfView, type PdfViewRef } from 'react-native-better-pdf';
+import { PdfView } from 'react-native-better-pdf';
 
 export function Reader() {
-  const pdf = useRef<PdfViewRef>(null);
-
   return (
     <PdfView
-      ref={pdf}
       style={{ flex: 1 }}
       source={{ uri: 'https://example.com/report.pdf' }}
-      initialPage={0}
-      minScale={1}
-      maxScale={4}
-      pageSpacing={8}
       onLoad={({ pageCount }) => console.log('pages', pageCount)}
       onPageChange={({ page, pageCount }) => console.log(page + 1, '/', pageCount)}
       onError={(error) => console.warn(error.code, error.message)}
     />
   );
 }
+```
 
-// Links and taps:
+### Links and taps
+
+```tsx
 <PdfView
   source={source}
   onLinkPress={({ url }) => {
     if (url.startsWith('https://')) Linking.openURL(url);
   }}
   onPageTap={({ page, x, y }) => toggleToolbar()}
-/>;
+/>
+```
+
+URL links are reported, never opened by the viewer. Links to other pages
+are followed natively. `onPageTap` reports taps outside links in PDF points
+from the top-left of the page as displayed.
+
+### Imperative API
+
+```tsx
+import { useRef } from 'react';
+import { PdfView, type PdfViewRef } from 'react-native-better-pdf';
+
+const pdf = useRef<PdfViewRef>(null);
+<PdfView ref={pdf} style={{ flex: 1 }} source={source} />;
 
 // Later:
 pdf.current?.goToPage(41);                     // zero-based, animated
@@ -103,6 +249,8 @@ pdf.current?.searchNext();                     // wraps around; searchPrevious()
 pdf.current?.clearSearch();                    // or search('')
 pdf.current?.goToViewport(saved);              // a position from onViewportChange
 ```
+
+## Usage
 
 ### Sources
 
@@ -135,7 +283,7 @@ re-renders never reload the document.
 | `pageAccessibilityLabel` | `string` | `'Page {page} of {pageCount}'` | how screen readers name a page; localise it |
 | `showsVerticalScrollIndicator` | `boolean` | `true` | platform scroll bar while scrolling |
 | `showsHorizontalScrollIndicator` | `boolean` | `true` | shown only while zoomed wider than the view |
-| `enableTextSelection` | `boolean` | `true` | long press selects text, handles adjust it, the system menu copies; `false` turns selection off (Android: API 35+) |
+| `enableTextSelection` | `boolean` | `true` | long press selects text, handles adjust it, the system menu copies; `false` turns selection off (Android: 15+, or 12–14 with SDK extension 13) |
 | `enableFormFilling` | `boolean` | `true` | form fields can be filled in by touch; `false` shows them as they are (taps on them are page taps); see [Forms](#forms) |
 | `horizontal` | `boolean` | `false` | pages side by side |
 | `enablePaging` | `boolean` | `false` | one page per swipe, along the `horizontal` axis |
@@ -193,48 +341,6 @@ onLoadProgress={({ loadedBytes, totalBytes }) =>
 ```
 
 `totalBytes` is `undefined` when the server does not report a size.
-
-## Features
-
-- Local, bundled, `content://` and remote (with headers) documents
-- Offline reading: downloads kept for the session or across launches,
-  revalidated with `ETag` / `Last-Modified`, shown when the server cannot be
-  reached; `PdfCache` downloads ahead of time, reports and deletes copies
-- Vertical continuous scrolling, fling, platform scroll indicators
-- Card layouts: `borderRadius` clips the document; a short document starts
-  at the top on both platforms
-- Translucent bars: `contentInset` lets pages scroll under a header or
-  toolbar while the first page starts below it
-- Facing pages (two-page spreads) for tablets, with or without a cover page
-- Dark pages for reading at night, colours' hues kept
-- Page overlays: React views (form fields, signatures, markers) attached
-  to points of a page, moved natively while it scrolls and zooms
-- Forms (AcroForm): filled in by touch or from code, read back by field
-  name, exported as a filled-in PDF (Android: 15+, or 12–14 with SDK
-  extension 13)
-- Pinch zoom, double-tap zoom, pan while zoomed, min/max scale
-- Initial page, imperative page navigation and zoom
-- Every page's size (`getPageSizes`), cheap even for long documents
-- Page images (`renderPage`): PNG or JPEG files for thumbnails, previews and
-  covers, rendered off the main thread
-- Printing (`print`) through the system dialog, password-protected
-  documents included
-- Documents without a view (`PdfDocument`): page count, metadata (title,
-  author, dates), page sizes, outline and page images, e.g. for document
-  lists with covers
-- Reading position: settled viewport events, restore on open or on demand,
-  end-of-document detection
-- Page-change, load and typed error events
-- Link presses (URL links reported to JS; links to other pages followed
-  natively) and page taps in PDF coordinates
-- Text search with highlighted matches and next/previous navigation
-  (Android 15+, or Android 12–14 with SDK extension 13 on Android)
-- Text selection with the platform's handles and Copy / Select all menu
-  (Android 15+, or Android 12–14 with SDK extension 13 on Android)
-- Password-protected documents (Android 15+, or Android 12–14 with SDK extension 13 on Android)
-- Native page virtualization, render cache, prefetch and cancellation
-  (Android; PDFKit handles these on iOS)
-- Memory-pressure handling and release of all pixels while a screen is hidden
 
 ## Reading position
 
@@ -633,10 +739,65 @@ Screen readers get the document's text and position:
 - Images inside pages have no descriptions on either platform (PDF alt text
   is not read by the platform renderers).
 
+## Public API
+
+### Components
+
+| Component | Description |
+| --- | --- |
+| `PdfView` | The viewer |
+| `PdfPageOverlay` | A React view attached to a point of a page; a child of `PdfView` |
+
+### Objects
+
+| Object | Description |
+| --- | --- |
+| `PdfDocument` | `PdfDocument.open(source, options?)`: a document without a view — `pageCount`, `getMetadata()`, `getPageSizes()`, `getOutline()`, `renderPage()`, `close()` |
+| `PdfCache` | Stored downloads: `download()`, `getEntry()`, `remove()`, `getByteSize()`, `clear()` |
+| `PdfOpenError` | Rejection of `PdfDocument.open`, with the view's error `code` |
+| `PdfDownloadError` | Rejection of `PdfCache.download`, with a `code` and `httpStatus` |
+
+### `PdfViewRef` methods
+
+| Method | Description |
+| --- | --- |
+| `goToPage(page, options?)` | Scroll to a zero-based page, animated unless `{ animated: false }` |
+| `zoomTo(scale, options?)` | Zoom relative to the fitted page |
+| `goToViewport(viewport)` | Jump to a position from `onViewportChange` |
+| `getOutline()` | The table of contents |
+| `getPageSizes()` | Every page's size in PDF points |
+| `renderPage(page, options)` | A PNG or JPEG file of a page |
+| `print(options?)` | The system print dialog |
+| `getFormFields()` / `setFormFieldValues(values)` / `exportDocument(options?)` | Read, fill in and save the form |
+| `search(query)` / `searchNext()` / `searchPrevious()` / `clearSearch()` | Full-text search |
+| `getStats()` | Render and cache statistics, for diagnostics |
+
+### Types
+
+| Type | Description |
+| --- | --- |
+| `PdfViewProps` | Props for `PdfView` |
+| `PdfPageOverlayProps` | Props for `PdfPageOverlay` |
+| `PdfSource` / `PdfUriSource` | Where a document comes from, with cache options for downloads |
+| `PdfError` / `PdfErrorCode` | Errors and their stable codes |
+| `PdfViewport` | A reading position: `{ page, x, y, scale }` |
+| `PdfFormField` | A form field, discriminated by `type` (`PdfTextFormField`, `PdfCheckboxFormField`, …) |
+| `PdfOutlineItem` | An outline entry: `{ title, page?, children }` |
+| `PdfPageSize` | `{ width, height }` in PDF points |
+| `PdfPageImage` | A rendered page: `{ uri, width, height }` |
+| `PdfFitPolicy` / `PdfSpreadMode` / `PdfColorScheme` | Layout options |
+| `PdfCacheEntry` / `PdfCacheMode` | Stored downloads |
+| `PdfDocumentMetadata` | Title, author, dates and the rest of the information dictionary |
+| `Pdf…Event` | Event payloads (`PdfLoadEvent`, `PdfPageTapEvent`, `PdfSearchChangeEvent`, …) |
+
+Every type is exported from the package root; see
+[docs/api-design.md](docs/api-design.md) for the decisions behind them.
+
 ## Limitations
 
-- **Not implemented yet**: editing annotations or forms; facing pages in
-  horizontal or paged layouts, or right to left.
+- **Not implemented yet**: editing annotations (forms are filled in, not
+  restructured); facing pages in horizontal or paged layouts, or right to
+  left.
 - **Dark pages on iOS**: annotations keep their own colours (see
   [Dark pages](#dark-pages)).
 - **Forms**: JavaScript actions and calculations in a form do not run;
@@ -710,17 +871,83 @@ Screen readers get the document's text and position:
    describes the method and publishes the numbers — including where this
    library is not faster.
 
+## Example app
+
+```bash
+bun install
+bun run fixtures                        # test documents (~650 MB), served by the next line
+node benchmarks/serve-fixtures.mjs      # on :8090 (Android: adb reverse tcp:8090 tcp:8090)
+cd example && bunx expo run:ios         # or run:android
+```
+
+The example app lives in [example](example), an Expo development build. It
+shows every feature on generated documents (forms, links, outlines, scans of
+1,000 pages, encrypted and damaged files) and runs the Maestro end-to-end
+flows in [example/e2e](example/e2e).
+
 ## Documentation
 
-- [docs/migrating-from-react-native-pdf.md](docs/migrating-from-react-native-pdf.md) — prop-by-prop migration guide
-- [ARCHITECTURE.md](ARCHITECTURE.md) — threading, virtualization, cache, lifecycle
-- [docs/api-design.md](docs/api-design.md) — API decisions vs. react-native-pdf
-- [docs/architecture/research.md](docs/architecture/research.md) — platform research
-- [docs/benchmarks.md](docs/benchmarks.md) — methodology and results
-- [docs/audit.md](docs/audit.md) — engineering audit and open issues
-- [docs/community-requests.md](docs/community-requests.md) — what react-native-pdf users ask for, and where this library stands
-- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [Migrating from react-native-pdf](docs/migrating-from-react-native-pdf.md) — prop-by-prop migration guide
+- [Architecture](ARCHITECTURE.md) — threading, virtualization, cache, lifecycle
+- [API design](docs/api-design.md) — API decisions vs. react-native-pdf
+- [Platform research](docs/architecture/research.md)
+- [Benchmarks](docs/benchmarks.md) — methodology and results
+- [Audit](docs/audit.md) — engineering audit and open issues
+- [Community requests](docs/community-requests.md) — what react-native-pdf users ask for, and where this library stands
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Common problems
+
+| Problem | Solution |
+| --- | --- |
+| The viewer does not appear in Expo Go | Use a development build (`npx expo run:ios` / `run:android`); Expo Go cannot load native modules. |
+| An error about `BetterPdfView` right after installing | Rebuild the native app: `pod install` and a new build on iOS, a new build on Android. |
+| Errors about the legacy architecture | Enable the New Architecture; Nitro Views need Fabric. |
+| A password-protected document fails with `unsupported-pdf` on Android | The device is below Android 15 without SDK extension 13, where the platform renderer cannot open protected files. |
+| Search reports `isSupported: false`, long presses select nothing | Same devices as above; see the [capability matrix](#capability-matrix). |
+| A remote document fails with `invalid-pdf` | The server answered with something else, often a login page: check the URL and `headers`. |
+| A signed URL or rotating token downloads the document on every open | Set `cacheKey` on the source to identify the stored copy. |
+| Tapping a URL link does nothing | The viewer never opens URLs: open them in `onLinkPress`. |
+| `onPageTap` arrives about 300 ms after the tap | It waits for a possible double tap; `enableDoubleTapZoom={false}` reports taps at once. |
+| The first page sits under the status bar or a header | The viewer adds no safe-area insets: place it in a `SafeAreaView`, or use `contentInset` for translucent bars. |
+
+## Development
+
+```bash
+# Install dependencies
+bun install
+
+# Type checks, lint and JS unit tests
+bun run typecheck
+bun run lint
+bun run test
+
+# Regenerate Nitro bindings after editing *.nitro.ts
+cd package && bun run specs
+
+# Android JVM unit tests (layout, prefetch, cache, the PDF parser)
+cd example/android && ./gradlew :react-native-better-pdf:testDebugUnitTest
+
+# End-to-end flows on a simulator or emulator
+example/e2e/run.sh <simulator-udid | emulator-serial>
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the toolchain, the end-to-end
+flows and benchmarks.
+
+## What's next
+
+Being considered for later releases:
+
+- Password-protected documents, search and text selection on Android
+  versions without the newer renderer API, with the library's own PDF
+  reading.
+- Editing annotations.
+- Downloads with `POST` and a body.
+- Screen reader access to form fields on Android, and text selections
+  across pages.
 
 ## License
 
-MIT
+MIT - see [LICENSE](LICENSE).

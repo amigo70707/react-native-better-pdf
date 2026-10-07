@@ -58,4 +58,17 @@ class PdfOutlineFuzzTest {
     val parsed = fuzz(load("metadata.pdf", "metadata-compressed.pdf", "outline-pdfkit.pdf")) { PdfInfoReader(it).read() }
     assertTrue("parsed $parsed of 500", parsed > 100)
   }
+
+  /** Links are read from every document the view opens. */
+  @Test
+  fun `corrupted links fail cleanly`() {
+    val parsed = fuzz(load("links.pdf", "links-all.pdf", "outline.pdf")) { PdfLinkReader(it).read() }
+    assertTrue("parsed $parsed of 500", parsed > 100)
+  }
+
+  @Test
+  fun `corrupted forms fail cleanly`() {
+    val parsed = fuzz(load("forms.pdf", "forms-compressed.pdf", "forms-boxes.pdf")) { PdfFormReader(it).read() }
+    assertTrue("parsed $parsed of 500", parsed > 100)
+  }
 }

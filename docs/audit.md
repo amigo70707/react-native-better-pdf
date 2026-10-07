@@ -20,7 +20,7 @@ None open.
 
 | # | Finding | Status |
 | --- | --- | --- |
-| H1 | **Untrusted PDFs are parsed in-process.** Android's docs recommend an isolated process for untrusted input; a PDFium exploit would run with the app's permissions. PDFKit on iOS has the same property. Since v0.2 our own Kotlin outline reader also parses untrusted bytes — the outline, the page tree and (for `PdfDocument.getMetadata`) the information dictionary (memory-safe JVM code; bounded; fuzz tested — see api-design "Outline"). | Open. Document for integrators; an isolated-service renderer is a possible future option on Android. |
+| H1 | **Untrusted PDFs are parsed in-process.** Android's docs recommend an isolated process for untrusted input; a PDFium exploit would run with the app's permissions. PDFKit on iOS has the same property. Our own Kotlin readers also parse untrusted bytes on Android — the outline, the page tree, links, form fields and (for `PdfDocument.getMetadata`) the information dictionary (memory-safe JVM code; bounded; fuzz tested — see api-design "Outline" and `PdfOutlineFuzzTest`). | Open. Document for integrators; an isolated-service renderer is a possible future option on Android. |
 | H2 | Evicted bitmaps were left to the GC; pixel memory depended on GC timing. | Fixed (`BitmapPool` recycles eagerly). |
 | H3 | Android view painted outside its bounds (RN parents disable `clipChildren`). | Fixed (`clipRect`), found in e2e screenshots. |
 | H4 | Tiles could be placed with the wrong scale if the user zoomed while a tile was rendering. | Fixed (tile carries its own content rect and scale). |

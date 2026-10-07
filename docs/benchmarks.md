@@ -112,7 +112,9 @@ Look for `BetterPdf#open`, `BetterPdf#renderPage` and `BetterPdf#recycleRenderer
 
 Measured on release builds of the example app, which contains both
 libraries, by attributing each file and each linked object to its library
-(2026-09-30, after text selection was added). react-native-pdf includes the
+(Android 2026-10-06, the 1.0 release candidate; iOS 2026-09-30, after text
+selection was added, not measured again since). KB are 1,024 bytes.
+react-native-pdf includes the
 dependencies it requires (AndroidPdfViewer, pdfium-android, Gson,
 react-native-blob-util). react-native-nitro-modules is listed separately: it
 is shared by every Nitro module in an app.
@@ -123,15 +125,17 @@ download; dex sizes are unminified, the example builds without R8):
 
 | | react-native-better-pdf | react-native-pdf 7.0.5 |
 | --- | ---: | ---: |
-| Native code, per ABI | `libNitroBetterPdf.so` 1,308 KB (gzip 268 KB) | `libpdfium.so` 4,660 KB + `libpdfiumandroid.so` 422 KB = 5,082 KB (gzip 2,546 KB) |
-| Dex | `com.margelo.nitro.betterpdf` 125 KB | `org.wonday.pdf` 8 KB + AndroidPdfViewer 45 KB + pdfium-android 77 KB + Gson 122 KB + blob-util 52 KB = 304 KB |
-| **Total, one ABI** | **≈ 1.43 MB** | **≈ 5.39 MB** |
-| Shared prerequisite | react-native-nitro-modules: `libNitroModules.so` 958 KB + 12 KB dex | — |
+| Native code, per ABI | `libNitroBetterPdf.so` 2,763 KB (gzip 546 KB) | `libpdfium.so` 4,660 KB + `libpdfiumandroid.so` 422 KB = 5,082 KB (gzip 2,546 KB) |
+| Dex | `com.margelo.nitro.betterpdf` 277 KB | `org.wonday.pdf` 8 KB + AndroidPdfViewer 44 KB + pdfium-android 75 KB + Gson 119 KB + blob-util 51 KB = 297 KB |
+| **Total, one ABI** | **≈ 2.97 MB** | **≈ 5.25 MB** |
+| Shared prerequisite | react-native-nitro-modules: `libNitroModules.so` 958 KB + 14 KB dex | — |
 
 Native code is per ABI: an APK with all four ABIs carries PDFium four times
-(≈ 20 MB); an app bundle delivers one ABI per device. Of
-`libNitroBetterPdf.so`, `.dynstr` + `.dynsym` (2,430 exported symbols) took
-414 KB in a build from earlier the same day; building with hidden
+(≈ 20 MB); an app bundle delivers one ABI per device. On 2026-09-30
+`libNitroBetterPdf.so` was 1,308 KB; what was added since (reading
+position, page images, `PdfCache`, printing, `PdfDocument`, overlays,
+forms) and its generated bindings doubled it. Of the 2,763 KB, `.dynstr` + `.dynsym`
++ `.gnu.hash` (4,774 exported symbols) take 921 KB; building with hidden
 visibility could remove most of that (not measured).
 
 **iOS** (Release, simulator arm64 slice; linker map of the app binary; both
@@ -145,8 +149,8 @@ libraries render with the system's PDFKit, which costs the app nothing):
 On iOS this library is larger: its generated JSI/Swift bindings outweigh
 react-native-pdf's Objective-C view.
 
-**npm** (unpacked): react-native-better-pdf 678 KB in 282 files (tarball
-133 KB) + react-native-nitro-modules 581 KB; react-native-pdf 303 KB +
+**npm** (unpacked): react-native-better-pdf 1.7 MB in 734 files (tarball
+323 kB, npm's figures; 2026-10-06) + react-native-nitro-modules 581 KB; react-native-pdf 303 KB +
 react-native-blob-util 893 KB + crypto-js 487 KB +
 deprecated-react-native-prop-types 46 KB.
 

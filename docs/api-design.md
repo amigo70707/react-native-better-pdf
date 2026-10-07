@@ -19,7 +19,7 @@ performance rules in `ARCHITECTURE.md`.
 5. **Omit what we can't do well natively on both platforms** rather than ship
    platform-specific booleans.
 
-## Public API (v0.1)
+## Public API
 
 ```tsx
 import { PdfView, type PdfViewRef } from 'react-native-better-pdf';
@@ -180,7 +180,7 @@ The public component is a thin wrapper around the generated host component:
 - Callbacks are routed through refs so their identity never changes after
   mount; changing `onPageChange` between renders costs no native prop update.
 
-## Links and taps (v0.2)
+## Links and taps
 
 ```ts
 onLinkPress?: (event: { url: string }) => void;
@@ -237,7 +237,7 @@ Platform limitations (measured, not assumed):
 - On both platforms a tap on an annotation whose action the viewer does
   not perform (JavaScript, launching an app) is a page tap (`viewer-links`).
 
-## Load progress (v0.2)
+## Load progress
 
 ```ts
 onLoadProgress?: (event: { loadedBytes: number; totalBytes?: number }) => void;
@@ -259,7 +259,7 @@ onLoadProgress?: (event: { loadedBytes: number; totalBytes?: number }) => void;
 - The throttle runs natively on the download thread
   (`ProgressThrottle` in Kotlin and Swift); JS never sees dropped updates.
 
-## Layout modes (v0.2)
+## Layout modes
 
 ```ts
 horizontal?: boolean;   // default false
@@ -281,7 +281,7 @@ enablePaging?: boolean; // default false
   `horizontal` (verified in the view hierarchy and by the
   `viewer-layout-modes` e2e flow on both platforms).
 
-## Fit policy (v0.2)
+## Fit policy
 
 ```ts
 fitPolicy?: 'width' | 'height' | 'page';
@@ -306,7 +306,7 @@ fitPolicy?: 'width' | 'height' | 'page';
   - iOS paging (PDFKit's page view controller) turns the page on any swipe,
     also inside a page longer than the view; such a page is read by zooming.
 
-## Single page (v0.2)
+## Single page
 
 ```tsx
 <Pressable onPress={() => open(page)}>
@@ -330,7 +330,7 @@ fitPolicy?: 'width' | 'height' | 'page';
 - Takes precedence over `horizontal` and `enablePaging`; default fit is
   `'page'`.
 
-## Right to left (v0.2)
+## Right to left
 
 - **Meaning:** in a horizontal layout the first page is on the right and
   reading continues to the left (Arabic, Hebrew, manga). Vertical layouts and
@@ -349,7 +349,7 @@ fitPolicy?: 'width' | 'height' | 'page';
   Mirroring the view ourselves would mirror the page content too. The e2e
   flow (`viewer-rtl`) runs the continuous part on Android only.
 
-## Android 12–14: `PdfRendererPreV` (v0.2)
+## Android 12–14: `PdfRendererPreV`
 
 Passwords, links, text selection and annotation flags come from
 `PdfRenderer` APIs added in Android 15. The same renderer ships to Android
@@ -377,7 +377,7 @@ deliver (SDK extension 13).
   12–14 device with extension 13 has not been tested.
 - Android 7–11 (API 24–30) cannot be supported with the platform renderer.
 
-## Initial scale and file path (v0.2)
+## Initial scale and file path
 
 - **`initialScale`** replaces react-native-pdf's `scale` prop the way
   `initialPage` replaces `page`: applied once when a document loads, clamped
@@ -398,7 +398,7 @@ deliver (SDK extension 13).
   on first presentation). Invisible before, since zooming was what exposed
   the order; fixed.
 
-## Annotations (v0.2)
+## Annotations
 
 Annotations are drawn from their appearance streams, always on (no
 `enableAnnotationRendering` switch — nothing to gain from hiding them).
@@ -433,7 +433,7 @@ API 35 emulator).
   was found while checking API parity with react-native-pdf (whose bundled
   PDFium draws every kind).
 
-## Scale change (v0.2)
+## Scale change
 
 ```ts
 onScaleChange?: (event: { scale: number }) => void;
@@ -467,7 +467,7 @@ onScaleChange?: (event: { scale: number }) => void;
 - **Measured difference:** iOS's double tap zooms to PDFKit's own step (1.70
   for an A4 page on an iPhone 17 Pro simulator); Android's to 2×.
 
-## Double-tap zoom (v0.2)
+## Double-tap zoom
 
 - **Same name and default as react-native-pdf.** `false` disables the
   double-tap zoom only; pinch and `zoomTo` keep working.
@@ -485,7 +485,7 @@ onScaleChange?: (event: { scale: number }) => void;
   40 ms minimum, so it never registers — and a Maestro-only "off" test would
   pass even if the setting did nothing.
 
-## Scroll enabled (v0.2)
+## Scroll enabled
 
 ```tsx
 <ScrollView>
@@ -506,7 +506,7 @@ onScaleChange?: (event: { scale: number }) => void;
   checks both directions: with `false` a drag on the document scrolls the
   form, with `true` the same drag scrolls the document and not the form.
 
-## Text selection (v0.2)
+## Text selection
 
 ```ts
 enableTextSelection?: boolean; // default true
@@ -579,7 +579,7 @@ onTextSelectionChange?: (event: { text: string }) => void;
   the paged layout selects anything (no Copy menu, no event); turned back
   on in the paged layout, a long press selects again.
 
-## Outline (v0.2)
+## Outline
 
 ```ts
 const toc: PdfOutlineItem[] = await ref.current.getOutline();
@@ -638,7 +638,7 @@ sends concrete defaults for every configuration prop and keeps an event
 subscribed once it has been (a removed handler becomes a no-op). Covered by a
 unit test and the last step of the `viewer-fit-policy` e2e flow.
 
-## Accessibility (v0.2)
+## Accessibility
 
 Measured first (the accessibility tree, as Maestro reads it on both
 platforms — the same tree TalkBack and VoiceOver use):
@@ -678,7 +678,7 @@ Design:
   iOS. Not tested automatically: speech itself, TalkBack's scroll actions
   and the VoiceOver announcement (they need a real screen-reader session).
 
-## Search (v0.2)
+## Search
 
 ```ts
 // ref
@@ -745,7 +745,7 @@ The most requested missing feature of react-native-pdf (7 issues, see
   matches. `SearchResultsTest` covers ordering, indexes and
   wrapping.
 
-## Viewport (v0.2)
+## Viewport
 
 ```ts
 // props
@@ -805,7 +805,7 @@ restore the position, scroll events, "read to the end"; see
   so the point within a zoomed page is not restored there. Both settle on
   the page when not zoomed, as a swipe does.
 
-## Page sizes (v0.2)
+## Page sizes
 
 ```ts
 // ref
@@ -844,7 +844,7 @@ for every page: overlays, thumbnails and layouts for mixed-size documents).
   page's size and corrects pages as they are rendered (see README,
   Limitations); the page-tree sizes could remove that re-anchoring.
 
-## Page images (v0.2)
+## Page images
 
 ```ts
 // ref
@@ -881,7 +881,7 @@ Requested in react-native-pdf as thumbnail export (#998, #43, #457, #811).
   a plain and a rotated page, PNG and JPEG, and the encrypted copy; the
   screenshots were checked for orientation and content against the viewer.
 
-## Caching and offline (v0.2)
+## Caching and offline
 
 ```ts
 type PdfUriSource = {
@@ -965,7 +965,7 @@ invalidation, prefetch and offline reading (#952, #964, #572, #566, #689,
   platforms with the fixture server's simulated outage
   (`/__control/offline`), including an app restart.
 
-## Short documents, rounded corners, safe area (v0.2)
+## Short documents, rounded corners, safe area
 
 No new props: `style.borderRadius` and the layout of a short document now
 behave the same on both platforms.
@@ -1011,7 +1011,7 @@ under the iOS status bar (#513, #994) and removable padding (#520, already
   corners on screenshots against a dark background, the box in a unit
   test, and the full e2e suite (the component tree changed).
 
-## Closing while work runs (v0.2)
+## Closing while work runs
 
 react-native-pdf's most reported Android crash is "Already closed"
 (#830, #882, #976, #959, #989, #987, #1041): a renderer or page used after
@@ -1060,7 +1060,7 @@ uses it — and stress-tested.
   `viewer-forms` (an export over the source is rejected), and the full
   suite on both.
 
-## Content inset (v0.2)
+## Content inset
 
 ```ts
 contentInset?: { top?: number; bottom?: number }; // dp / pt, default none
@@ -1101,7 +1101,7 @@ Requested in react-native-pdf as padding pages scroll under (#520, PR
 - **Tested:** `viewer-inset` on both platforms (the `Inset` entry: 80 /
   60 dp bars), a unit test for the prop, and the full suite on both.
 
-## Forms (v0.2)
+## Forms
 
 ```ts
 enableFormFilling?: boolean; // default true
@@ -1213,7 +1213,7 @@ on iOS; Android showed them read-only.
   page images of a filled form and a field at the bottom of a page above
   the keyboard; the full suite on both platforms.
 
-## Page overlays (v0.2)
+## Page overlays
 
 ```tsx
 <PdfView source={source}>
@@ -1298,7 +1298,7 @@ scale and offset events.
   the pin at 2.5× and for taps on every rotation of `page-boxes`; the full
   suite on both platforms.
 
-## Dark pages (v0.2)
+## Dark pages
 
 ```ts
 colorScheme?: 'light' | 'dark' | 'unspecified' | null; // default 'light'
@@ -1360,7 +1360,7 @@ cross-platform theme that does not "distort document colours" (#1038).
   compared on both platforms, runtime toggles in paged layouts and on
   `page-boxes` (crop box ≠ media box), and the full suite on both.
 
-## Facing pages (v0.2)
+## Facing pages
 
 ```ts
 spreadMode?: 'none' | 'pairs' | 'book'; // default 'none'
@@ -1420,7 +1420,7 @@ Requested in react-native-pdf as two pages side by side on tablets
   pairs and 10–11 in a book, the last page at the end, the reader's page
   kept); the full e2e suite on both platforms.
 
-## Printing (v0.2)
+## Printing
 
 ```ts
 ref.print(options?: { jobName?: string }): Promise<{ isSubmitted: boolean }>;
@@ -1468,7 +1468,7 @@ file path), and anchoring the dialog to the viewer on iPad.
   (checked with PDFKit). Not tested: submitting on iOS (a simulator has no
   printer; Printer Simulator is not installed) and real printers.
 
-## Documents without a view (v0.2)
+## Documents without a view
 
 ```ts
 const document = await PdfDocument.open(source, { password?, onProgress?, signal? });
