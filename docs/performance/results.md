@@ -446,6 +446,16 @@ medians of 3):
   janky count of the same run is 1.5% (react-native-pdf 7.8%).
   react-native-pdf draws RGB_565 page parts (half the bytes per pixel, see
   §6), likely the GPU difference (not measured separately).
+- The ~38-fps mode draws fewer frames, so it costs less CPU: Better PDF's
+  CPU medians above come mostly from that mode. Its runs at ~490 frames
+  used 23–38% (`extreme` 37.7%) against react-native-pdf's 108–115% on
+  `large` and `extreme`: 3× less CPU, not the medians' 4×.
+- Driver fix after this run: `input swipe` can inject a swipe whose moves
+  arrive too late, which the viewer sees as a tap; two at one spot are a
+  double tap, which zooms the viewer for the rest of the scroll window
+  (seen once while recording a video of a run, at 1.76×). Consecutive
+  flings now alternate between two columns. Page changes per run do not
+  drop as a 1.76× zoom would make them, so the runs above were not zoomed.
 - **Not a regression**: the code §11 measured (`bed0738`), built and run
   on this emulator, shows the same modes (21–47% janky,
   `android-2026-10-07T07-41-11-460Z-bed0738.json`), with p99 frame times of

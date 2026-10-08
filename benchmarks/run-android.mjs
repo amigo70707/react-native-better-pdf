@@ -256,7 +256,6 @@ function cpuUsage(before, after, clockTicks, seconds) {
 }
 
 async function swipeFor(durationMs, { width, height }) {
-  const x = Math.round(width / 2);
   const low = Math.round(height * 0.8);
   const high = Math.round(height * 0.3);
   const end = Date.now() + durationMs;
@@ -265,6 +264,10 @@ async function swipeFor(durationMs, { width, height }) {
   while (Date.now() < end) {
     // Mostly forward flings with an occasional reversal, like reading.
     const [from, to] = down ? [low, high] : [high, low];
+    // Consecutive flings in alternate columns: an injected swipe whose moves
+    // arrive too late is a tap, and two taps at one spot are a double tap,
+    // which zooms the viewer for the rest of the window.
+    const x = Math.round(width * (count % 2 === 0 ? 0.33 : 0.67));
     await adb(
       'shell',
       'input',
