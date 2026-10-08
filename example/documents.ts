@@ -118,6 +118,22 @@ export const DOCUMENTS: DocumentEntry[] = [
     contentInset: { top: 80, bottom: 60 },
   },
   {
+    id: 'medium-inset-last',
+    title: 'Inset, last page',
+    subtitle: 'initialPage={99}, bars 80 / 60',
+    resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
+    initialPage: 99,
+    contentInset: { top: 80, bottom: 60 },
+  },
+  {
+    id: 'medium-inset-tall-last',
+    title: 'Inset tall, last page',
+    subtitle: 'initialPage={99}, bars 0 / 400',
+    resolve: async () => ({ uri: (await ensureFixture('medium')).uri }),
+    initialPage: 99,
+    contentInset: { top: 0, bottom: 400 },
+  },
+  {
     id: 'medium-overlays',
     title: 'Overlays',
     subtitle: 'PdfPageOverlay on pages 1 and 3',

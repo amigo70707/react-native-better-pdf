@@ -19,11 +19,11 @@ extension PDFView {
   }
 
   /// After `go(to:)` — which ignores content insets, measured: the page's
-  /// top lands at the view's top — moves `page`'s top below `topClearance`,
-  /// as far as the scrollable area allows (a short last page stays at the
-  /// end). Vertical continuous layouts.
+  /// top lands at the view's top, or past it under a tall bottom inset —
+  /// moves `page`'s top below `topClearance`, as far as the scrollable area
+  /// allows (a short last page stays at the end). Vertical continuous
+  /// layouts.
   func alignTop(of page: PDFPage, in scrollView: UIScrollView, topClearance: CGFloat) {
-    guard topClearance > 0 else { return }
     let pageTop = convert(page.bounds(for: displayBox), from: page).minY
     let inset = scrollView.adjustedContentInset
     let maxY = max(-inset.top, scrollView.contentSize.height + inset.bottom - scrollView.bounds.height)

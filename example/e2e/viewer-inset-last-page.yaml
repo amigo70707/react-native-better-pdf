@@ -1,0 +1,41 @@
+# contentInset with initialPage on the last of the 100-page `medium`:
+# `Inset, last page` (bars 80 / 60) and `Inset tall, last page` (no top bar,
+# a 400 dp / pt bottom bar, so a page is taller than the room left). Either
+# way the page's top starts at the top of the area between the bars, like any
+# other page; the end stays reachable above the bottom bar. On iOS, PDFKit's
+# go(to:) ignores insets and under the tall bar landed near the document's
+# end (p 100 · y 592) until the page was realigned with a bottom inset alone.
+appId: software.gmi.betterpdf.example
+---
+- launchApp: { stopApp: true }
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Viewer"
+- scrollUntilVisible: { element: "Inset, last page.*" }
+- tapOn: "Inset, last page.*"
+- extendedWaitUntil: { visible: "100 / 100", timeout: 15000 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 100 · y -?[0-9] · 1.00x" }
+    timeout: 5000
+- takeScreenshot: inset-last-page
+- tapOn: "‹ Back"
+
+- scrollUntilVisible: { element: "Inset tall, last page.*" }
+- tapOn: "Inset tall, last page.*"
+- extendedWaitUntil: { visible: "100 / 100", timeout: 15000 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 100 · y -?[0-9] · 1.00x" }
+    timeout: 5000
+- takeScreenshot: inset-tall-last-page
+# The rest of the page scrolls up until its bottom sits on the bar.
+- repeat:
+    times: 3
+    commands:
+      - swipe: { start: "50%, 45%", end: "50%, 25%", duration: 400 }
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: { id: "viewport-status", text: "p 100 · .* · end" }
+    timeout: 5000
+- takeScreenshot: inset-tall-last-page-end
+- tapOn: "‹ Back"

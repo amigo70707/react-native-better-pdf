@@ -967,9 +967,12 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     alignTopBelowClearance(page)
   }
 
-  /// PDFKit's `go(to:)` puts a page at the view's top, under `contentInset`.
+  /// PDFKit's `go(to:)` ignores `contentInset`: it puts a page at the view's
+  /// top, under a top inset, and with a bottom inset it can scroll past the
+  /// page's top (measured: the last page under a 400 pt toolbar landed
+  /// 389 pt below its top, near the document's end).
   private func alignTopBelowClearance(_ page: PDFPage) {
-    guard let pdfView, let scrollView, clearance.top > 0 else { return }
+    guard let pdfView, let scrollView, clearance.top > 0 || clearance.bottom > 0 else { return }
     pdfView.alignTop(of: page, in: scrollView, topClearance: clearance.top)
   }
 
