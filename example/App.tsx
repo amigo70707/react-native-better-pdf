@@ -8,6 +8,11 @@ import { BenchmarkScreen, type BenchRequest } from './screens/BenchmarkScreen';
 import { DocumentsScreen } from './screens/DocumentsScreen';
 import { EmbeddedScreen } from './screens/EmbeddedScreen';
 import { OfflineScreen } from './screens/OfflineScreen';
+import {
+  SHOWCASE_FEATURES,
+  ShowcaseScreen,
+  type ShowcaseFeature,
+} from './screens/ShowcaseScreen';
 import { ViewerScreen } from './screens/ViewerScreen';
 import { Button, colors } from './ui';
 
@@ -43,14 +48,32 @@ function parseBenchLink(url: string | null): BenchRequest | null {
   };
 }
 
+/** `betterpdfexample://showcase?feature=search` plays one feature full screen. */
+function parseShowcaseLink(url: string | null): ShowcaseFeature | null {
+  const match =
+    url == null ? null : /^[a-z]+:\/\/showcase\?feature=([a-z]+)/.exec(url);
+  const feature = match?.[1];
+  return SHOWCASE_FEATURES.find((name) => name === feature) ?? null;
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('viewer');
   const [autoRun, setAutoRun] = useState<BenchRequest | null>(null);
+  const [showcase, setShowcase] = useState<{
+    feature: ShowcaseFeature;
+    key: number;
+  } | null>(null);
 
   useEffect(() => {
     const handle = (url: string | null) => {
+      const feature = parseShowcaseLink(url);
+      if (feature != null) {
+        setShowcase({ feature, key: Date.now() });
+        return;
+      }
       const request = parseBenchLink(url);
       if (request == null) return;
+      setShowcase(null);
       setTab('benchmark');
       setAutoRun(request);
     };
@@ -60,6 +83,15 @@ export default function App() {
     );
     return () => subscription.remove();
   }, []);
+
+  if (showcase != null) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <ShowcaseScreen key={showcase.key} feature={showcase.feature} />
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>
