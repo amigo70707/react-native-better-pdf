@@ -1,0 +1,55 @@
+name: Native
+
+# Thin trigger for the native compile jobs. They live in a reusable workflow so
+# release.yml can gate the publish on exactly the same definition, and `paths:`
+# filters have to sit on the triggering workflow — ci.yml deliberately has none.
+#
+# These checks are intentionally not part of the required status checks. A
+# required check that a `paths:` filter skips reports as permanently pending and
+# blocks the pull request, so promoting them means either dropping the filter or
+# adding an always-running gate job. Until then release.yml is the hard gate.
+#
+# The two lists below are identical; GitHub Actions does not support YAML anchors.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/native.yml'
+      - '.github/workflows/native-build.yml'
+      - 'package/ios/**'
+      - 'package/android/**'
+      - 'package/nitrogen/**'
+      - 'package/NitroBetterPdf.podspec'
+      - 'package/nitro.json'
+      - 'package/package.json'
+      - 'package/react-native.config.js'
+      - 'example/app.json'
+      - 'example/package.json'
+      - 'bun.lock'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/native.yml'
+      - '.github/workflows/native-build.yml'
+      - 'package/ios/**'
+      - 'package/android/**'
+      - 'package/nitrogen/**'
+      - 'package/NitroBetterPdf.podspec'
+      - 'package/nitro.json'
+      - 'package/package.json'
+      - 'package/react-native.config.js'
+      - 'example/app.json'
+      - 'example/package.json'
+      - 'bun.lock'
+
+concurrency:
+  group: native-${{ github.event.pull_request.number || github.ref }}
+  # Only on pull requests. Cancelling on main would let one merge discard the
+  # previous merge's result, leaving a commit on main with no native verdict.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  native:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/native-build.yml
