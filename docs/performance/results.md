@@ -456,7 +456,7 @@ medians of 3):
   (seen once while recording a video of a run, at 1.76×). Consecutive
   flings now alternate between two columns. Page changes per run do not
   drop as a 1.76× zoom would make them, so the runs above were not zoomed.
-- **Not a regression**: the code §11 measured (`bed0738`), built and run
+- **Not a regression**: the code §11 measured (`9d9cef5`), built and run
   on this emulator, shows the same modes (21–47% janky,
   `android-2026-10-07T07-41-11-460Z-bed0738.json`), with p99 frame times of
   48–125 ms and 64–69% CPU on `large` and `extreme`, against 20–32 ms and

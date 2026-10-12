@@ -15,6 +15,8 @@ export default tseslint.config(
       '**/ios/**',
       'benchmarks/fixtures/**',
       'benchmarks/results/**',
+      // Agent worktrees: other checkouts of this repository.
+      '.claude/**',
     ],
   },
   eslint.configs.recommended,

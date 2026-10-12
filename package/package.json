@@ -44,7 +44,8 @@
     "specs": "tsc --noEmit && nitrogen --logLevel=\"debug\"",
     "typecheck": "tsc --noEmit",
     "test": "bun test src",
-    "clean": "rm -rf android/build node_modules/**/android/build lib *.tsbuildinfo"
+    "clean": "rm -rf android/build node_modules/**/android/build lib *.tsbuildinfo",
+    "release": "release-it"
   },
   "keywords": [
     "react-native",
@@ -70,6 +71,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "^12.0.2",
     "@types/bun": "^1.3.14",
     "@types/react": "~19.2.14",
     "@types/react-test-renderer": "19.1.0",
@@ -78,6 +80,7 @@
     "react-native": "0.86.3",
     "react-native-nitro-modules": "0.37.1",
     "react-test-renderer": "19.2.3",
+    "release-it": "^21.1.1",
     "typescript": "~6.0.3"
   },
   "peerDependencies": {

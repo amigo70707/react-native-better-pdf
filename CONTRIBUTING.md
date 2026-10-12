@@ -97,3 +97,44 @@ builds.
 - Update `README.md` and `docs/api-design.md` for public API changes.
 - Validate both iOS and Android for native changes.
 - Performance claims need a benchmark run attached.
+
+## Commit messages
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/):
+the release notes are generated from them. Commit messages are validated
+locally by a Husky hook (installed by `bun install`) and on pull requests in
+CI.
+
+```text
+<type>[optional scope]: <description>
+```
+
+Common types: `feat`, `fix`, `perf`, `docs`, `refactor`, `test`, `build`,
+`ci`, `chore`. Scopes in use: `ios`, `android`, `example`, `bench`, `e2e`.
+
+```text
+feat: add contentInset for translucent bars
+fix(ios): write form exports off the main thread
+perf(android): build the library with hidden symbols
+```
+
+## Pull requests
+
+`main` is protected: every change lands through a reviewed pull request, and
+the `quality` and `commitlint` checks must pass. Native changes also run the
+iOS and Android compile jobs (`.github/workflows/native.yml`).
+
+## Releasing
+
+Maintainers cut releases from CI — see [RELEASING.md](RELEASING.md).
+
+## Code of conduct
+
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By taking
+part you are expected to uphold it; report unacceptable behavior to
+security@gmi.software.
+
+## Security
+
+Do not report vulnerabilities through issues or pull requests. See
+[SECURITY.md](SECURITY.md) for the private reporting channel.

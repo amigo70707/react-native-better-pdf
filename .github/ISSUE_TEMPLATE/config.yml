@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/gmi-software/react-native-better-pdf#readme
+    about: Installation, the capability matrix per Android version, common problems and the public API.
+  - name: 🔁 Migrating from react-native-pdf
+    url: https://github.com/gmi-software/react-native-better-pdf/blob/main/docs/migrating-from-react-native-pdf.md
+    about: Prop-by-prop migration guide.
+  - name: 🔐 Report a security vulnerability
+    url: https://github.com/gmi-software/react-native-better-pdf/security/advisories/new
+    about: Do not open a public issue. Report it privately through a GitHub security advisory.

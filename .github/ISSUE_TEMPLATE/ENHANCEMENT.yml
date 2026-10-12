@@ -1,0 +1,42 @@
+name: ✨ Enhancement
+description: Request a feature or an enhancement to react-native-better-pdf
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes:
+      label: Feature request / enhancement
+      description: Describe the feature in detail, and explain the motivation that led you to open this issue — what are you building, and what is blocked without it?
+      placeholder: I need ink annotations drawn by the reader, saved into the exported document. PDFKit supports them on iOS.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Which platforms should this cover?
+      description: >
+        The platform renderers differ in what they support, and on Android it also depends on the Android version, so a feature may land on one before the other.
+        See the [capability matrix](https://github.com/gmi-software/react-native-better-pdf#capability-matrix).
+      multiple: true
+      options:
+        - iOS
+        - Android 15+ (or 12–14 with SDK extension 13)
+        - Older Android versions
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Are there any existing workarounds?
+      description: List anything you do today to work around the missing feature, so others reading this issue are not blocked by it.
+      placeholder: I render the page with `renderPage` and draw on top of the image, but the drawing is lost on export.
+    validations:
+      required: false
+  - type: checkboxes
+    attributes:
+      label: Additional information
+      description: Please check all the boxes that apply
+      options:
+        - label: I checked the [README](https://github.com/gmi-software/react-native-better-pdf#readme) and the [docs](https://github.com/gmi-software/react-native-better-pdf/tree/main/docs) and this feature does not exist yet.
+          required: true
+        - label: I checked [What's next](https://github.com/gmi-software/react-native-better-pdf#whats-next) and [Community requests](https://github.com/gmi-software/react-native-better-pdf/blob/main/docs/community-requests.md), and it is not already listed there.
+        - label: I can open a pull request to implement this. (See [Contributing](https://github.com/gmi-software/react-native-better-pdf/blob/main/CONTRIBUTING.md))
+        - label: I searched for [similar issues in this repository](https://github.com/gmi-software/react-native-better-pdf/issues) and found none.
+          required: true

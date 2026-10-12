@@ -896,7 +896,7 @@ flows in [example/e2e](example/e2e).
 - [Benchmarks](docs/benchmarks.md) — methodology and results
 - [Audit](docs/audit.md) — engineering audit and open issues
 - [Community requests](docs/community-requests.md) — what react-native-pdf users ask for, and where this library stands
-- [Changelog](CHANGELOG.md)
+- [Releases](https://github.com/gmi-software/react-native-better-pdf/releases) — release notes for every version
 - [Contributing](CONTRIBUTING.md)
 
 ## Common problems
