@@ -101,10 +101,9 @@ Provenance also requires the repository to be public.
 ## The first release
 
 npm only accepts a trusted publisher for a package that already exists, so
-1.0.0 was published by hand from `package/` before the workflow was added, and
-carries no provenance. Its `v1.0.0` tag points at the published commit, which
-does not contain `release.yml`, so pushing the tag did not trigger a run. Every
-later version goes through the workflow.
+1.0.0 was published by hand from `package/`, and carries no provenance. Pushing
+its `v1.0.0` tag started the Release workflow, which was cancelled: the version
+was already on npm. Every later version goes through the workflow.
 
 ## Notes on the configuration
 

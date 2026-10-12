@@ -1,10 +1,11 @@
-<div align="center">
+<img width="2188" height="718" alt="react-native-better-pdf" src="./assets/react-native-better-pdf.png" />
 
-# react-native-better-pdf
+<div align="center">
 
 A native, virtualized PDF viewer for React Native, built on [Nitro Views](https://nitro.margelo.com/docs/guides/view-components) and the New Architecture.
 
 [![npm version](https://img.shields.io/npm/v/react-native-better-pdf.svg)](https://www.npmjs.com/package/react-native-better-pdf)
+[![CI](https://github.com/gmi-software/react-native-better-pdf/actions/workflows/ci.yml/badge.svg)](https://github.com/gmi-software/react-native-better-pdf/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)
 ![Expo Development Build](https://img.shields.io/badge/Expo-development%20build-000020.svg)

@@ -69,8 +69,8 @@ machine:
 - workflows check out with `persist-credentials: false`, and CI never writes to
   git
 
-1.0.0 was published by a maintainer before the workflow existed and carries no
-provenance; its tarball matches the `v1.0.0` tag.
+1.0.0 was published by a maintainer, before trusted publishing could be
+configured, and carries no provenance; its tarball matches the `v1.0.0` tag.
 
 If you believe a published artifact does not match this repository, treat it as
 a vulnerability and report it through the channel above.
