@@ -891,6 +891,7 @@ flows in [example/e2e](example/e2e).
 ## Documentation
 
 - [Migrating from react-native-pdf](docs/migrating-from-react-native-pdf.md) — prop-by-prop migration guide
+- [Agent skill](https://github.com/gmi-software/better-skills/tree/main/skills/react-native-better-pdf) — teaches AI coding agents this API and the migration from react-native-pdf: `npx skills add gmi-software/better-skills --skill react-native-better-pdf`
 - [Architecture](ARCHITECTURE.md) — threading, virtualization, cache, lifecycle
 - [API design](docs/api-design.md) — API decisions vs. react-native-pdf
 - [Platform research](docs/architecture/research.md)

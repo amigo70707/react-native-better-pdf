@@ -94,7 +94,9 @@ builds.
 - Keep the hot path native. A change that adds per-frame JS work, a new
   per-gesture event, or a React-managed page needs a design note first.
 - Anything that allocates bitmaps must say who frees them and when.
-- Update `README.md` and `docs/api-design.md` for public API changes.
+- Update `README.md` and `docs/api-design.md` for public API changes, and the
+  [agent skill](https://github.com/gmi-software/better-skills/tree/main/skills/react-native-better-pdf)
+  in gmi-software/better-skills when they are released.
 - Validate both iOS and Android for native changes.
 - Performance claims need a benchmark run attached.
 
