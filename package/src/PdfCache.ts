@@ -1,5 +1,5 @@
 import { NitroModules } from 'react-native-nitro-modules';
-import { abortReason } from './abortReason';
+import { abortable, abortReason, untilAborted } from './abort';
 import { PdfDownloadError } from './PdfDownloadError';
 import type { PdfDownloadOptions } from './types/PdfDownloadOptions';
 import { normalizeUriSource, type PdfUriSource } from './source';
@@ -73,30 +73,11 @@ export const PdfCache = {
     const result = cache.download(
       requestId,
       normalizeUriSource(source),
-      onProgress,
+      untilAborted(onProgress, signal),
     );
-    if (signal === undefined) return unwrap(await result);
-    return new Promise<PdfCacheEntry>((resolve, reject) => {
-      const onAbort = () => {
-        cache.cancelDownload(requestId);
-        reject(abortReason(signal));
-      };
-      signal.addEventListener('abort', onAbort, { once: true });
-      result.then(
-        (value) => {
-          signal.removeEventListener('abort', onAbort);
-          try {
-            resolve(unwrap(value));
-          } catch (error) {
-            reject(error);
-          }
-        },
-        (error: unknown) => {
-          signal.removeEventListener('abort', onAbort);
-          reject(error);
-        },
-      );
-    });
+    return unwrap(
+      await abortable(result, signal, () => cache.cancelDownload(requestId)),
+    );
   },
 
   /**
