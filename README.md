@@ -416,6 +416,8 @@ const saved = storage.get(documentId); // a PdfViewport, or undefined
   page is on screen.
 - `ref.goToViewport(viewport)` jumps back to a position without animation,
   e.g. for "back to where I was" after following a table-of-contents entry.
+- A saved page outside the document (a shorter new version, a corrupted
+  value) opens the nearest page from its top.
 - Paged layouts (`enablePaging`, `singlePage`) restore the page and zoom;
   on iOS the position within a zoomed page is not restored.
 
@@ -807,8 +809,8 @@ Screen readers get the document's text and position:
 
 | Method | Description |
 | --- | --- |
-| `goToPage(page, options?)` | Scroll to a zero-based page, animated unless `{ animated: false }` |
-| `zoomTo(scale, options?)` | Zoom relative to the fitted page |
+| `goToPage(page, options?)` | Scroll to a zero-based page (clamped to the document), animated unless `{ animated: false }` |
+| `zoomTo(scale, options?)` | Zoom relative to the fitted page, clamped to `minScale` / `maxScale` |
 | `goToViewport(viewport)` | Jump to a position from `onViewportChange` |
 | `getOutline()` | The table of contents |
 | `getPageSizes()` | Every page's size in PDF points |
@@ -817,6 +819,9 @@ Screen readers get the document's text and position:
 | `getFormFields()` / `setFormFieldValues(values)` / `exportDocument(options?)` | Read, fill in and save the form |
 | `search(query)` / `searchNext()` / `searchPrevious()` / `clearSearch()` | Full-text search |
 | `getStats()` | Render and cache statistics, for diagnostics |
+
+`goToPage`, `zoomTo` and `goToViewport` ignore `NaN` and `±Infinity`, e.g.
+`goToPage(Number(text) - 1)` while a page field holds a letter.
 
 ### Types
 
