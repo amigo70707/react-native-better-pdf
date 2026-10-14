@@ -321,6 +321,10 @@ class HybridBetterPdfView(
     val document = loaded ?: return Promise.rejected(IllegalStateException("No document is loaded"))
     val session = document.session
     val target = if (filePath.isEmpty()) null else File(filePath)
+    // As on iOS, where replacing a directory would delete everything in it.
+    if (target != null && (filePath.endsWith("/") || target.isDirectory)) {
+      return Promise.rejected(IllegalArgumentException("The export path is a directory, not a file: $filePath"))
+    }
     // The displayed file is read while the copy is written, and is never changed.
     if (target != null && document.file != null && target.canonicalFile == document.file.canonicalFile) {
       return Promise.rejected(IllegalArgumentException("The export cannot replace the displayed document's file"))
@@ -328,8 +332,9 @@ class HybridBetterPdfView(
     return afterFormSettles(session) {
       val file = target ?: newExportFile(document.name)
       // Written beside the target and renamed over it: a failed write
-      // leaves an existing file as it was.
-      val partial = File(file.absoluteFile.parentFile, ".${file.name}.${UUID.randomUUID()}.partial")
+      // leaves an existing file as it was. The copy's name does not repeat
+      // the target's, which may already be close to the 255-byte limit.
+      val partial = File(file.absoluteFile.parentFile, ".${UUID.randomUUID()}.partial")
       try {
         ParcelFileDescriptor.open(
           partial,
