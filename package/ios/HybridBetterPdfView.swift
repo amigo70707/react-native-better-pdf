@@ -900,6 +900,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     }
     reportScale()
     reportViewport()
+    // Page turns and resizes don't move the observed scroll view.
+    searchController.viewportDidSettle()
   }
 
   private func reportScale() {
@@ -1173,6 +1175,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     offsetObservation = scrollView?.observe(\.contentOffset, options: []) { [weak self] _, _ in
       self?.layoutOverlays()
       self?.reportCurrentPage()
+      self?.searchController.viewportDidChange()
       // Every scroll frame, including animated zooms (PDFKit's double tap
       // posts PDFViewScaleChanged only when it starts).
       self?.settle.noteMotion()
