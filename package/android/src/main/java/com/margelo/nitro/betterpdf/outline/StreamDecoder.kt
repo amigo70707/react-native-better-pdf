@@ -7,13 +7,34 @@ import java.util.zip.Inflater
 /**
  * Decodes stream data for the filters that carry document structure in
  * practice: FlateDecode, optionally with PNG predictors (xref and object
- * streams). Output is capped: a small compressed stream can expand to
- * gigabytes ("zip bomb").
+ * streams). A stream's data, read or decoded, is capped: a small compressed
+ * stream can expand to gigabytes ("zip bomb").
  */
 object StreamDecoder {
-  private const val MAX_DECODED_BYTES = 32 * 1024 * 1024
+  /** The most a stream's data may be, read or decoded. */
+  const val MAX_DECODED_BYTES = 32 * 1024 * 1024
 
-  fun decode(dictionary: PdfObject.Dictionary, data: ByteArray, resolve: (PdfObject?) -> PdfObject?): ByteArray {
+  /**
+   * Reads [stream]'s data from [source] and decodes it; it and what it
+   * decodes to are charged to [budget], as it decodes.
+   */
+  internal fun read(
+    source: PdfByteSource,
+    stream: PdfObject.Stream,
+    budget: ScanBudget,
+    resolve: (PdfObject?) -> PdfObject?,
+  ): ByteArray {
+    if (stream.dataLength > MAX_DECODED_BYTES) throw PdfFormatException("Stream longer than $MAX_DECODED_BYTES bytes")
+    return decode(stream.dictionary, source.read(stream.dataOffset, stream.dataLength), budget, resolve)
+  }
+
+  private fun decode(
+    dictionary: PdfObject.Dictionary,
+    data: ByteArray,
+    budget: ScanBudget,
+    resolve: (PdfObject?) -> PdfObject?,
+  ): ByteArray {
+    budget.spendOnStream(data.size)
     val filters = when (val filter = resolve(dictionary["Filter"])) {
       null, PdfObject.Null -> emptyList()
       is PdfObject.Name -> listOf(filter.value)
@@ -28,14 +49,14 @@ object StreamDecoder {
     var bytes = data
     filters.forEachIndexed { index, filter ->
       bytes = when (filter) {
-        "FlateDecode", "Fl" -> unpredict(inflate(bytes), parameters.getOrNull(index), resolve)
+        "FlateDecode", "Fl" -> unpredict(inflate(bytes, budget), parameters.getOrNull(index), resolve)
         else -> throw PdfFormatException("Unsupported filter /$filter")
       }
     }
     return bytes
   }
 
-  private fun inflate(data: ByteArray): ByteArray {
+  private fun inflate(data: ByteArray, budget: ScanBudget): ByteArray {
     val inflater = Inflater()
     try {
       inflater.setInput(data)
@@ -50,6 +71,7 @@ object StreamDecoder {
         }
         if (count == 0 && (inflater.needsInput() || inflater.needsDictionary())) break
         output.write(buffer, 0, count)
+        budget.spendOnStream(count)
         if (output.size() > MAX_DECODED_BYTES) throw PdfFormatException("Stream expands beyond $MAX_DECODED_BYTES bytes")
       }
       return output.toByteArray()
