@@ -85,8 +85,8 @@ export interface NavigationOptions {
 
 export interface PdfViewRef {
   /**
-   * Scrolls so `page` (zero-based, clamped) is at the top of the viewport.
-   * `NaN` and `±Infinity` are ignored.
+   * Scrolls so `page` (zero-based, rounded to the nearest page, clamped) is
+   * at the top of the viewport. `NaN` and `±Infinity` are ignored.
    */
   goToPage(page: number, options?: NavigationOptions): void;
   /**
@@ -97,10 +97,11 @@ export interface PdfViewRef {
   /**
    * Jumps, without animation, to a position saved from
    * {@linkcode PdfViewProps.onViewportChange}: its page point at the view's
-   * top-left corner, at its zoom. The page is clamped to the document and
-   * the position to the scrollable area. Paged layouts settle on the page
-   * unless zoomed in. Ignored before {@linkcode PdfViewProps.onLoad}, and
-   * when a field is `NaN` or `±Infinity` or `scale` is not positive.
+   * top-left corner, at its zoom. The page is rounded to the nearest page
+   * and clamped to the document, and the position to the scrollable area.
+   * Paged layouts settle on the page unless zoomed in. Ignored before
+   * {@linkcode PdfViewProps.onLoad}, and when a field is `NaN` or
+   * `±Infinity` or `scale` is not positive.
    */
   goToViewport(viewport: PdfViewport): void;
   /** Native diagnostics. `null` before the native view has mounted. */
@@ -164,8 +165,11 @@ export interface PdfViewRef {
    * Writes the document as shown — its form filled in — to a new PDF file,
    * e.g. to share or upload it; the source file is never changed (a
    * `filePath` naming it, or a directory, is rejected). Keeps the
-   * document's password protection. Rejects before
-   * {@linkcode PdfViewProps.onLoad}.
+   * document's password protection: the password that opened it opens the
+   * export, with the same permissions. On iOS a filled-in export gets an
+   * owner password nobody knows, or, when the owner password opened the
+   * document, opens with that password alone (see the forms guide). Rejects
+   * before {@linkcode PdfViewProps.onLoad}.
    */
   exportDocument(options?: PdfExportOptions): Promise<PdfExportResult>;
   /**
@@ -187,7 +191,10 @@ export interface PdfViewRef {
 export interface PdfViewProps extends ViewProps {
   source: PdfSource;
   password?: string;
-  /** Zero-based page shown when a document finishes loading. Default `0`. */
+  /**
+   * Zero-based page shown when a document finishes loading, rounded to the
+   * nearest page. Default `0`.
+   */
   initialPage?: number;
   /**
    * Zoom applied once when a document finishes loading, relative to the
@@ -209,7 +216,10 @@ export interface PdfViewProps extends ViewProps {
   minScale?: number;
   /** Relative to the fitted page (see {@linkcode PdfViewProps.fitPolicy}). Default `4`. */
   maxScale?: number;
-  /** Gap between pages in dp / pt. Default `8`. */
+  /**
+   * Gap between pages in dp / pt; negative, `NaN` and infinite values are the
+   * default. Default `8`.
+   */
   pageSpacing?: number;
   /**
    * Lay pages out left to right and scroll horizontally. Default `false`.

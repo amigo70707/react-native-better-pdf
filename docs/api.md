@@ -16,11 +16,11 @@ Every component, object and type is exported from the package root. The
 | --- | --- | --- | --- |
 | `source` | `PdfSource` | — | required |
 | `password` | `string` | — | changing it re-opens the document (no re-download) |
-| `initialPage` | `number` | `0` | zero-based, applied once per loaded document |
+| `initialPage` | `number` | `0` | zero-based, rounded to the nearest page, applied once per loaded document |
 | `initialScale` | `number` | `1` | zoom applied once per loaded document, relative to the fitted page |
 | `initialViewport` | `PdfViewport` | | position applied once per loaded document, e.g. where the reader left off; takes precedence over `initialPage` / `initialScale`; see [Reading position](guides/navigation.md#reading-position) |
 | `minScale` / `maxScale` | `number` | `1` / `4` | relative to the fitted page (see `fitPolicy`) |
-| `pageSpacing` | `number` | `8` | dp / pt |
+| `pageSpacing` | `number` | `8` | dp / pt; negative, `NaN` and infinite values are the default |
 | `enableDoubleTapZoom` | `boolean` | `true` | double tap toggles zoom; `false` also delivers `onPageTap` without the ~300 ms double-tap wait |
 | `scrollEnabled` | `boolean` | `true` | `false`: drags go to parent views (a surrounding `ScrollView` scrolls); zoom, taps and `goToPage` still work |
 | `pageAccessibilityLabel` | `string` | `'Page {page} of {pageCount}'` | how screen readers name a page; localise it |
@@ -76,7 +76,9 @@ each page. The viewer adds no safe-area insets on either platform, like
 | `getStats()` | Render and cache statistics, for diagnostics |
 
 `goToPage`, `zoomTo` and `goToViewport` ignore `NaN` and `±Infinity`, e.g.
-`goToPage(Number(text) - 1)` while a page field holds a letter.
+`goToPage(Number(text) - 1)` while a page field holds a letter. A fractional
+page is rounded to the nearest page on both platforms: `goToPage(1.6)` opens
+page 2.
 
 Calling the methods through a ref:
 

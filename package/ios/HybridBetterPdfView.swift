@@ -37,7 +37,11 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     didSet { needsScaleUpdate = true }
   }
   var pageSpacing: Double? {
-    didSet { applyPageSpacing() }
+    didSet {
+      applyPageSpacing()
+      // The page view controller takes its spacing only when it is set up.
+      if isPagedLayout && Self.resolvedSpacing(oldValue) != resolvedPageSpacing { needsLayoutModeUpdate = true }
+    }
   }
   var horizontal: Bool? {
     didSet { if horizontal != oldValue { needsLayoutModeUpdate = true } }
@@ -404,7 +408,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       // filled-in form is copied over to it.
       Self.readQueue.async {
         do {
-          guard let renderDocument = Self.openCopy(of: url, password: password, filledIn: filledForm) else {
+          guard let renderDocument = Self.openCopy(of: url, password: password, filledIn: filledForm)?.document else {
             throw RuntimeError.error(withMessage: "The document could not be opened for rendering")
           }
           promise.resolve(withResult: try request.render(from: renderDocument))
@@ -449,7 +453,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       // like renderPage.
       let password = self.password
       Self.writeQueue.async { [weak self] in
-        let copy = Self.openCopy(of: url, password: password, filledIn: filledForm)
+        let copy = Self.openCopy(of: url, password: password, filledIn: filledForm)?.document
         let data = copy?.dataRepresentation()
         DispatchQueue.main.async { [weak self] in
           guard let self, let data else {
@@ -523,7 +527,6 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
         return
       }
       let password = self.password
-      let isEncrypted = document.isEncrypted
       let filledForm = self.filledFormSnapshot(of: document)
       // Off the main thread: PDFKit writes a long document in seconds.
       Self.writeQueue.async {
@@ -532,14 +535,8 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
             guard let copy = Self.openCopy(of: url, password: password, filledIn: filledForm) else {
               throw RuntimeError.error(withMessage: "The document could not be opened for writing")
             }
-            // Kept protected: an unlocked document is written without its
-            // encryption unless passwords are given (printing relies on it).
-            var options: [PDFDocumentWriteOption: Any] = [:]
-            if isEncrypted, let password, !password.isEmpty {
-              options[.userPasswordOption] = password
-              options[.ownerPasswordOption] = password
-            }
-            guard let data = copy.dataRepresentation(options: options) else {
+            let options = copy.document.protectedWriteOptions(unlockPassword: copy.unlockPassword)
+            guard let data = copy.document.dataRepresentation(options: options) else {
               throw RuntimeError.error(withMessage: "The document could not be written")
             }
             try data.write(to: destination, options: .atomic)
@@ -612,12 +609,17 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
 
   /// A separate instance of the displayed file, unlocked and filled in like
   /// the displayed document; for the calling (background) thread only.
-  private static func openCopy(of url: URL, password: String?, filledIn form: FormSnapshot?) -> PDFDocument? {
+  private static func openCopy(
+    of url: URL,
+    password: String?,
+    filledIn form: FormSnapshot?
+  ) -> (document: PDFDocument, unlockPassword: String?)? {
     guard let copy = PDFDocument(url: url) else { return nil }
-    if copy.isLocked { _ = copy.unlock(withPassword: password ?? "") }
+    let unlockPassword = copy.isLocked ? password ?? "" : nil
+    if let unlockPassword { _ = copy.unlock(withPassword: unlockPassword) }
     guard !copy.isLocked else { return nil }
     form?.apply(to: copy)
-    return copy
+    return (copy, unlockPassword)
   }
 
   private func reportFormChange(_ widget: FormWidgetAnnotation) {
@@ -691,11 +693,11 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
       residentPages: -1,
       cacheBytes: -1,
       cacheBudgetBytes: -1,
-      cacheHits: 0,
-      cacheMisses: 0,
-      bitmapAllocations: 0,
-      pagesRendered: 0,
-      rendersCancelled: 0,
+      cacheHits: -1,
+      cacheMisses: -1,
+      bitmapAllocations: -1,
+      pagesRendered: -1,
+      rendersCancelled: -1,
       meanRenderMs: -1
     )
   }
@@ -979,9 +981,16 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     return min(max(scale, resolvedMinScale), resolvedMaxScale)
   }
 
+  private var resolvedPageSpacing: CGFloat { Self.resolvedSpacing(pageSpacing) }
+
+  private static func resolvedSpacing(_ spacing: Double?) -> CGFloat {
+    let value = spacing ?? 8
+    return CGFloat(value.isFinite && value >= 0 ? value : 8)
+  }
+
   private func applyPageSpacing() {
     guard let pdfView else { return }
-    let spacing = CGFloat(max(pageSpacing ?? 8, 0))
+    let spacing = resolvedPageSpacing
     pdfView.pageBreakMargins = UIEdgeInsets(top: spacing / 2, left: 0, bottom: spacing / 2, right: 0)
     pdfView.pageShadowsEnabled = spacing > 0
   }
@@ -1266,8 +1275,7 @@ final class HybridBetterPdfView: HybridBetterPdfViewSpec {
     container.isUserInteractionEnabled = !isSinglePage
     pdfView.displayDirection = isHorizontalLayout ? .horizontal : .vertical
     pdfView.displaysRTL = isRightToLeftLayout
-    let spacing = CGFloat(max(pageSpacing ?? 8, 0))
-    pdfView.usePageViewController(paged, withViewOptions: paged ? [UIPageViewController.OptionsKey.interPageSpacing: spacing] : nil)
+    pdfView.usePageViewController(paged, withViewOptions: paged ? [UIPageViewController.OptionsKey.interPageSpacing: resolvedPageSpacing] : nil)
     container.applyDoubleTapZoom()
     container.applyTextSelection()
     if let pageChangeObserver { NotificationCenter.default.removeObserver(pageChangeObserver) }
