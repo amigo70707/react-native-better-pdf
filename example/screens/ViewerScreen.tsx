@@ -114,6 +114,7 @@ export function ViewerScreen() {
   const isAlternate = useRef(false);
   /** The latest open or "Swap": only its source, or its failure, is applied. */
   const sourceRequest = useRef(0);
+  const [isCollapsed, setCollapsed] = useState(false);
   /** Counts onTextSelectionChange events: one per settled selection. */
   const selectionEvents = useRef(0);
   /** Counts onScaleChange events: one per settled zoom, never per frame. */
@@ -126,6 +127,7 @@ export function ViewerScreen() {
     async (next: DocumentEntry, resume?: PdfViewport) => {
       setEntry(next);
       setResumeViewport(resume);
+      setCollapsed(next.onLoadAtZeroWidth != null);
       setViewport(null);
       setPageImage(null);
       renders.current = 0;
@@ -477,7 +479,7 @@ export function ViewerScreen() {
         {source != null && (
           <PdfView
             ref={ref}
-            style={styles.pdf}
+            style={[styles.pdf, isCollapsed && styles.collapsed]}
             source={source}
             password={password}
             showsVerticalScrollIndicator={showIndicators}
@@ -511,6 +513,10 @@ export function ViewerScreen() {
               setLastEvent(
                 `file: ${event.filePath?.split('/').slice(-2).join('/') ?? 'none'}`,
               );
+              if (entry.onLoadAtZeroWidth != null) {
+                if (ref.current != null) entry.onLoadAtZeroWidth(ref.current);
+                setTimeout(() => setCollapsed(false), 500);
+              }
             }}
             onPageChange={(event) => setPage(event.page)}
             // A real app would validate the scheme and call Linking.openURL.
@@ -764,6 +770,7 @@ function DemoOverlays({ onPress }: { onPress: (name: string) => void }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pdf: { flex: 1, backgroundColor: colors.canvas },
+  collapsed: { width: 0 },
   overlayField: {
     flex: 1,
     alignItems: 'center',
