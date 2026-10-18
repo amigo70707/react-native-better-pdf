@@ -208,9 +208,12 @@ viewport change (main)
   `PdfRendererPreV`) and posts the
   result; the view keeps it in page points and draws the highlight and
   handles in view coordinates on top of the pages.
-- **Failure isolation**: a page that throws is recorded in `failedPages`,
-  reported once (`page-render-failed`) and drawn as a placeholder, never
-  retried in a loop.
+- **Failure isolation** (`RenderFailures`): a failed render is retried
+  straight away, once, since the first failure may be transient (the session
+  could not re-create its renderer). A page that fails twice in a row is reported
+  once (`page-render-failed`), drawn as a placeholder and not requested
+  again, so it never fails in a loop. Base bitmaps and zoom tiles are
+  counted apart: a page whose tiles fail keeps its base bitmap.
 
 ### Page sizes and PDFium's document cache
 
@@ -278,7 +281,8 @@ position first and is re-anchored after that page is measured.
   rendering is discarded. When it shows again, the visible pages' neighbours
   are prefetched right away.
 - Detached from window (e.g. a screen hidden under a native stack): all
-  bitmaps are dropped; the document stays open and re-renders on attach.
+  bitmaps are dropped, and a render that finishes later is discarded; the
+  document stays open and re-renders on attach.
 - Bitmaps that leave the cache go to the pool or are `recycle()`d
   immediately rather than waiting for a GC (the Java heap of a PDF viewer is
   tiny, so GCs are rare and native pixel memory would pile up).
@@ -302,8 +306,13 @@ involved; the bars fade on the platform's schedule.
 one virtual node per visible page (label + text), the host as a scrollable
 list. `PdfDocumentView` implements `PdfAccessibilityHost` (visible pages,
 page bounds in view coordinates, hit testing, labels, cached text) and
-queues `PageTextQuery` work for visible pages without text only while
-`AccessibilityManager.isEnabled`. The render thread answers it through
+queues `PageTextQuery` work for visible pages without text. While a screen
+reader is on (`isTouchExplorationEnabled`), which reads pages as they come
+into view, the text goes after the visible pages' pixels and before the
+look-ahead. Other services (Switch Access, password managers, UI
+automation such as Maestro) also turn accessibility on but may never read
+a page: their text is read only for pages whose node a service asked for,
+after the look-ahead. The render thread answers it through
 `DocumentPage.readText()`.
 
 ### Search
@@ -312,7 +321,10 @@ queues `PageTextQuery` work for visible pages without text only while
 its own thread with its own `PdfRenderer` over a duplicated file descriptor
 (the view's render thread and its queue are untouched), searches pages from
 the current one to the end and then from the start, and posts each page's
-matches to the main thread; a new query or document cancels it. The
+matches to the main thread; a new query or document cancels it. So does
+detaching the view (a screen hidden under another), so that a hidden
+viewer does not compete for PDFium with the one on screen: a new task goes
+on from the next page once the view is attached again. The
 renderer is reopened every 48 pages to cap PDFium's per-page cache. The
 platform serialises all `PdfRenderer` calls in a process on one lock, so
 the search interleaves with rendering page by page. `SearchResults` keeps
@@ -331,7 +343,9 @@ again at half or a quarter of their size. When the viewport settles for
 full-resolution tile per visible page is rendered using `PdfRenderer`'s
 clip + matrix. Tiles carry their own content-space rect and scale, so a
 tile that finishes after the user zoomed again still lands in the right
-place.
+place. A relayout (rotation, a page's real size, `contentInset`,
+`pageSpacing`) drops the tiles, and those still rendering when they
+arrive.
 
 ### Lifecycle
 
@@ -340,7 +354,7 @@ place.
 | `source`/`password` change | old session `close()`d; new session started                              |
 | `onDropView`          | `on*` callbacks released, session closed, all bitmaps dropped                |
 | `session.close()`     | queue cleared, download aborted, pending main-thread results dropped; the worker finishes the in-flight render, then closes the renderer (and with it the FD) |
-| Detach from window    | bitmaps dropped, pool emptied, queue emptied                                 |
+| Detach from window    | bitmaps dropped (also renders finishing later), pool emptied, queue emptied, search stopped until attached again |
 | Window hidden         | queue emptied, a late off-screen render discarded; on `UI_HIDDEN`, off-screen pages dropped and pool emptied |
 | Window shown again    | render plan resubmitted, so neighbours of the visible pages are prefetched   |
 
